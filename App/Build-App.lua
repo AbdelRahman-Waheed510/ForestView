@@ -12,7 +12,8 @@ project "App"
       "Source",
 
 	  -- Include Core
-	  "../Core/Source"
+	  "../Core/Source",
+      "../Core/Source/Core"
    }
 
    links
@@ -26,6 +27,7 @@ project "App"
    filter "system:windows"
        systemversion "latest"
        defines { "WINDOWS" }
+       buildoptions { "/utf-8" }
 
    filter "configurations:Debug"
        defines { "DEBUG" }
