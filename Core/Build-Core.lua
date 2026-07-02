@@ -9,7 +9,16 @@ project "Core"
 
    includedirs
    {
-      "Source"
+      "Source",
+      "../Vendor/imgui-docking",
+      "../Vendor/imgui-docking/backends",
+      "../Vendor/imgui-docking/misc/cpp",
+      "../Vendor/imgui-docking/misc/freetype"
+   }
+
+   links
+   {
+      "ImGui" 
    }
 
    targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")

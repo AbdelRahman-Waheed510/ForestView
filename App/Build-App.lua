@@ -13,12 +13,19 @@ project "App"
 
 	  -- Include Core
 	  "../Core/Source",
-      "../Core/Source/Core"
+      "../Core/Source/Core",
+      "../Core/Source/Core/tree",
+      "../Core/Source/Core/Folder Explorer",
+      "../Vendor/imgui-docking",
+      "../Vendor/imgui-docking/backends",
+      "../Vendor/imgui-docking/misc/cpp",
+      "../Vendor/imgui-docking/misc/freetype",
    }
 
    links
    {
-      "Core"
+      "Core",
+      "ImGui"
    }
 
    targetdir ("../Binaries/" .. OutputDir .. "/%{prj.name}")

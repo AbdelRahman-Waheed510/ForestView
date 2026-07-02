@@ -4,10 +4,6 @@
 #include <string>
 #include <iostream>
 
-#ifdef _WIN32
-#include <windows.h>
-#endif
-
 namespace fs = std::filesystem;
 
 class Utils
@@ -112,7 +108,9 @@ private:
 
 	void AddNode_helper(const fs::path& value, Node*& root);
 
-	void print_helper(Node* root, std::string prefix = "", bool is_last = true);
+	void print_helper(Node* root, std::wstring prefix, bool is_last = true);
+
+	void DeleteNode_helper(fs::path& value, Node* root);
 
 public:
 
@@ -125,7 +123,9 @@ public:
 
 	void AddNode(const fs::path& value);
 
-	Node* DeleteNode(fs::path& value, Node* root);
+	void DeleteNode(fs::path value);
+
+	void BuildTree(const fs::path& value);
 
 	Node* TraverseToNode_helper(const fs::path& value, Node* root);
 

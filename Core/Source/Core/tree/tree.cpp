@@ -32,10 +32,67 @@ void tree::AddNode(const fs::path& value)
     return;
 }
 
-tree::Node* tree::DeleteNode(fs::path& value, Node* root)
+void tree::DeleteNode_helper(fs::path& value, Node* root)
 {
-    return nullptr;
+    Node* parent = TraverseToNode(value.parent_path(), root);
+    for (auto it = parent->children.begin(); it != parent->children.end(); ++it)
+    {
+        if ((*it)->path == value.filename())
+        {
+            delete* it;
+            parent->children.erase(it);
+            break;
+        }
+    }
+    parent = nullptr;
+    return;
 }
+
+void tree::DeleteNode(fs::path value)
+{
+    if (value.has_parent_path()) 
+    {
+        fs::path to_delete = fs::relative(value, value.parent_path());
+        DeleteNode_helper(to_delete, root);
+    }
+    else 
+    {
+        DeleteNode_helper(value, root);
+    }
+    return;
+}
+
+void tree::BuildTree(const fs::path& value)
+{
+    if (!isEmpty()) delete root;
+    
+    AddNode(value);
+    
+    if (value.has_parent_path()) 
+    {
+        fs::path parent = value.parent_path();
+        for (const auto& entry : fs::recursive_directory_iterator(value))
+        {
+            if (!fs::is_regular_file(entry))
+            {
+                AddNode(fs::relative(entry, parent));
+            }
+        }
+    }
+    else 
+    {
+        for (const auto& entry : fs::recursive_directory_iterator(value))
+        {
+            if (!fs::is_regular_file(entry))
+            {
+                AddNode(entry);
+            }
+        }
+    }
+
+}
+
+
 
 tree::Node* tree::TraverseToNode_helper(const fs::path& value, Node* root)
 {
@@ -62,7 +119,7 @@ tree::Node* tree::TraverseToNode(const fs::path& value, Node* root)
     return node;
 }
 
-void tree::print_helper(Node* root, std::string prefix, bool is_last)
+void tree::print_helper(Node* root, std::wstring prefix, bool is_last)
 {
     if (isEmpty()) 
     {
@@ -71,33 +128,14 @@ void tree::print_helper(Node* root, std::string prefix, bool is_last)
     }
     if (is_last) 
     {
-        std::u8string u8_path = (root->path).u8string();
-        std::string path(u8_path.begin(), u8_path.end());
-        if (utils.hasArabic(path))
-        {
-            std::string processedName = utils.reverseArabic(path);
-            std::cout << prefix << "\\-- " << "\xE2\x80\x8F" << processedName << std::endl;
-        }
-        else {
-            std::cout << prefix << "\\-- " << path << std::endl;
-        }
-        prefix += "    ";
+
+        std::wcout << prefix << L"└── " << root->path.wstring() << L'\n';
+        prefix += L"    ";
     }
     else 
     {
-        std::u8string u8_path = (root->path).u8string();
-        std::string path(u8_path.begin(), u8_path.end());
-
-        if (utils.hasArabic(path))
-        {
-            std::string processedName = utils.reverseArabic(path);
-            std::cout << prefix << "|--  " << "\xE2\x80\x8F" << processedName << std::endl;
-        }
-        else {
-            std::cout << prefix << "|--  " << path << std::endl;
-        }
-        prefix += "|   ";
-
+        std::wcout << prefix << L"├── " << root->path.wstring() << L'\n';
+        prefix += L"│   ";
     }
 
 
@@ -112,7 +150,8 @@ void tree::print_helper(Node* root, std::string prefix, bool is_last)
 
 void tree::print() 
 {
-    print_helper(root, "", true);
+    print_helper
+    (root,L"", true);
 
     return;
 }

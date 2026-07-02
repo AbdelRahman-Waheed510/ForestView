@@ -21,35 +21,45 @@
 #include <chrono>
 
 #include <filesystem>
+
 #include "tree.h"
+#include "ForestView.h"
 
 #include <Windows.h>
+
+#include "FileExplorer.h"
+
+#include <io.h>
+#include <fcntl.h>
 
 namespace fs = std::filesystem;
 using namespace std;
 
 int main() 
 {
-	SetConsoleOutputCP(CP_UTF8);
-	tree t;
-	fs::path targetDir = "D:\\FAMILY";
+	ForestView f;
+	f.run_loop();
+	//Explorer exp;
+	//exp.start_the_explorer();
+	//exp.print_entries();
 
+	//exp.load_entries_from_specific_path(R"(D:\)");
+	//exp.print_entries();
 
-	fs::path parent;
-	if (targetDir.has_parent_path()) parent = targetDir.parent_path();
-
-	t.AddNode(targetDir.filename());
-
-	for (const auto& entry : fs::recursive_directory_iterator(targetDir))
-	{
-		if (!fs::is_regular_file(entry))
-		{
-			if (targetDir.has_parent_path()) t.AddNode(fs::relative(entry, parent));
-			else  t.AddNode(entry);
-		}
-
-	}
-	t.print();
-	
+//	_setmode(_fileno(stdout), _O_U16TEXT);
+//
+//	tree t;
+//
+//	fs::path targetDir = R"(D:\GAMES\Zuma)";
+//
+//	t.BuildTree(targetDir);
+//
+//	t.print();
+//	
+//	fs::path toDelete = "D:\\GAMES\\Zuma\\Luxor";
+//
+//	t.DeleteNode(toDelete);
+//
+//	t.print();
 	return 0;
 }
