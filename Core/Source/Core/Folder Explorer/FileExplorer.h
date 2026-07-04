@@ -6,12 +6,15 @@
 #include <iostream>
 #include <windows.h>
 #include <format>
+#include <stack>
+#include <stdexcept>
+#include "tree.h"
+
 namespace fs = std::filesystem;
 
 class Explorer 
 {
 private:
-
 	std::vector<fs::path> entries;
 	std::stack<fs::path> paths_undo;
 
@@ -19,26 +22,29 @@ public:
 	
 	Explorer() 
 	{
-		start_the_explorer();
+		load_partitions();
 	}
 	
 	~Explorer() {};
 
-	void start_the_explorer() 
+	void load_partitions() 
 	{
 		if (!entries.empty()) entries.clear();
-		for (int i = 0; i < 26; ++i) {
-			char drive_letter = static_cast<char>('A' + i);
-			fs::path drive_str = std::format("{}:\\", drive_letter);
-
-			if (fs::exists(drive_str)) {
-				entries.emplace_back(drive_str);
+		wchar_t buffer[256];
+		DWORD buffer_len = GetLogicalDriveStringsW(ARRAYSIZE(buffer), buffer);
+		if (buffer_len > 0 && buffer_len < ARRAYSIZE(buffer)) {
+			wchar_t* drive = buffer;
+			while (*drive) {
+				entries.push_back(fs::path(drive));
+				drive += wcslen(drive) + 1; 
 			}
 		}
+		return;
 	}
 
-	void load_entries_from_specific_path(const fs::path& path ) 
+	void load_entries_from_specific_path(const fs::path& path) 
 	{
+
 		if (!entries.empty())
 		{
 			entries.clear();
@@ -56,6 +62,8 @@ public:
 
 			entries.emplace_back(entry.path());
 		}
+		return;
+	}
 
 	void navigate_to(const fs::path& path) 
 	{
@@ -75,6 +83,23 @@ public:
 	std::vector<fs::path> get_entries()
 	{
 		return entries;
+	}
+
+	void create_folder(fs::path& to_create, const fs::path& name) 
+	{
+		
+		fs::path newFolder = to_create / name;
+		if (fs::exists(newFolder)) return;
+		fs::create_directory(newFolder);
+		return;
+	}
+
+	void rename_file(fs::path& to_rename, const fs::path new_name) 
+	{
+		fs::path delted_path = to_rename;
+		delted_path.remove_filename();
+		fs::path newPath = delted_path / new_name;
+		fs::rename(to_rename, newPath);
 	}
 
 	void back(fs::path& current_path) 
@@ -127,6 +152,7 @@ public:
 			throw std::runtime_error("void redo(): there is no path to redo");
 		}
 	}
+
 	void print_entries() 
 	{
 		for (const fs::path& path : entries) 
@@ -134,4 +160,5 @@ public:
 			std::cout << path << std::endl;
 		}
 	}
+
 };

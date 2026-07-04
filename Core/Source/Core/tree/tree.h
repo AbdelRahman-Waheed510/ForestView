@@ -1,3 +1,4 @@
+#pragma once
 
 #include <filesystem>
 #include <vector>
@@ -6,43 +7,9 @@
 
 namespace fs = std::filesystem;
 
-class Utils
-{
-private:
-
-public:
-
-	Utils() = default;
-
-	std::string reverseArabic(const std::string& text) {
-		std::string reversed = "";
-		for (int i = text.length() - 1; i >= 0; i--) {
-			if (text[i] < 0 && i > 0) {
-				reversed += text[i - 1];
-				reversed += text[i];
-				i--;
-			}
-			else {
-				reversed += text[i];
-			}
-		}
-		return reversed;
-	}
-
-	bool hasArabic(const std::string& text) {
-		for (unsigned char c : text) {
-			if (c == 0xD8 || c == 0xD9) return true;
-		}
-		return false;
-	}
-
-};
-
 class tree 
 {
 private:
-
-	Utils utils;
 
 	struct Node
 	{
