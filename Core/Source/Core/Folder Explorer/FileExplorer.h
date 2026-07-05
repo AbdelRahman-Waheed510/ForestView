@@ -153,6 +153,46 @@ public:
 		}
 	}
 
+	void copy_paste(const fs::path& from, const fs::path& to) 
+	{
+		if (!fs::exists(from)) 
+		{
+			std::cerr << "Error: source path doesnot exist: " << from << std::endl;
+			return;
+		}
+		std::error_code ec;
+
+		fs::copy_options options = fs::copy_options::recursive | fs::copy_options::overwrite_existing;
+
+		fs::copy(from, to, options, ec);
+
+		if (ec) 
+		{
+			std::cerr << "Copy failed: " << ec.message() << '\n';
+		}
+		return;
+	}
+
+	void remove(fs::path& path_to_delete) 
+	{
+		if (!fs::exists(path_to_delete)) 
+		{
+			std::cerr << "Error: source path doesnot exist.....! " << std::endl;
+			return;
+		}
+		std::error_code ec;
+
+		int deleted_files = fs::remove_all(path_to_delete, ec);
+		if (ec) 
+		{
+			std::cerr << "Failed to wipe directory: " << ec.message() << '\n';
+		}
+		else 
+		{
+			std::cout << "Successfully deleted " << deleted_files << " items/folders.\n";
+		}
+	}
+
 	void print_entries() 
 	{
 		for (const fs::path& path : entries) 

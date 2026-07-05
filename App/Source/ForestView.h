@@ -75,6 +75,9 @@ private:
 
 	fs::path selected_path;
 	fs::path current_path;
+	fs::path copied_path;
+
+
 public:
 
 	ForestView() 
@@ -82,6 +85,10 @@ public:
 		fileExplorer = new Explorer();
 	}
 
+	void print_tree() 
+	{
+
+	}
 
 	void on_update() 
 	{
@@ -121,8 +128,43 @@ public:
 
 				if (ImGui::Button("New"))
 				{
-					show_create_folder = true;
+					// show_create_folder = true;
+					ImGui::OpenPopup("Newfilepopup");
 				}
+
+				
+
+				ImGui::SameLine();
+
+				ImGui::BeginDisabled(selected_path.empty() || selected_path == selected_path.root_path());
+				if (ImGui::Button("Delete"))
+				{
+					fileExplorer->remove(selected_path);
+					entries_need_update = true;
+				}
+				ImGui::EndDisabled();
+
+				ImGui::SameLine();
+
+				ImGui::BeginDisabled(selected_path.empty() || selected_path == selected_path.root_path());
+				if (ImGui::Button("Copy")) 
+				{
+					copied_path = selected_path;
+				}
+				ImGui::EndDisabled();
+
+				ImGui::SameLine();
+				
+				ImGui::BeginDisabled(copied_path.empty());
+				if (ImGui::Button("Paste"))
+				{
+					fileExplorer->copy_paste(copied_path, current_path);
+					entries_need_update = true;
+					copied_path.clear();
+				}
+				ImGui::EndDisabled();
+
+
 
 				if (show_create_folder)
 				{
@@ -171,7 +213,8 @@ public:
 
 					if (ImGui::Selectable(utf8_path.c_str(), is_selected))
 					{
-						selected_path = entries[i];
+						if (selected_path == entries[i]) selected_path.clear();
+						else selected_path = entries[i];
 						show_selected_folder_options = !show_selected_folder_options;
 					}
 
