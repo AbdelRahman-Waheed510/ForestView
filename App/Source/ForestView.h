@@ -50,6 +50,7 @@ private:
 
 	void clean_up();
 
+	void dark_mode();
 public:
 
 	App() = default;
