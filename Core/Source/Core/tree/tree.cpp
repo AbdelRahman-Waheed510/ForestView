@@ -10,21 +10,23 @@ void tree::AddNode_helper(const fs::path& value, Node*& root)
 {
     if (root == nullptr) 
     {
-        root = new Node(value.filename());
+        if (value == value.root_path()) root = new Node(value);
+        else root = new Node(value);
     }
 
     else if (root->children.empty())
     {
-        Node* newnode = new Node(value.filename());
+        Node* newnode = new Node(value);
         root->children.emplace_back(newnode);
     }
     else 
     {
         Node* parentNode = TraverseToNode(value.parent_path(), root);
-        if (parentNode != nullptr) parentNode->children.emplace_back(new Node(value.filename()));
+        if (parentNode != nullptr) parentNode->children.emplace_back(new Node(value));
     }
     return;
 }
+
 
 void tree::AddNode(const fs::path& value)
 {
@@ -64,45 +66,54 @@ void tree::DeleteNode(fs::path value)
 
 void tree::BuildTree(const fs::path& value)
 {
-    if (!isEmpty()) delete root;
-    
-    AddNode(value);
-    
-    if (value.has_parent_path()) 
+    if (!isEmpty())
     {
-        fs::path parent = value.parent_path();
-        for (const auto& entry : fs::recursive_directory_iterator(value))
-        {
-            if (!fs::is_regular_file(entry))
-            {
-                AddNode(fs::relative(entry, parent));
-            }
-        }
+        delete root;
+        root = nullptr;
     }
-    else 
+    
+    if (!fs::exists(value)) return;
+
+    fs::path base_path = value.has_parent_path() ? value.parent_path() : value;
+
+    if (value == base_path) 
     {
-        for (const auto& entry : fs::recursive_directory_iterator(value))
+        AddNode(value);
+    }
+    else AddNode(fs::relative(value, base_path));
+
+    for (const auto& entry : fs::recursive_directory_iterator(value))
+    {
+        if (fs::is_directory(entry))
         {
-            if (!fs::is_regular_file(entry))
+            if (value == base_path) 
             {
-                AddNode(entry);
+                AddNode(entry.path());
             }
+            else AddNode(fs::relative(entry.path(), base_path));
         }
     }
 
 }
 
-
-
-tree::Node* tree::TraverseToNode_helper(const fs::path& value, Node* root)
+tree::Node* tree::TraverseToNode_helper(const fs::path& absolute_target, Node* current)
 {
-    if (root == nullptr) return nullptr;
+    if (current == nullptr) return nullptr;
+    if (current->path == absolute_target) return current;
 
-    if (root->path == value) return root;
+    std::wstring target_str = absolute_target.wstring();
 
-    for (const auto& child : root->children) 
+    for (const auto& child : current->children)
     {
-        if (child->path == value) return child;
+        std::wstring child_str = child->path.wstring();
+
+        if (target_str.rfind(child_str, 0) == 0)
+        {
+            if (target_str.size() > child_str.size() && target_str[child_str.size()] == fs::path::preferred_separator)
+            {
+                return TraverseToNode_helper(absolute_target, child);
+            }
+        }
     }
 
     return nullptr;
@@ -110,22 +121,18 @@ tree::Node* tree::TraverseToNode_helper(const fs::path& value, Node* root)
 
 tree::Node* tree::TraverseToNode(const fs::path& value, Node* root)
 {
-    Node* node = root;
-    for (const fs::path& part : value) 
-    {
-        node = TraverseToNode_helper(part, node);
-        if (node == nullptr) return nullptr;
-    }
-    return node;
+    return TraverseToNode_helper(value, root);
 }
 
 void tree::print_helper(Node* root, std::wstring prefix, bool is_last)
 {
-    if (isEmpty()) 
+    /*if (isEmpty()) 
     {
         std::cout << "The directory does not exist...." << std::endl;
         return;
-    }
+    }*/
+    if (root == nullptr) return;
+
     if (is_last) 
     {
 
@@ -150,8 +157,12 @@ void tree::print_helper(Node* root, std::wstring prefix, bool is_last)
 
 void tree::print() 
 {
-    print_helper
-    (root,L"", true);
+    if (isEmpty() || root == nullptr)
+    {
+        std::wcout << L"The directory does not exist...." << std::endl;
+        return;
+    }
+    print_helper (root,L"", true);
 
     return;
 }

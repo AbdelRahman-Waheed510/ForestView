@@ -130,12 +130,36 @@ public:
 		return;
 	}
 
-	void rename_file(fs::path& to_rename, const fs::path new_name) 
+	bool rename_file(fs::path& to_rename, fs::path new_name)	 
 	{
+		if (new_name.empty()) return true;
+
+		if (fs::is_regular_file(to_rename)) 
+		{
+			if (new_name.has_extension())
+			{
+				if (new_name.extension() != to_rename.extension())
+				{
+					return false;
+				}
+			}
+			else 
+			{
+				new_name.replace_extension(to_rename.extension());
+			}
+		}
 		fs::path delted_path = to_rename;
 		delted_path.remove_filename();
+		
+		for (const auto& entry : fs::directory_iterator(delted_path)) 
+		{
+			if (entry.path().filename() == new_name) return false;;
+		}
+
 		fs::path newPath = delted_path / new_name;
+
 		fs::rename(to_rename, newPath);
+		return true;
 	}
 
 	void back(fs::path& current_path) 
@@ -171,7 +195,7 @@ public:
 	{
 		if (paths_undo.empty()) 
 		{
-			throw std::runtime_error("void redo(): there is no path to redo");
+			// throw std::runtime_error("void redo(): there is no path to redo");
 			return;
 		}
 		fs::path path = paths_undo.top(); paths_undo.pop();
