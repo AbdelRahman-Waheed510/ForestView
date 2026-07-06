@@ -15,6 +15,7 @@ namespace fs = std::filesystem;
 class Explorer 
 {
 private:
+	tree* t;
 	std::vector<fs::path> entries;
 	std::stack<fs::path> paths_undo;
 
@@ -44,7 +45,6 @@ public:
 
 	void load_entries_from_specific_path(const fs::path& path) 
 	{
-
 		if (!entries.empty())
 		{
 			entries.clear();
@@ -76,6 +76,42 @@ public:
 			{
 				paths_undo.pop();
 			}
+		}
+		return;
+	}
+
+	void to_lower(std::string& word)
+	{
+		for (auto& c : word) 
+		{
+			c = std::tolower(c);
+		}
+		return;
+	}
+
+	void search(const fs::path& path, std::string& keyword) 
+	{
+		if (!entries.empty())
+		{
+			entries.clear();
+		}
+
+		for (const auto& entry : fs::directory_iterator(path))
+		{
+			DWORD attr = GetFileAttributesW(entry.path().c_str());
+
+			if (attr == INVALID_FILE_ATTRIBUTES)
+				continue; // couldn't stat it, skip
+
+			if (attr & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))
+				continue; // skip hidden/system
+
+			std::string entrypath = entry.path().filename().string();
+
+			to_lower(entrypath);
+			to_lower(keyword);
+
+			if (entrypath.find(keyword) != std::string::npos)entries.emplace_back(entry.path());
 		}
 		return;
 	}
