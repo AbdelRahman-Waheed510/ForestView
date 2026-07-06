@@ -51,6 +51,7 @@ private:
 	void clean_up();
 
 	void dark_mode();
+
 public:
 
 	App() = default;
@@ -78,6 +79,7 @@ private:
 	fs::path current_path;
 	fs::path copied_path;
 
+	std::string message;
 
 public:
 
@@ -91,6 +93,18 @@ public:
 
 	}
 
+	void render_msg()
+	{
+		if (!message.empty())
+		{
+			if (message == "Task added successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), message.c_str());
+			else if (message == "Task edtied successfuly")  ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), message.c_str());
+			else if (message == "Added dependencies successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), message.c_str());
+			else if (message == "Removed dependencies successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), message.c_str());
+			else ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), message.c_str());
+		}
+	}
+
 	void on_update() 
 	{
 
@@ -101,23 +115,36 @@ public:
 
 			if (ImGui::BeginChild("SearchBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 			{
-			
+				static std::string keyWord;
+				if (ImGui::InputText("Search Bar", &keyWord)) 
+				{
+					fileExplorer->search(current_path, keyWord);
+				}
 
 			}
 			ImGui::EndChild();
 
 			if (ImGui::BeginChild("ToolBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 			{
-				if (ImGui::Button("<-") || ImGui::IsKeyPressed(ImGuiKey_Backspace))
+				if (ImGui::Button("<-") || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 				{
-					fileExplorer->back(current_path);
+					if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
+
+						if (!ImGui::GetIO().WantCaptureKeyboard) {
+							fileExplorer->back(current_path);
+						}
+					}
+					else 
+					{
+						fileExplorer->back(current_path);
+					}
 				}
 
 				ImGui::SameLine();
 
 				ImGui::BeginDisabled(!fileExplorer->can_go_forward());
 
-				if (ImGui::Button("->") || ImGui::IsKeyPressed(ImGuiKey_Backspace))
+				if (ImGui::Button("->") || ImGui::IsKeyPressed(ImGuiKey_MouseX2 , false))
 				{
 					fileExplorer->redo(current_path);
 				}
@@ -189,17 +216,21 @@ public:
 				remainingHeight = 0.0f;
 			}
 
-			if (ImGui::BeginChild("FolderTree", ImVec2(200, remainingHeight), ImGuiChildFlags_Borders))
+			if (ImGui::BeginChild("FolderTree##identifer", ImVec2(200, remainingHeight), ImGuiChildFlags_Borders))
 			{
-			
+				ImGui::Text("Folder Tree");
+				ImGui::Separator();
+
 
 			}
 			ImGui::EndChild();
 
 			ImGui::SameLine();
 			
-			if (ImGui::BeginChild("Files", ImVec2(0, remainingHeight), ImGuiChildFlags_Borders))
+			if (ImGui::BeginChild("Files##identifier", ImVec2(0, remainingHeight), ImGuiChildFlags_Borders))
 			{
+				ImGui::Text("Files");
+				ImGui::Separator();
 
 				std::vector<fs::path> entries = fileExplorer->get_entries();
 
@@ -212,18 +243,36 @@ public:
 					auto u8_str = entries[i].u8string();
 					std::string utf8_path(u8_str.begin(), u8_str.end());
 
-					if (ImGui::Selectable(utf8_path.c_str(), is_selected))
-					{
-						if (selected_path == entries[i]) selected_path.clear();
-						else selected_path = entries[i];
-						show_selected_folder_options = !show_selected_folder_options;
-					}
+					ImGui::Selectable(utf8_path.c_str(), is_selected);
 
-					if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) {
-						if (fs::is_directory(entries[i]))
+					if (ImGui::IsItemHovered()) 
+					{
+						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) 
 						{
-							fileExplorer->navigate_to(entries[i]);
-							current_path = entries[i];
+							if (fs::is_directory(entries[i]))
+							{
+								fileExplorer->navigate_to(entries[i]);
+								current_path = entries[i];
+							}
+						}
+						else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+						{
+							if (entries[i] != entries[i].root_path())
+							{
+								if (selected_path == entries[i])
+								{
+									show_selected_folder_options = !show_selected_folder_options;
+									show_rename_file = false;
+								}
+								else
+								{
+									show_selected_folder_options = true;
+									show_rename_file = false;
+								}
+							}
+							message = "";
+							if (selected_path == entries[i]) selected_path.clear();
+							else selected_path = entries[i];
 						}
 					}
 
@@ -239,9 +288,18 @@ public:
 							ImGui::InputText("New Name", &newName);
 							if (ImGui::Button("Submit"))
 							{
-								fileExplorer->rename_file(selected_path, newName);
+								if (!fileExplorer->rename_file(selected_path, newName)) 
+								{
+									message = "This name already exists";
+								}
 								entries_need_update = true;
+								newName.clear();
 							}
+
+							if (!message.empty()) ImGui::SameLine();
+
+							render_msg();
+
 						}
 					}
 
