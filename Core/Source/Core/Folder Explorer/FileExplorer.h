@@ -9,6 +9,7 @@
 #include <stack>
 #include <stdexcept>
 #include "tree.h"
+#include <functional>
 
 namespace fs = std::filesystem;
 
@@ -41,6 +42,31 @@ public:
 			}
 		}
 		return;
+	}
+
+	int get_size() 
+	{
+		return entries.size();
+	}
+
+	float get_total_files_size(const fs::path& path, const std::function<float(uint64_t)>& func)
+	{
+		float count = 0.0;
+		if (fs::is_directory(path)) 
+		{
+			for (const auto& entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied))
+			{
+				if (fs::is_regular_file(entry.status()))
+				{
+					count += func(entry.file_size());
+				}
+			}
+		}
+		else if (fs::is_regular_file(path)) 
+		{
+			count += func(fs::file_size(path));
+		}
+		return count;
 	}
 
 	void load_entries_from_specific_path(const fs::path& path) 
@@ -253,6 +279,22 @@ public:
 		}
 	}
 
+	std::string form_breadcrumb_navigation_string(const fs::path& path_to_format) 
+	{
+		std::string result = "";
+	
+		for (const auto& part : path_to_format) 
+		{
+			if (result.empty()) 
+			{
+				result += part.string();
+				continue;
+			}
+			result += part.string();
+			result += " > ";
+		}
+		return result;
+	}
 	void print_entries() 
 	{
 		for (const fs::path& path : entries) 

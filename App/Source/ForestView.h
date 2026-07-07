@@ -75,11 +75,17 @@ private:
 
 	bool entries_need_update = false;
 
+	bool need_file_size_call = false;
+
+	
+
 	fs::path selected_path;
 	fs::path current_path;
 	fs::path copied_path;
 
 	std::string message;
+
+	float file_size;
 
 public:
 
@@ -112,13 +118,29 @@ public:
 
 		if (ImGui::Begin("test")) 
 		{
-
 			if (ImGui::BeginChild("SearchBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 			{
-				static std::string keyWord;
-				if (ImGui::InputText("Search Bar", &keyWord)) 
+				static std::string globalKeyWord = "test";
+				static std::string ThisDirectoryKeyWord;
+
+
+				if (ImGui::InputTextWithHint("##Global Search Bar", fileExplorer->form_breadcrumb_navigation_string(current_path).c_str(), &globalKeyWord) || !globalKeyWord.empty())
 				{
-					fileExplorer->search(current_path, keyWord);
+					ThisDirectoryKeyWord = "";
+				}
+				if (ImGui::IsItemActive() && globalKeyWord.empty())
+				{
+					globalKeyWord = current_path.string();
+					ThisDirectoryKeyWord = "";
+				}
+
+				ImGui::SameLine();
+				ImGui::SetNextItemWidth(150.0f);
+
+				if (ImGui::InputText("Search Bar", &ThisDirectoryKeyWord) || !ThisDirectoryKeyWord.empty())
+				{
+					fileExplorer->search(current_path, ThisDirectoryKeyWord);
+					globalKeyWord = "";
 				}
 
 			}
@@ -263,11 +285,13 @@ public:
 								{
 									show_selected_folder_options = !show_selected_folder_options;
 									show_rename_file = false;
+									file_size = 0.0;
 								}
 								else
 								{
 									show_selected_folder_options = true;
 									show_rename_file = false;
+									need_file_size_call = true;
 								}
 							}
 							message = "";
@@ -301,6 +325,12 @@ public:
 							render_msg();
 
 						}
+						ImGui::SameLine();
+						if (ImGui::Button("Copy Path")) 
+						{
+							show_rename_file = false;
+							ImGui::SetClipboardText(selected_path.string().c_str());
+						}
 					}
 
 					ImGui::PopID();
@@ -332,13 +362,28 @@ public:
 
 			if (ImGui::BeginChild("StatsBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 			{
-				if (fs::is_regular_file(selected_path)) 
-				{
-					fs::directory_entry entry(selected_path);
-					ImGui::Text("File size: "); ImGui::SameLine();
-					ImGui::Text(std::to_string((float)entry.file_size() / (1024*1024)).c_str());
-				}
+				
 
+				ImGui::Text(std::to_string(fileExplorer->get_size()).c_str());
+				ImGui::SameLine();
+				ImGui::Text(" Items | ");
+				
+				ImGui::SameLine();
+
+				if (selected_path != selected_path.root_path() && !selected_path.empty())
+				{
+					ImGui::Text("File Size: ");
+					ImGui::SameLine();
+
+					if (need_file_size_call)
+					{
+						file_size = fileExplorer->get_total_files_size(selected_path, [](uint64_t n) {return n / (1024 * 1024);});
+						need_file_size_call = false;
+					}
+
+					ImGui::Text(std::to_string(file_size).c_str());
+				}
+				
 			}
 			ImGui::EndChild();
 
