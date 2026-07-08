@@ -300,6 +300,20 @@ public:
 			result += part.string();
 			result += " > ";
 		}
+		if ((int)result.size() > 50) 
+		{
+			int max = (int)result.size() - 50;
+			int index_pos = 0;
+			for (size_t i = max - 1; i < (int)result.size(); ++i) 
+			{
+				if (result[i] == '>')
+				{
+					index_pos = i + 2;
+					break;
+				} 
+			}
+			result = "... > " + result.substr(index_pos, (int)result.size());
+		}
 		return result;
 	}
 	void print_entries() 
