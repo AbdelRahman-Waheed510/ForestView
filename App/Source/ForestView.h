@@ -26,6 +26,11 @@
 
 #include <filesystem>
 
+#include <thread>
+#include <future>
+
+#include <chrono>
+
 namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
@@ -234,7 +239,6 @@ public:
 				if (ImGui::Button("New"))
 				{
 					// show_create_folder = true;
-					ImGui::OpenPopup("Newfilepopup");
 				}
 
 				
@@ -244,8 +248,7 @@ public:
 				ImGui::BeginDisabled(selected_path.empty() || selected_path == selected_path.root_path());
 				if (ImGui::Button("Delete"))
 				{
-					fileExplorer->remove(selected_path);
-					entries_need_update = true;
+					ImGui::OpenPopup("Delete Warning?");
 				}
 				ImGui::EndDisabled();
 
@@ -283,9 +286,30 @@ public:
 					}
 				}
 
+				if (ImGui::BeginPopupModal("Delete Warning?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+				{
+					ImGui::Text("Are you sure you want to delete this folder?\nThe deleted file will be deleted permanently and will not go to the recycle bin \nThis action cannot be undone.");
+					ImGui::Separator();
+
+					if (ImGui::Button("YES"))
+					{
+						fileExplorer->remove(selected_path);
+						entries_need_update = true;
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::SetItemDefaultFocus();
+					ImGui::SameLine();
+					if (ImGui::Button("NO"))
+					{
+						ImGui::CloseCurrentPopup();
+					}
+
+					ImGui::EndPopup();
+				}
 			}
 			ImGui::EndChild();
 
+			
 			float footerHeight = 40.0f + ImGui::GetStyle().FramePadding.y * 2.0f;
 			float remainingHeight = ImGui::GetContentRegionAvail().y - footerHeight;
 			if (remainingHeight < 0.0f) 
@@ -317,7 +341,7 @@ public:
 					static bool is_selected = false;
 
 
-					auto u8_str = entries[i].u8string();
+					auto u8_str = (entries[i] == entries[i].root_path()) ? entries[i].u8string() : entries[i].filename().u8string();
 					std::string utf8_path(u8_str.begin(), u8_str.end());
 
 					ImGui::Selectable(utf8_path.c_str(), is_selected);
