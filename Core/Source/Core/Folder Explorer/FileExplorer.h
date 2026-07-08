@@ -13,6 +13,43 @@
 
 namespace fs = std::filesystem;
 
+class Timer
+{
+private:
+	std::chrono::time_point<std::chrono::high_resolution_clock> start_;
+
+public:
+
+	Timer()
+	{
+		start_ = std::chrono::high_resolution_clock::now();
+	}
+
+	~Timer()
+	{
+		stop();
+	}
+
+	void stop()
+	{
+		std::chrono::time_point<std::chrono::high_resolution_clock> end_ = std::chrono::high_resolution_clock::now();
+		auto start = std::chrono::time_point_cast<std::chrono::microseconds>(start_).time_since_epoch().count();
+		auto end = std::chrono::time_point_cast<std::chrono::microseconds>(end_).time_since_epoch().count();
+		auto duration = end - start;
+		
+		std::ofstream speedLog("Log.txt", std::ios::app);
+		if (speedLog.is_open())
+		{
+			speedLog << std::to_string(duration) << " MicroSeconds\n";
+			speedLog << std::to_string(duration * 0.001) << " MillieSeconds\n";
+			speedLog << std::to_string(duration * 0.000001) << " Seconds\n";
+			speedLog << "=============================================================\n";
+		}
+		speedLog.close();
+	}
+};
+
+
 class Explorer 
 {
 private:
