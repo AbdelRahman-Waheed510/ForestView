@@ -75,7 +75,8 @@ public:
 		{
 			entries.clear();
 		}
-		
+		if (fs::is_regular_file(path)) return;
+
 		for (const auto& entry : fs::directory_iterator(path))
 		{
 			DWORD attr = GetFileAttributesW(entry.path().c_str());
@@ -89,6 +90,13 @@ public:
 			entries.emplace_back(entry.path());
 		}
 		return;
+	}
+
+	void refresh(const fs::path& current_path)
+	{
+		if (current_path.empty())
+			load_partitions();
+		else navigate_to(current_path);
 	}
 
 	void navigate_to(const fs::path& path) 
@@ -117,11 +125,14 @@ public:
 
 	void search(const fs::path& path, std::string& keyword) 
 	{
+		if (path.empty())
+		{
+			return;
+		}
 		if (!entries.empty())
 		{
 			entries.clear();
 		}
-
 		for (const auto& entry : fs::directory_iterator(path))
 		{
 			DWORD attr = GetFileAttributesW(entry.path().c_str());
@@ -272,10 +283,6 @@ public:
 		if (ec) 
 		{
 			std::cerr << "Failed to wipe directory: " << ec.message() << '\n';
-		}
-		else 
-		{
-			std::cout << "Successfully deleted " << deleted_files << " items/folders.\n";
 		}
 	}
 

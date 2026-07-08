@@ -77,7 +77,9 @@ private:
 
 	bool need_file_size_call = false;
 
-	
+	bool show_deletion_warning = false;
+
+	bool global_key_need_update = false;
 
 	fs::path selected_path;
 	fs::path current_path;
@@ -86,6 +88,8 @@ private:
 	std::string message;
 
 	float file_size;
+	std::string globalKeyWord;
+	std::string ThisDirectoryKeyWord;
 
 public:
 
@@ -118,31 +122,68 @@ public:
 
 		if (ImGui::Begin("test")) 
 		{
+			static int test_id = 0;
+			test_id++;
+			ImGui::Text(std::to_string(test_id).c_str());
+
+
 			if (ImGui::BeginChild("SearchBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 			{
-				static std::string globalKeyWord = "test";
-				static std::string ThisDirectoryKeyWord;
+				static int ids = 0;
+				if (global_key_need_update) 
+				{
+					globalKeyWord = current_path.string();
+					global_key_need_update = false;
+					ids++;
+					ImGui::SetKeyboardFocusHere();
+				}
 
-
+				ImGui::SetNextItemWidth(550.0f);
+				ImGui::PushID(ids);
 				if (ImGui::InputTextWithHint("##Global Search Bar", fileExplorer->form_breadcrumb_navigation_string(current_path).c_str(), &globalKeyWord) || !globalKeyWord.empty())
 				{
 					ThisDirectoryKeyWord = "";
+					fileExplorer->refresh(current_path);
+					if (ImGui::IsKeyReleased(ImGuiKey_Enter))
+					{
+						fs::path path_(globalKeyWord);
+						if (fs::is_directory(path_) && fs::exists(path_))
+						{
+							fileExplorer->navigate_to(path_);
+							current_path = path_;
+							globalKeyWord = "";
+
+						}
+						else 
+						{
+							globalKeyWord = "";
+						}
+					}
 				}
-				if (ImGui::IsItemActive() && globalKeyWord.empty())
+				ImGui::PopID();
+				if (ImGui::IsItemActivated() && globalKeyWord.empty())
 				{
-					globalKeyWord = current_path.string();
-					ThisDirectoryKeyWord = "";
+					if (!current_path.empty())
+					{
+						global_key_need_update = true;
+					}
+	
+				}
+				if (ImGui::IsItemDeactivated() && globalKeyWord == current_path.string())
+				{
+					globalKeyWord = "";
 				}
 
 				ImGui::SameLine();
-				ImGui::SetNextItemWidth(150.0f);
+				ImGui::SetNextItemWidth(-1.0f);
 
-				if (ImGui::InputText("Search Bar", &ThisDirectoryKeyWord) || !ThisDirectoryKeyWord.empty())
+				ImGui::BeginDisabled(current_path.empty());
+				if (ImGui::InputText("##Search Bar", &ThisDirectoryKeyWord) || !ThisDirectoryKeyWord.empty())
 				{
 					fileExplorer->search(current_path, ThisDirectoryKeyWord);
 					globalKeyWord = "";
 				}
-
+				ImGui::EndDisabled();
 			}
 			ImGui::EndChild();
 
@@ -150,6 +191,8 @@ public:
 			{
 				if (ImGui::Button("<-") || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 				{
+					ThisDirectoryKeyWord = "";
+					globalKeyWord = "";
 					if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
 
 						if (!ImGui::GetIO().WantCaptureKeyboard) {
@@ -160,6 +203,7 @@ public:
 					{
 						fileExplorer->back(current_path);
 					}
+
 				}
 
 				ImGui::SameLine();
@@ -168,11 +212,22 @@ public:
 
 				if (ImGui::Button("->") || ImGui::IsKeyPressed(ImGuiKey_MouseX2 , false))
 				{
+					ThisDirectoryKeyWord = "";
+					globalKeyWord = "";
 					fileExplorer->redo(current_path);
 				}
 
 				ImGui::EndDisabled();
 
+				ImGui::SameLine();
+
+				if (ImGui::Button("Refresh")) 
+				{
+					selected_path = "";
+					fileExplorer->refresh(current_path);
+					globalKeyWord = "";
+					ThisDirectoryKeyWord = "";
+				}
 
 				ImGui::SameLine();
 
@@ -273,6 +328,8 @@ public:
 						{
 							if (fs::is_directory(entries[i]))
 							{
+								ThisDirectoryKeyWord = "";
+								globalKeyWord = "";
 								fileExplorer->navigate_to(entries[i]);
 								current_path = entries[i];
 							}
