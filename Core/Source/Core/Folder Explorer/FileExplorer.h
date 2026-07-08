@@ -49,24 +49,43 @@ public:
 		return entries.size();
 	}
 
-	float get_total_files_size(const fs::path& path, const std::function<float(uint64_t)>& func)
+	std::pair<double, std::string> get_total_files_size(const fs::path& path)
 	{
-		float count = 0.0;
-		if (fs::is_directory(path)) 
+		double count = 0.0;
+		std::error_code ec;
+		if (fs::is_directory(path, ec))
 		{
-			for (const auto& entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied))
+			for (const auto& entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec))
 			{
 				if (fs::is_regular_file(entry.status()))
 				{
-					count += func(entry.file_size());
+					count += entry.file_size();
 				}
 			}
+			if (ec) 
+			{
+				std::cerr << "Error while calulating the size" << std::endl;
+				return {0.0,""};
+			}
 		}
-		else if (fs::is_regular_file(path)) 
+		else if (fs::is_regular_file(path, ec))	
 		{
-			count += func(fs::file_size(path));
+			count += fs::file_size(path);
+			if (ec)
+			{
+				std::cerr << "Error while calulating the size" << std::endl;
+				return { 0.0,"" };
+			}
 		}
-		return count;
+		if (count > (1024.0 * 1024.0 * 1024.0))
+			return { count / (1024.0 * 1024.0 * 1024.0), " GB" };
+		else if (count > (1024.0 * 1024.0))
+			return { count / (1024.0 * 1024.0), " MB" };
+		else if (count > 1024.0)
+			return { count / (1024.0), " KB" };
+
+		
+		return {(double)count, " Bytes"};
 	}
 
 	void load_entries_from_specific_path(const fs::path& path) 
@@ -316,6 +335,7 @@ public:
 		}
 		return result;
 	}
+
 	void print_entries() 
 	{
 		for (const fs::path& path : entries) 

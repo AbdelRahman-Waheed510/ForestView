@@ -92,9 +92,10 @@ private:
 
 	std::string message;
 
-	float file_size;
 	std::string globalKeyWord;
 	std::string ThisDirectoryKeyWord;
+
+	std::pair<double, std::string> file_size;
 
 public:
 
@@ -310,6 +311,7 @@ public:
 			ImGui::EndChild();
 
 			
+	
 			float footerHeight = 40.0f + ImGui::GetStyle().FramePadding.y * 2.0f;
 			float remainingHeight = ImGui::GetContentRegionAvail().y - footerHeight;
 			if (remainingHeight < 0.0f) 
@@ -366,7 +368,9 @@ public:
 								{
 									show_selected_folder_options = !show_selected_folder_options;
 									show_rename_file = false;
-									file_size = 0.0;
+
+									file_size.first = 0.0;
+									file_size.second = "";
 								}
 								else
 								{
@@ -458,15 +462,17 @@ public:
 
 					if (need_file_size_call)
 					{
-						file_size = fileExplorer->get_total_files_size(selected_path, [](uint64_t n) {return n / (1024 * 1024);});
+						Timer timer;
+						file_size = fileExplorer->get_total_files_size(selected_path);
 						need_file_size_call = false;
 					}
 
-					ImGui::Text(std::to_string(file_size).c_str());
+					ImGui::Text((std::format("{:.2f}{}",file_size.first, file_size.second )).c_str());
 				}
 				
 			}
 			ImGui::EndChild();
+
 
 		}
 		ImGui::End();
