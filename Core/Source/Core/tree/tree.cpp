@@ -1,5 +1,5 @@
 ﻿#include "tree.h"
-    
+#include <windows.h>
 
 bool tree::isEmpty()
 {
@@ -10,11 +10,10 @@ void tree::AddNode_helper(const fs::path& value, Node*& root)
 {
     if (root == nullptr) 
     {
-        if (value == value.root_path()) root = new Node(value);
-        else root = new Node(value);
+        root = new Node(value);
     }
 
-    else if (root->children.empty())
+    else if (value.parent_path() == root->path)
     {
         Node* newnode = new Node(value);
         root->children.emplace_back(newnode);
@@ -27,40 +26,52 @@ void tree::AddNode_helper(const fs::path& value, Node*& root)
     return;
 }
 
-
 void tree::AddNode(const fs::path& value)
 {
     AddNode_helper(value, root);
     return;
 }
 
+void tree::AddChildrenOf(const fs::path& value)
+{
+    for (const auto& entry : fs::directory_iterator(value, fs::directory_options::skip_permission_denied)) 
+    {
+
+        DWORD attr = GetFileAttributesW(entry.path().c_str());
+
+        if (attr == INVALID_FILE_ATTRIBUTES)
+            continue; // couldn't stat it, skip
+
+        if (attr & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))
+            continue; // skip hidden/system
+
+        if (fs::is_directory(entry)) 
+        {
+            AddNode(entry);
+        }
+    }
+}
+
 void tree::DeleteNode_helper(fs::path& value, Node* root)
 {
     Node* parent = TraverseToNode(value.parent_path(), root);
-    for (auto it = parent->children.begin(); it != parent->children.end(); ++it)
+    if (parent == nullptr) return;
+
+    for (auto it = parent->children.begin(); it != parent->children.end(); it++)     
     {
-        if ((*it)->path == value.filename())
+        if ((*it)->path == value)
         {
-            delete* it;
+            delete *it;
             parent->children.erase(it);
             break;
         }
     }
-    parent = nullptr;
     return;
 }
 
 void tree::DeleteNode(fs::path value)
 {
-    if (value.has_parent_path()) 
-    {
-        fs::path to_delete = fs::relative(value, value.parent_path());
-        DeleteNode_helper(to_delete, root);
-    }
-    else 
-    {
-        DeleteNode_helper(value, root);
-    }
+    DeleteNode_helper(value, root);
     return;
 }
 
@@ -74,74 +85,69 @@ void tree::BuildTree(const fs::path& value)
     
     if (!fs::exists(value)) return;
 
-    fs::path base_path = value.has_parent_path() ? value.parent_path() : value;
+    AddNode(value);
 
-    if (value == base_path) 
-    {
-        AddNode(value);
-    }
-    else AddNode(fs::relative(value, base_path));
+    auto option = fs::directory_options::skip_permission_denied;
 
-    for (const auto& entry : fs::recursive_directory_iterator(value))
+    for (const auto& entry : fs::recursive_directory_iterator(value, option))
     {
         if (fs::is_directory(entry))
         {
-            if (value == base_path) 
-            {
-                AddNode(entry.path());
-            }
-            else AddNode(fs::relative(entry.path(), base_path));
+            AddNode(entry.path());
         }
     }
 
 }
 
-tree::Node* tree::TraverseToNode_helper(const fs::path& absolute_target, Node* current)
+Node* tree::get_root()
+{
+    return root;
+}
+
+Node* tree::TraverseToNode_helper(const fs::path& absolute_target, Node* current)
 {
     if (current == nullptr) return nullptr;
     if (current->path == absolute_target) return current;
 
-    std::wstring target_str = absolute_target.wstring();
-
     for (const auto& child : current->children)
     {
-        std::wstring child_str = child->path.wstring();
+        Node* foundParent = TraverseToNode_helper(absolute_target, child);
 
-        if (target_str.rfind(child_str, 0) == 0)
-        {
-            if (target_str.size() > child_str.size() && target_str[child_str.size()] == fs::path::preferred_separator)
-            {
-                return TraverseToNode_helper(absolute_target, child);
-            }
-        }
+        if (foundParent != nullptr) return foundParent;
     }
-
     return nullptr;
 }
 
-tree::Node* tree::TraverseToNode(const fs::path& value, Node* root)
+Node* tree::TraverseToNode(const fs::path& value, Node* root)
 {
     return TraverseToNode_helper(value, root);
 }
 
+void tree::iniThisPc(const std::string& label)
+{
+    if (!isEmpty())
+    {
+        delete root;
+        root = nullptr;
+    }
+    root = new Node(fs::path());
+    root->virtualName = label;
+    root->is_loaded = true;
+}
+
 void tree::print_helper(Node* root, std::wstring prefix, bool is_last)
 {
-    /*if (isEmpty()) 
-    {
-        std::cout << "The directory does not exist...." << std::endl;
-        return;
-    }*/
     if (root == nullptr) return;
 
     if (is_last) 
     {
 
-        std::wcout << prefix << L"└── " << root->path.wstring() << L'\n';
+        std::wcout << prefix << L"└── " << root->path.filename().wstring() << L'\n';
         prefix += L"    ";
     }
     else 
     {
-        std::wcout << prefix << L"├── " << root->path.wstring() << L'\n';
+        std::wcout << prefix << L"├── " << root->path.filename().wstring() << L'\n';
         prefix += L"│   ";
     }
 
@@ -155,7 +161,17 @@ void tree::print_helper(Node* root, std::wstring prefix, bool is_last)
 
 }
 
-void tree::print() 
+void tree::fillThisPcWithDrives(const std::vector<fs::path>& drives)
+{
+    if (root == nullptr) return;
+    root->children.reserve((int)drives.size());
+    for (const fs::path& drive : drives)
+    {
+        root->children.emplace_back(new Node(drive));
+    }
+}
+
+void tree::print()
 {
     if (isEmpty() || root == nullptr)
     {

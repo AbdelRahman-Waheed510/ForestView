@@ -89,7 +89,7 @@ void App::dark_mode()
 	style.ItemSpacing = ImVec2(4.3f, 5.5f);
 	style.ItemInnerSpacing = ImVec2(7.1f, 1.8f);
 	style.CellPadding = ImVec2(12.1f, 9.2f);
-	style.IndentSpacing = 0.0f;
+	style.IndentSpacing = 20.0f;
 	style.ColumnsMinSpacing = 4.9f;
 	style.ScrollbarSize = 11.6f;
 	style.ScrollbarRounding = 5.0f;
