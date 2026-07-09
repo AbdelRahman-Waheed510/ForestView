@@ -424,13 +424,19 @@ public:
 
 				// temporary
 
+				auto u8 = current_path.u8string();
+				std::string current_path_string_to_show(u8.begin(), u8.end());
+
+				auto u8_selected = selected_path.u8string();
+				std::string selected_path_string_to_show(u8_selected.begin(), u8_selected.end());
+
 				ImGui::Separator();
 
 				ImGui::Text("Current Path: "); ImGui::SameLine();
-				ImGui::Text(current_path.string().c_str());
+				ImGui::Text(current_path_string_to_show.c_str());
 
 				ImGui::Text("Seleted Path: "); ImGui::SameLine();
-				ImGui::Text(selected_path.string().c_str());
+				ImGui::Text(selected_path_string_to_show.c_str());
 
 				ImGui::Separator();
 
