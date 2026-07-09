@@ -31,6 +31,8 @@
 
 #include <chrono>
 
+#include "tree.h"
+
 namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
@@ -97,11 +99,15 @@ private:
 
 	std::pair<double, std::string> file_size;
 
+	tree t;
+
 public:
 
 	ForestView() 
 	{
 		fileExplorer = new Explorer();
+		t.iniThisPc("THIS PC");
+		t.fillThisPcWithDrives(fileExplorer->get_partitions());
 	}
 
 	void print_tree() 
@@ -319,12 +325,9 @@ public:
 				remainingHeight = 0.0f;
 			}
 
-			if (ImGui::BeginChild("FolderTree##identifer", ImVec2(200, remainingHeight), ImGuiChildFlags_Borders))
+			if (ImGui::BeginChild("FolderTree##identifer", ImVec2(200, remainingHeight), ImGuiChildFlags_Borders , ImGuiWindowFlags_HorizontalScrollbar))
 			{
-				ImGui::Text("Folder Tree");
-				ImGui::Separator();
-
-
+				draw_tree(t.get_root());
 			}
 			ImGui::EndChild();
 
@@ -483,5 +486,58 @@ public:
 		}
 		ImGui::End();
 		
+	}
+
+	void draw_tree(Node* node_to_show)
+	{
+		if (node_to_show == nullptr) return;
+		
+		std::string node_to_show_path_string_to_show;
+		if (node_to_show->path.empty()) 
+		{
+			node_to_show_path_string_to_show = node_to_show->virtualName;
+		}
+		else 
+		{
+			auto u8 = (node_to_show->path == node_to_show->path.root_path()) ? node_to_show->path.u8string() : node_to_show->path.filename().u8string();
+			node_to_show_path_string_to_show.assign(u8.begin(), u8.end());
+		}
+
+
+		ImGui::PushID(node_to_show);
+
+		ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+
+		if (ImGui::TreeNodeEx(node_to_show_path_string_to_show.c_str(), flags))
+		{
+			if (node_to_show->is_loaded == false)
+			{
+				t.AddChildrenOf(node_to_show->path);
+				node_to_show->is_loaded = true;
+			}
+
+			for (const auto& i : node_to_show->children) 
+			{
+				draw_tree(i);
+			}
+			ImGui::TreePop();
+		}
+
+		if (ImGui::IsItemHovered()) 
+		{
+			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			{
+				if (!node_to_show->path.empty())
+				{
+					fileExplorer->navigate_to(node_to_show->path);
+					current_path = node_to_show->path;
+					selected_path = "";
+				}
+			}
+		}
+	
+		ImGui::PopID();
+
+		return;
 	}
 };

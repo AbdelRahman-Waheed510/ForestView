@@ -81,6 +81,21 @@ public:
 		return;
 	}
 
+	std::vector<fs::path> get_partitions() 
+	{
+		std::vector<fs::path> drives;
+		wchar_t buffer[256];
+		DWORD buffer_len = GetLogicalDriveStringsW(ARRAYSIZE(buffer), buffer);
+		if (buffer_len > 0 && buffer_len < ARRAYSIZE(buffer)) {
+			wchar_t* drive = buffer;
+			while (*drive) {
+				drives.push_back(fs::path(drive));
+				drive += wcslen(drive) + 1;
+			}
+		}
+		return drives;
+	}
+
 	int get_size() 
 	{
 		return entries.size();
