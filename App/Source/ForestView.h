@@ -89,6 +89,8 @@ private:
 	bool global_key_need_update = false;
 
 	bool tree_need_update = false;
+	bool is_calulating_size = false;
+
 	fs::path selected_path;
 	fs::path current_path;
 	fs::path copied_path;
@@ -98,9 +100,11 @@ private:
 	std::string globalKeyWord;
 	std::string ThisDirectoryKeyWord;
 
+	std::vector<std::future<std::pair<double, std::string>>> file_size_future;
 	std::pair<double, std::string> file_size;
 
 	tree t;
+
 
 public:
 
@@ -483,11 +487,25 @@ public:
 					if (need_file_size_call)
 					{
 						Timer timer;
-						file_size = fileExplorer->get_total_files_size(selected_path);
+						file_size_future.push_back(std::async(std::launch::async, [&]() {return fileExplorer->get_total_files_size(selected_path);} ));
 						need_file_size_call = false;
+						is_calulating_size = true;
 					}
 
-					ImGui::Text((std::format("{:.2f}{}",file_size.first, file_size.second )).c_str());
+					if (is_calulating_size && !file_size_future.empty() && file_size_future.back().valid())
+					{
+						if (file_size_future.back().wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+						{
+							file_size = file_size_future.back().get();
+							file_size_future.pop_back();
+							is_calulating_size = false;
+						}		
+					}
+
+					std::erase_if(file_size_future, [](auto& x) {return !x.valid() || x.wait_for(std::chrono::seconds(0)) == std::future_status::ready;});
+
+					if (!is_calulating_size) ImGui::Text((std::format("{:.2f}{}",file_size.first, file_size.second )).c_str());
+					else ImGui::Text("Calculating size....");
 				}
 				
 			}
