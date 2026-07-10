@@ -102,6 +102,8 @@ public:
 
 	Node* get_root();
 
+	void update_tree(const std::vector<fs::path>& partitions);
+
 	Node* TraverseToNode_helper(const fs::path& value, Node* root);
 
 	Node* TraverseToNode(const fs::path& value, Node* root);

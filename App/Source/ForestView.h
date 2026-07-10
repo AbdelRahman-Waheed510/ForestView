@@ -88,6 +88,7 @@ private:
 
 	bool global_key_need_update = false;
 
+	bool tree_need_update = false;
 	fs::path selected_path;
 	fs::path current_path;
 	fs::path copied_path;
@@ -239,6 +240,7 @@ public:
 					fileExplorer->refresh(current_path);
 					globalKeyWord = "";
 					ThisDirectoryKeyWord = "";
+					tree_need_update = true;
 				}
 
 				ImGui::SameLine();
@@ -246,6 +248,7 @@ public:
 				if (ImGui::Button("New"))
 				{
 					// show_create_folder = true;
+					tree_need_update = true;
 				}
 
 				
@@ -275,6 +278,7 @@ public:
 				{
 					fileExplorer->copy_paste(copied_path, current_path);
 					entries_need_update = true;
+					tree_need_update = true;
 					copied_path.clear();
 				}
 				ImGui::EndDisabled();
@@ -302,6 +306,7 @@ public:
 					{
 						fileExplorer->remove(selected_path);
 						entries_need_update = true;
+						tree_need_update = true;
 						ImGui::CloseCurrentPopup();
 					}
 					ImGui::SetItemDefaultFocus();
@@ -327,6 +332,11 @@ public:
 
 			if (ImGui::BeginChild("FolderTree##identifer", ImVec2(200, remainingHeight), ImGuiChildFlags_Borders , ImGuiWindowFlags_HorizontalScrollbar))
 			{
+				if (tree_need_update) 
+				{
+					t.update_tree(fileExplorer->get_partitions());
+					tree_need_update = false;
+				}
 				draw_tree(t.get_root());
 			}
 			ImGui::EndChild();
@@ -405,6 +415,7 @@ public:
 									message = "This name already exists";
 								}
 								entries_need_update = true;
+								tree_need_update = true;
 								newName.clear();
 							}
 

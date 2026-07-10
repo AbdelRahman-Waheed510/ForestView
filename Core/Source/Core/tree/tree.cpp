@@ -104,6 +104,14 @@ Node* tree::get_root()
     return root;
 }
 
+void tree::update_tree(const std::vector<fs::path>& partitions)
+{
+    if (root == nullptr) return;
+    DeleteNode(root->path);
+    iniThisPc("THIS PC");
+    fillThisPcWithDrives(partitions);
+}
+
 Node* tree::TraverseToNode_helper(const fs::path& absolute_target, Node* current)
 {
     if (current == nullptr) return nullptr;
