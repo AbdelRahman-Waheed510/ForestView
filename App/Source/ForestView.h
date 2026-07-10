@@ -37,6 +37,7 @@ namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
 
+
 class App 
 {
 private:
@@ -90,10 +91,13 @@ private:
 
 	bool tree_need_update = false;
 	bool is_calulating_size = false;
+	bool is_coping_structure = false;
+
 
 	fs::path selected_path;
 	fs::path current_path;
 	fs::path copied_path;
+	std::string copied_structure = "";
 
 	std::string message;
 
@@ -103,13 +107,16 @@ private:
 	std::vector<std::future<std::pair<double, std::string>>> file_size_future;
 	std::pair<double, std::string> file_size;
 
-	tree t;
+	std::future<std::string> folder_structure;
 
+	tree t;
+	tree structure_tree;
 
 public:
 
 	ForestView() 
 	{
+		copied_structure.reserve(1024*512);
 		fileExplorer = new Explorer();
 		t.iniThisPc("THIS PC");
 		t.fillThisPcWithDrives(fileExplorer->get_partitions());
@@ -434,8 +441,30 @@ public:
 							show_rename_file = false;
 							ImGui::SetClipboardText(selected_path.string().c_str());
 						}
-					}
+						ImGui::SameLine();
+						if (ImGui::Button("Copy Structure")) 
+						{
+							folder_structure = std::async(std::launch::async, [this]() {
+								// Create a local, isolated tree instance inside the thread so it doesn't touch main thread data
+								tree localTree;
+								localTree.BuildTree(this->selected_path);
+								return localTree.put_structure_into_string();
+							});
+							is_coping_structure = true;
 
+							//structure_tree.put_structure_into_string(copied_structure);
+							
+						}
+
+						
+					}
+					if (folder_structure.valid() &&  folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready) 
+					{
+						copied_structure = folder_structure.get();
+						ImGui::SetClipboardText(copied_structure.c_str());
+						is_coping_structure = false;
+						copied_structure = "";
+					}
 					ImGui::PopID();
 				}
 
@@ -475,13 +504,13 @@ public:
 
 				ImGui::Text(std::to_string(fileExplorer->get_size()).c_str());
 				ImGui::SameLine();
-				ImGui::Text(" Items | ");
+				ImGui::Text(" Items ");
 				
 				ImGui::SameLine();
 
 				if (selected_path != selected_path.root_path() && !selected_path.empty())
 				{
-					ImGui::Text("File Size: ");
+					ImGui::Text("| File Size: ");
 					ImGui::SameLine();
 
 					if (need_file_size_call)
@@ -507,7 +536,12 @@ public:
 					if (!is_calulating_size) ImGui::Text((std::format("{:.2f}{}",file_size.first, file_size.second )).c_str());
 					else ImGui::Text("Calculating size....");
 				}
-				
+				if (is_coping_structure) 
+				{
+					ImGui::SameLine();
+
+					ImGui::Text(" | Coping Structure....");
+				}
 			}
 			ImGui::EndChild();
 

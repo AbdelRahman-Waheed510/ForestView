@@ -112,5 +112,9 @@ public:
 	
 	void fillThisPcWithDrives(const std::vector<fs::path>& drives);
 
+	void put_structure_into_string_helper(std::string& result, Node* root, std::string prefix, bool is_last);
+
+	std::string put_structure_into_string();
+	
 	void print();
 };

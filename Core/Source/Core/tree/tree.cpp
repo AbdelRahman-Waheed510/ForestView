@@ -190,3 +190,38 @@ void tree::print()
 
     return;
 }
+
+void tree::put_structure_into_string_helper(std::string& result, Node* root, std::string prefix, bool is_last)
+{
+    if (root == nullptr) return;
+
+    auto u8Name = root->path.filename().u8string();
+    std::string safeName(reinterpret_cast<const char*>(u8Name.data()), u8Name.size());
+
+    if (is_last)
+    {
+        result += prefix + "\\-- " + safeName + '\n';
+        prefix += "    ";
+    }
+    else
+    {
+        result += prefix + "+-- " + safeName + '\n';
+        prefix += "|   ";
+    }
+
+
+    for (size_t i = 0; i < root->children.size(); ++i)
+    {
+        bool is_last_child = false;
+        if (i == root->children.size() - 1) is_last_child = true;
+        put_structure_into_string_helper(result, root->children[i], prefix, is_last_child);
+    }
+
+}
+
+std::string tree::put_structure_into_string()
+{
+    std::string result = "";
+    put_structure_into_string_helper(result, root, "", true);
+    return result;
+}
