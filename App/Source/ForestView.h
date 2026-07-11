@@ -112,6 +112,7 @@ private:
 	tree t;
 	tree structure_tree;
 
+	Timer timer;
 public:
 
 	ForestView() 
@@ -215,8 +216,10 @@ public:
 			{
 				if (ImGui::Button("<-") || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 				{
+					show_selected_folder_options = false;
 					ThisDirectoryKeyWord = "";
 					globalKeyWord = "";
+					selected_path = "";
 					if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
 
 						if (!ImGui::GetIO().WantCaptureKeyboard) {
@@ -227,7 +230,6 @@ public:
 					{
 						fileExplorer->back(current_path);
 					}
-
 				}
 
 				ImGui::SameLine();
@@ -236,8 +238,10 @@ public:
 
 				if (ImGui::Button("->") || ImGui::IsKeyPressed(ImGuiKey_MouseX2 , false))
 				{
+					show_selected_folder_options = false;
 					ThisDirectoryKeyWord = "";
 					globalKeyWord = "";
+					selected_path = "";
 					fileExplorer->redo(current_path);
 				}
 
@@ -291,6 +295,14 @@ public:
 					entries_need_update = true;
 					tree_need_update = true;
 					copied_path.clear();
+				}
+				ImGui::EndDisabled();
+
+				ImGui::SameLine();
+				ImGui::BeginDisabled(current_path.empty());
+				if (ImGui::Button("Sort"))
+				{
+					fileExplorer->sort_entries();
 				}
 				ImGui::EndDisabled();
 
@@ -374,7 +386,7 @@ public:
 
 					if (ImGui::IsItemHovered()) 
 					{
-						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) 
+						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 						{
 							if (fs::is_directory(entries[i]))
 							{
@@ -384,8 +396,9 @@ public:
 								current_path = entries[i];
 							}
 						}
-						else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+						else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 						{
+
 							if (entries[i] != entries[i].root_path())
 							{
 								if (selected_path == entries[i])

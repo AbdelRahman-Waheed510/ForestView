@@ -17,12 +17,11 @@ class Timer
 {
 private:
 	std::chrono::time_point<std::chrono::high_resolution_clock> start_;
-
+	float duration = 0.0;
 public:
 
 	Timer()
 	{
-		start_ = std::chrono::high_resolution_clock::now();
 	}
 
 	~Timer()
@@ -30,13 +29,27 @@ public:
 		stop();
 	}
 
+	void restart() 
+	{
+		start_ = std::chrono::high_resolution_clock::now();
+
+	}
+
 	void stop()
 	{
 		std::chrono::time_point<std::chrono::high_resolution_clock> end_ = std::chrono::high_resolution_clock::now();
 		auto start = std::chrono::time_point_cast<std::chrono::microseconds>(start_).time_since_epoch().count();
 		auto end = std::chrono::time_point_cast<std::chrono::microseconds>(end_).time_since_epoch().count();
-		auto duration = end - start;
-		
+		duration = end - start;
+	}
+
+	float get_duration() 
+	{
+		return duration;
+	}
+
+	void load_to_txt_file() 
+	{
 		std::ofstream speedLog("Log.txt", std::ios::app);
 		if (speedLog.is_open())
 		{
@@ -48,7 +61,6 @@ public:
 		speedLog.close();
 	}
 };
-
 
 class Explorer 
 {
@@ -332,7 +344,9 @@ public:
 
 		fs::copy_options options = fs::copy_options::recursive | fs::copy_options::overwrite_existing;
 
-		fs::copy(from, to, options, ec);
+		fs::path dest = to / from.filename();
+
+		fs::copy(from, dest, options, ec);
 
 		if (ec) 
 		{
@@ -386,6 +400,12 @@ public:
 			result = "... > " + result.substr(index_pos, (int)result.size());
 		}
 		return result;
+	}
+
+	void sort_entries() 
+	{
+		std::sort(entries.begin(), entries.end(), [&](fs::path& a, fs::path& b) { return a < b; });
+		return;
 	}
 
 	void print_entries() 
