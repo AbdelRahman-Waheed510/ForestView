@@ -306,13 +306,14 @@ public:
 				ImGui::BeginDisabled(current_path.empty());
 				if (ImGui::Button("Sort"))
 				{
-					fileExplorer->sort_entries();
+					ImGui::OpenPopup("Sort Type");
+					//fileExplorer->sort_entries();
 				}
 				ImGui::EndDisabled();
 
 
 
-				if (show_create_folder)
+				/*if (show_create_folder)
 				{
 					static std::string name;
 					ImGui::InputText("Name", &name);
@@ -322,6 +323,20 @@ public:
 						fileExplorer->create_folder(current_path, name);
 						entries_need_update = true;
 					}
+				}*/
+				if (ImGui::BeginPopup("Sort Type")) 
+				{
+					if (ImGui::Selectable("Name")) 
+					{
+						fileExplorer->sort_entries([](const fs::directory_entry& a,const fs::directory_entry& b) {return a.path() < b.path();});
+						ImGui::CloseCurrentPopup();
+					}
+					if (ImGui::Selectable("Last Modified time"))
+					{
+						fileExplorer->sort_entries([](const fs::directory_entry& a, const fs::directory_entry& b) {return a.last_write_time() > b.last_write_time();});
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::EndPopup();
 				}
 
 				if (ImGui::BeginPopupModal("Delete Warning?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
@@ -461,19 +476,20 @@ public:
 							show_rename_file = false;
 							ImGui::SetClipboardText(selected_path.string().c_str());
 						}
-						ImGui::SameLine();
-						if (ImGui::Button("Copy Structure")) 
-						{
-							folder_structure = std::async(std::launch::async, [this]() {
-								// Create a local, isolated tree instance inside the thread so it doesn't touch main thread data
-								tree localTree;
-								localTree.BuildTree(this->selected_path);
-								return localTree.put_structure_into_string();
-							});
-							is_coping_structure = true;
 
-							//structure_tree.put_structure_into_string(copied_structure);
-							
+						if (fs::is_directory(selected_path)) 
+						{
+							ImGui::SameLine();
+							if (ImGui::Button("Copy Structure"))
+							{
+								folder_structure = std::async(std::launch::async, [fileExplorer = this->fileExplorer, path = selected_path]() {
+									// Create a local, isolated tree instance inside the thread so it doesn't touch main thread data
+									tree localTree;
+									localTree.BuildTree(path);
+									return localTree.put_structure_into_string();
+									});
+								is_coping_structure = true;
+							}
 
 						}
 

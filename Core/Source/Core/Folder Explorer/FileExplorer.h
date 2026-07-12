@@ -423,9 +423,9 @@ public:
 		return result;
 	}
 
-	void sort_entries() 
+	void sort_entries(const std::function<bool(fs::directory_entry&, fs::directory_entry&)>& comp)
 	{
-		std::sort(entries.begin(), entries.end(), [&](fs::path& a, fs::path& b) { return a < b; });
+		std::sort(entries.begin(), entries.end(), comp);
 		return;
 	}
 
