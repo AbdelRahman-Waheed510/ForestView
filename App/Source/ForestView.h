@@ -266,11 +266,8 @@ public:
 
 				if (ImGui::Button("New"))
 				{
-					// show_create_folder = true;
-					tree_need_update = true;
+					ImGui::OpenPopup("New?");
 				}
-
-				
 
 				ImGui::SameLine();
 
@@ -324,6 +321,26 @@ public:
 						entries_need_update = true;
 					}
 				}*/
+
+				if (ImGui::BeginPopup("New?")) 
+				{
+					if (ImGui::Selectable("Folder"))
+					{
+						fileExplorer->create_folder(current_path, "test111", FOLDER);
+						entries_need_update = true;
+						tree_need_update = true;
+						ImGui::CloseCurrentPopup();
+					}
+					if (ImGui::Selectable("Txt File"))
+					{
+						fileExplorer->create_folder(current_path, "test111.txt", REG_FILE);
+						entries_need_update = true;
+						tree_need_update = true;
+						ImGui::CloseCurrentPopup();
+					}
+					ImGui::EndPopup();
+				}
+
 				if (ImGui::BeginPopup("Sort Type")) 
 				{
 					if (ImGui::Selectable("Name")) 

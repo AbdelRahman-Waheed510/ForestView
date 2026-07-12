@@ -65,6 +65,12 @@ public:
 	}
 };
 
+enum NewType 
+{
+FOLDER,
+REG_FILE
+};
+
 class Explorer 
 {
 private:
@@ -169,6 +175,7 @@ public:
 		return res;
 
 	}
+
 	void load_entries_from_specific_path(const fs::path& path) 
 	{
 		if (!entries.empty())
@@ -262,12 +269,24 @@ public:
 		return entries;
 	}
 
-	void create_folder(fs::path& to_create, const fs::path& name) 
+	void create_folder(fs::path& to_create, const std::string& name, const NewType& type) 
 	{
-		
-		fs::path newFolder = to_create / name;
-		if (fs::exists(newFolder)) return;
-		fs::create_directory(newFolder);
+		if (type == FOLDER) 
+		{
+			std::error_code ec;
+			fs::path newFolder = to_create / name;
+			if (fs::create_directory(newFolder, ec)) return;
+			if (ec) 
+			{
+				std::cerr << "Error when creating " << name << std::endl;
+			}
+		}
+		else if (type == REG_FILE) 
+		{
+			fs::path newFilePath = to_create / name;
+			std::ofstream newfile(newFilePath);
+		}
+
 		return;
 	}
 
