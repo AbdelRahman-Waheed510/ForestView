@@ -1,44 +1,24 @@
-149.000000 MicroSeconds
-0.149000 MillieSeconds
-0.000149 Seconds
+20078800.000000 MicroSeconds
+20078.800000 MillieSeconds
+20.078800 Seconds
 =============================================================
-36.000000 MicroSeconds
-0.036000 MillieSeconds
-0.000036 Seconds
+13109.000000 MicroSeconds
+13.109000 MillieSeconds
+0.013109 Seconds
 =============================================================
-36.000000 MicroSeconds
-0.036000 MillieSeconds
-0.000036 Seconds
+25685092.000000 MicroSeconds
+25685.092000 MillieSeconds
+25.685092 Seconds
 =============================================================
-34.000000 MicroSeconds
-0.034000 MillieSeconds
-0.000034 Seconds
+13815925.000000 MicroSeconds
+13815.925000 MillieSeconds
+13.815925 Seconds
 =============================================================
-41.000000 MicroSeconds
-0.041000 MillieSeconds
-0.000041 Seconds
+124654160.000000 MicroSeconds
+124654.160000 MillieSeconds
+124.654160 Seconds
 =============================================================
-38.000000 MicroSeconds
-0.038000 MillieSeconds
-0.000038 Seconds
-=============================================================
-47.000000 MicroSeconds
-0.047000 MillieSeconds
-0.000047 Seconds
-=============================================================
-35.000000 MicroSeconds
-0.035000 MillieSeconds
-0.000035 Seconds
-=============================================================
-35.000000 MicroSeconds
-0.035000 MillieSeconds
-0.000035 Seconds
-=============================================================
-35.000000 MicroSeconds
-0.035000 MillieSeconds
-0.000035 Seconds
-=============================================================
-34.000000 MicroSeconds
-0.034000 MillieSeconds
-0.000034 Seconds
+14270301.000000 MicroSeconds
+14270.301000 MillieSeconds
+14.270301 Seconds
 =============================================================

@@ -156,6 +156,19 @@ public:
 		return {(double)count, " Bytes"};
 	}
 
+	const std::string get_last_modified_since(const fs::path& path)
+	{
+		if (!fs::exists(path)) return "";
+
+		fs::file_time_type time = fs::last_write_time(path);
+
+		auto sys_time = std::chrono::clock_cast<std::chrono::system_clock>(time);
+
+		std::string res = std::format("{:%Y-%m-%d %H:%M}", sys_time);
+
+		return res;
+
+	}
 	void load_entries_from_specific_path(const fs::path& path) 
 	{
 		if (!entries.empty())

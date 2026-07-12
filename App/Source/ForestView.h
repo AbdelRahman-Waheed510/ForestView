@@ -1,4 +1,5 @@
 #pragma once
+
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -108,6 +109,7 @@ private:
 	std::vector<std::future<std::pair<double, std::string>>> file_size_future;
 	std::pair<double, std::string> file_size;
 	std::string last_modified;
+
 
 	std::future<std::string> folder_structure;
 
@@ -373,15 +375,14 @@ public:
 				ImGui::Text("Files");
 				ImGui::Separator();
 
-				std::vector<fs::path> entries = fileExplorer->get_entries();
+				std::vector<fs::directory_entry> entries = fileExplorer->get_entries();
 
 				for (size_t i = 0; i < entries.size(); ++i)
 				{
 					ImGui::PushID(i);
 					static bool is_selected = false;
 
-
-					auto u8_str = (entries[i] == entries[i].root_path()) ? entries[i].u8string() : entries[i].filename().u8string();
+					auto u8_str = (entries[i].path() == entries[i].path().root_path()) ? entries[i].path().u8string() : entries[i].path().filename().u8string();
 					std::string utf8_path(u8_str.begin(), u8_str.end());
 
 					ImGui::Selectable(utf8_path.c_str(), is_selected);
@@ -390,7 +391,7 @@ public:
 					{
 						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 						{
-							if (fs::is_directory(entries[i]))
+							if (entries[i].is_directory())
 							{
 								ThisDirectoryKeyWord = "";
 								globalKeyWord = "";
@@ -401,30 +402,32 @@ public:
 						else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
 						{
 
-							if (entries[i] != entries[i].root_path())
+							if (entries[i].path() != entries[i].path().root_path())
 							{
-								if (selected_path == entries[i])
+								if (selected_path == entries[i].path())
 								{
 									show_selected_folder_options = !show_selected_folder_options;
 									show_rename_file = false;
 
 									file_size.first = 0.0;
 									file_size.second = "";
+									last_modified = "";
 								}
 								else
 								{
 									show_selected_folder_options = true;
 									show_rename_file = false;
 									need_file_size_call = true;
+									need_modified_since_call = true;
 								}
 							}
 							message = "";
-							if (selected_path == entries[i]) selected_path.clear();
-							else selected_path = entries[i];
+							if (selected_path == entries[i].path()) selected_path.clear();
+							else selected_path = entries[i].path();
 						}
 					}
 
-					if (show_selected_folder_options && selected_path == entries[i])
+					if (show_selected_folder_options && selected_path == entries[i].path())
 					{
 						if (ImGui::Button("Rename"))
 						{
@@ -450,7 +453,9 @@ public:
 							render_msg();
 
 						}
+
 						ImGui::SameLine();
+
 						if (ImGui::Button("Copy Path")) 
 						{
 							show_rename_file = false;
@@ -469,9 +474,9 @@ public:
 
 							//structure_tree.put_structure_into_string(copied_structure);
 							
+
 						}
 
-						
 					}
 					if (folder_structure.valid() &&  folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready) 
 					{
@@ -482,7 +487,7 @@ public:
 					}
 					ImGui::PopID();
 				}
-
+				
 
 				// temporary
 
@@ -506,7 +511,8 @@ public:
 
 				if (entries_need_update)
 				{
-					fileExplorer->load_entries_from_specific_path(current_path);
+					fileExplorer->refresh(current_path);
+					entries_need_update = false;
 				}
 
 
@@ -530,8 +536,8 @@ public:
 
 					if (need_file_size_call)
 					{
-						Timer timer;
-						file_size_future.push_back(std::async(std::launch::async, [&]() {return fileExplorer->get_total_files_size(selected_path);} ));
+						// Timer timer;
+						file_size_future.push_back(std::async(std::launch::async, [fileExplorer = this->fileExplorer, path = selected_path]() {return fileExplorer->get_total_files_size(path);} ));
 						need_file_size_call = false;
 						is_calulating_size = true;
 					}
@@ -550,6 +556,20 @@ public:
 
 					if (!is_calulating_size) ImGui::Text((std::format("{:.2f}{}",file_size.first, file_size.second )).c_str());
 					else ImGui::Text("Calculating size....");
+
+
+					if (need_modified_since_call) 
+					{
+						last_modified = fileExplorer->get_last_modified_since(selected_path);
+						need_modified_since_call = false;
+					}
+					if (!last_modified.empty()) 
+					{
+						ImGui::SameLine();
+						ImGui::Text(" | Modified Since: ");
+						ImGui::SameLine();
+						ImGui::Text(last_modified.c_str());
+					}
 				}
 				if (is_coping_structure) 
 				{
@@ -557,6 +577,8 @@ public:
 
 					ImGui::Text(" | Coping Structure....");
 				}
+
+
 			}
 			ImGui::EndChild();
 
