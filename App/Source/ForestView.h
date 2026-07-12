@@ -84,6 +84,7 @@ private:
 	bool entries_need_update = false;
 
 	bool need_file_size_call = false;
+	bool need_modified_since_call = false;
 
 	bool show_deletion_warning = false;
 
@@ -106,6 +107,7 @@ private:
 
 	std::vector<std::future<std::pair<double, std::string>>> file_size_future;
 	std::pair<double, std::string> file_size;
+	std::string last_modified;
 
 	std::future<std::string> folder_structure;
 

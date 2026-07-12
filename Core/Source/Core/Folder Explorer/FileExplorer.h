@@ -10,6 +10,7 @@
 #include <stdexcept>
 #include "tree.h"
 #include <functional>
+#include <chrono>
 
 namespace fs = std::filesystem;
 
@@ -22,11 +23,13 @@ public:
 
 	Timer()
 	{
+		start_ = std::chrono::high_resolution_clock::now();
 	}
 
 	~Timer()
 	{
 		stop();
+		load_to_txt_file();
 	}
 
 	void restart() 
@@ -66,7 +69,7 @@ class Explorer
 {
 private:
 	tree* t;
-	std::vector<fs::path> entries;
+	std::vector<fs::directory_entry> entries;
 	std::stack<fs::path> paths_undo;
 
 public:
@@ -86,7 +89,8 @@ public:
 		if (buffer_len > 0 && buffer_len < ARRAYSIZE(buffer)) {
 			wchar_t* drive = buffer;
 			while (*drive) {
-				entries.push_back(fs::path(drive));
+				std::error_code ec;
+				entries.emplace_back(fs::path(drive), ec);
 				drive += wcslen(drive) + 1; 
 			}
 		}
@@ -158,9 +162,13 @@ public:
 		{
 			entries.clear();
 		}
-		if (fs::is_regular_file(path)) return;
+		if (path.empty()) return;
 
-		for (const auto& entry : fs::directory_iterator(path))
+		std::error_code ec;
+		if (fs::is_regular_file(path, ec)) return;
+		if (!fs::exists(path, ec)) return;
+
+		for (const auto& entry : fs::directory_iterator(path, ec))
 		{
 			DWORD attr = GetFileAttributesW(entry.path().c_str());
 
@@ -170,7 +178,7 @@ public:
 			if (attr & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))
 				continue; // skip hidden/system
 
-			entries.emplace_back(entry.path());
+			entries.emplace_back(entry);
 		}
 		return;
 	}
@@ -231,12 +239,12 @@ public:
 			to_lower(entrypath);
 			to_lower(keyword);
 
-			if (entrypath.find(keyword) != std::string::npos)entries.emplace_back(entry.path());
+			if (entrypath.find(keyword) != std::string::npos) entries.emplace_back(entry);
 		}
 		return;
 	}
 
-	std::vector<fs::path> get_entries()
+	std::vector<fs::directory_entry> get_entries()
 	{
 		return entries;
 	}
@@ -410,9 +418,9 @@ public:
 
 	void print_entries() 
 	{
-		for (const fs::path& path : entries) 
+		for (const fs::directory_entry& entry : entries) 
 		{
-			std::cout << path << std::endl;
+			std::cout << entry.path() << std::endl;
 		}
 	}
 
