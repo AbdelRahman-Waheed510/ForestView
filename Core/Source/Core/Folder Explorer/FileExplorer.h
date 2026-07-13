@@ -8,11 +8,23 @@
 #include <format>
 #include <stack>
 #include <stdexcept>
+#include <fstream>
 #include "tree.h"
 #include <functional>
 #include <chrono>
 
 namespace fs = std::filesystem;
+
+enum NewType
+{
+	FOLDER,
+	REG_FILE
+};
+
+namespace Utils 
+{
+	std::string generate_new_folder_name(const fs::path& path, const std::string& name, const NewType& type);
+};
 
 class Timer
 {
@@ -63,12 +75,6 @@ public:
 		}
 		speedLog.close();
 	}
-};
-
-enum NewType 
-{
-FOLDER,
-REG_FILE
 };
 
 class Explorer 
@@ -311,14 +317,26 @@ public:
 		fs::path delted_path = to_rename;
 		delted_path.remove_filename();
 		
-		for (const auto& entry : fs::directory_iterator(delted_path)) 
+		if (fs::is_directory(delted_path / new_name))
 		{
-			if (entry.path().filename() == new_name) return false;;
+			new_name = Utils::generate_new_folder_name(to_rename.parent_path(), new_name.filename().string(), FOLDER);
+		}
+		else if (fs::is_regular_file(delted_path / new_name))
+		{
+			new_name = Utils::generate_new_folder_name(to_rename.parent_path(), new_name.filename().string(), REG_FILE);
 		}
 
 		fs::path newPath = delted_path / new_name;
 
-		fs::rename(to_rename, newPath);
+		std::error_code ec;
+
+		fs::rename(to_rename, newPath, ec);
+
+		if (ec) 
+		{
+			std::cerr << "Error when renaming the file " << to_rename.filename().string() << std::endl;
+			return false;
+		}
 		return true;
 	}
 
@@ -373,20 +391,31 @@ public:
 		}
 	}
 
-	void copy_paste(const fs::path& from, const fs::path& to) 
+	void copy_paste(const fs::path& copied_path, const fs::path& current_path) 
 	{
-		if (!fs::exists(from)) 
+		if (!fs::exists(copied_path))
 		{
-			std::cerr << "Error: source path doesnot exist: " << from << std::endl;
+			std::cerr << "Error: source path doesnot exist: " << copied_path << std::endl;
 			return;
 		}
 		std::error_code ec;
 
 		fs::copy_options options = fs::copy_options::recursive | fs::copy_options::overwrite_existing;
 
-		fs::path dest = to / from.filename();
+		fs::path dest = current_path / copied_path.filename();;
 
-		fs::copy(from, dest, options, ec);
+		if (fs::is_directory(copied_path))
+		{
+			std::string name_of_the_folder = Utils::generate_new_folder_name(current_path, copied_path.filename().string(), FOLDER);
+			dest = current_path / name_of_the_folder;
+		}
+		else if (fs::is_regular_file(copied_path))
+		{
+			std::string name_of_the_folder = Utils::generate_new_folder_name(current_path, copied_path.filename().string(), REG_FILE);
+			dest = current_path / name_of_the_folder;
+		}
+
+		fs::copy(copied_path, dest, options, ec);
 
 		if (ec) 
 		{

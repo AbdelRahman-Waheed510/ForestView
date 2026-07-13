@@ -10,6 +10,10 @@ project "Core"
    includedirs
    {
       "Source",
+      "Source/Core",                 
+      "Source/Core/tree",            
+      "Source/Core/Folder Explorer",
+
       "../Vendor/imgui-docking",
       "../Vendor/imgui-docking/backends",
       "../Vendor/imgui-docking/misc/cpp",
