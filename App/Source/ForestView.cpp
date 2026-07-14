@@ -297,7 +297,6 @@ void ForestView::search_bar()
 }
 
 // Tool Bar
-
 void ForestView::tool_bar()
 {
 	if (ImGui::BeginChild("ToolBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
@@ -436,6 +435,11 @@ void ForestView::tool_bar()
 
 			if (ImGui::Button("YES"))
 			{
+				if (fav.is_exist(selected_path)) 
+				{
+					fav.delete_fav(fs::directory_entry(selected_path));
+					favorites_need_update = true;
+				}
 				fileExplorer->remove(selected_path);
 				entries_need_update = true;
 				tree_need_update = true;
@@ -456,17 +460,54 @@ void ForestView::tool_bar()
 
 }
 
-
 // Folders Tree 
 void ForestView::folders_tree(const float& remainingHeight)
 {
 	if (ImGui::BeginChild("FolderTree##identifer", ImVec2(200, remainingHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar))
 	{
+		// Favorites =========================================================
+		if (favorites_need_update) 
+		{
+			favorites = fav.get_favorites();
+			favorites_need_update = false;
+		}
+
+		for (size_t i = 0; i < (int)favorites.size(); ++i) 
+		{
+			ImGui::PushID(i);
+
+			auto u8_str = (favorites[i].path() == favorites[i].path().root_path()) ? favorites[i].path().u8string() : favorites[i].path().filename().u8string();
+			std::string favorite_to_show(u8_str.begin(), u8_str.end());
+
+			if (ImGui::Selectable(favorite_to_show.c_str())) 
+			{
+				fileExplorer->navigate_to(favorites[i].path());
+				current_path = favorites[i].path();
+				selected_path = "";
+			}
+			if (ImGui::BeginPopupContextItem("favoritesRightClick"))
+			{
+				if (ImGui::Button("Unpin from favorites")) 
+				{
+					fav.delete_fav(favorites[i]);
+					favorites_need_update = true;
+					ImGui::CloseCurrentPopup();
+				}
+				
+				ImGui::EndPopup();
+			}
+			ImGui::PopID();
+		}
+
+		if (!fav.is_empty()) ImGui::Separator();
+
+		// Folders Tree =======================================================
 		if (tree_need_update)
 		{
 			t.update_tree(fileExplorer->get_partitions());
 			tree_need_update = false;
 		}
+
 		draw_tree(t.get_root());
 	}
 	ImGui::EndChild();
@@ -558,7 +599,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 						current_path = entries[i];
 					}
 				}
-				else if (ImGui::IsItemClicked(ImGuiMouseButton_Left))
+				else if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 				{
 
 					if (entries[i].path() != entries[i].path().root_path())
@@ -586,6 +627,36 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				}
 			}
 
+			if (ImGui::BeginPopupContextItem("entriesRightClick"))
+			{
+				// Add to favorites logic
+				if (entries[i].is_directory()) 
+				{
+					if (!fav.is_exist(entries[i]))
+					{
+						if (ImGui::Button("Add to favorites"))
+						{
+							if (fav.add_fav(entries[i]))
+							{
+								favorites_need_update = true;
+							}
+							ImGui::CloseCurrentPopup();
+						}
+					}
+					else
+					{
+						if (ImGui::Button("Unpin from favorites"))
+						{
+							fav.delete_fav(entries[i]);
+							favorites_need_update = true;
+							ImGui::CloseCurrentPopup();
+						}
+					}
+				}
+
+				ImGui::EndPopup();
+			}
+
 			if (show_selected_folder_options && selected_path == entries[i].path())
 			{
 				if (ImGui::Button("Rename"))
@@ -598,14 +669,23 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 					ImGui::InputText("New Name", &newName);
 					if (ImGui::Button("Submit"))
 					{
-						
-						if (!fileExplorer->rename_file(selected_path, newName))
+						RenameReturn rename = fileExplorer->rename_file(selected_path, newName);
+						if (rename.success) 
+						{
+							if (fav.is_exist(fs::directory_entry(selected_path))) 
+							{
+								fav.update_name(fs::directory_entry(selected_path) ,rename.finalPath);
+								favorites_need_update = true;
+							}
+							entries_need_update = true;
+							tree_need_update = true;
+							newName.clear();
+							selected_path = "";
+						}
+						else
 						{
 							message = "This name already exists";
 						}
-						entries_need_update = true;
-						tree_need_update = true;
-						newName.clear();
 					}
 
 					if (!message.empty()) ImGui::SameLine();
@@ -639,6 +719,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				}
 
 			}
+
 			if (folder_structure.valid() && folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 			{
 				copied_structure = folder_structure.get();
@@ -675,8 +756,6 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			fileExplorer->refresh(current_path);
 			entries_need_update = false;
 		}
-
-
 	}
 	ImGui::EndChild();
 }

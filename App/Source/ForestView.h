@@ -32,6 +32,7 @@
 
 #include <chrono>
 
+#include "favorites.h"
 #include "tree.h"
 
 namespace fs = std::filesystem;
@@ -77,6 +78,8 @@ class ForestView : public App
 {
 private:
 	Explorer* fileExplorer;
+	Favorites fav;
+
 	bool show_create_folder = false;
 	bool show_selected_folder_options = false;
 	bool show_rename_file = false;
@@ -93,7 +96,9 @@ private:
 	bool tree_need_update = false;
 	bool is_calulating_size = false;
 	bool is_coping_structure = false;
+	bool favorites_need_update = false;
 
+	std::vector<fs::directory_entry> favorites;
 
 	fs::path selected_path;
 	fs::path current_path;
@@ -120,6 +125,7 @@ public:
 
 	ForestView() 
 	{
+		favorites = fav.get_favorites();
 		copied_structure.reserve(1024*512);
 		fileExplorer = new Explorer();
 		t.iniThisPc("THIS PC");
