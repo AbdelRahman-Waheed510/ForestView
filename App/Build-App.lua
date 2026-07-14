@@ -12,10 +12,11 @@ project "App"
       "Source",
 
 	  -- Include Core
-	  "../Core/Source",
-      "../Core/Source/Core",
-      "../Core/Source/Core/tree",
-      "../Core/Source/Core/Folder Explorer",
+      "../Core/Source",
+      "../Core/Source/tree",
+      "../Core/Source/Folder Explorer",
+      "../Core/Source/Favorites",
+
       "../Vendor/imgui-docking",
       "../Vendor/imgui-docking/backends",
       "../Vendor/imgui-docking/misc/cpp",

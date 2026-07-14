@@ -26,6 +26,12 @@ namespace Utils
 	std::string generate_new_folder_name(const fs::path& path, const std::string& name, const NewType& type);
 };
 
+struct RenameReturn 
+{
+	fs::path finalPath;
+	bool success;
+};
+
 class Timer
 {
 private:
@@ -296,9 +302,9 @@ public:
 		return;
 	}
 
-	bool rename_file(fs::path& to_rename, fs::path new_name)	 
+	RenameReturn rename_file(fs::path& to_rename, fs::path new_name)
 	{
-		if (new_name.empty()) return true;
+		if (new_name.empty()) return { RenameReturn("",false) };
 
 		if (fs::is_regular_file(to_rename)) 
 		{
@@ -306,7 +312,7 @@ public:
 			{
 				if (new_name.extension() != to_rename.extension())
 				{
-					return false;
+					return { RenameReturn("",false) };
 				}
 			}
 			else 
@@ -335,9 +341,9 @@ public:
 		if (ec) 
 		{
 			std::cerr << "Error when renaming the file " << to_rename.filename().string() << std::endl;
-			return false;
+			return { RenameReturn("",false) };
 		}
-		return true;
+		return { RenameReturn(newPath,true) };
 	}
 
 	void back(fs::path& current_path) 
