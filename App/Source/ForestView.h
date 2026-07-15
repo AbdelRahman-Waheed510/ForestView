@@ -33,6 +33,8 @@
 #include <chrono>
 
 #include "favorites.h"
+#include "recents.h"
+
 #include "tree.h"
 
 namespace fs = std::filesystem;
@@ -79,6 +81,7 @@ class ForestView : public App
 private:
 	Explorer* fileExplorer;
 	Favorites fav;
+	Recent recents;
 
 	bool show_create_folder = false;
 	bool show_selected_folder_options = false;
@@ -97,8 +100,10 @@ private:
 	bool is_calulating_size = false;
 	bool is_coping_structure = false;
 	bool favorites_need_update = false;
+	bool recent_history_need_update = false;
 
 	std::vector<fs::directory_entry> favorites;
+	std::deque<fs::directory_entry> recent_history;
 
 	fs::path selected_path;
 	fs::path current_path;

@@ -49,3 +49,4 @@ void Favorites::update_name(const fs::directory_entry& entry, const fs::path& ne
 		}
 	}
 }
+

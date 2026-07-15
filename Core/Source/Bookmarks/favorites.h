@@ -3,6 +3,7 @@
 #include <vector>
 #include <iostream>
 #include <filesystem>
+#include <stack>
 
 namespace fs = std::filesystem;
 
@@ -28,3 +29,4 @@ public:
 
 	void update_name(const fs::directory_entry& entry, const fs::path& newPath);
 };
+

@@ -311,11 +311,15 @@ void ForestView::tool_bar()
 
 				if (!ImGui::GetIO().WantCaptureKeyboard) {
 					fileExplorer->back(current_path);
+					recents.visit(fs::directory_entry(current_path));
+					recent_history_need_update = true;
 				}
 			}
 			else
 			{
 				fileExplorer->back(current_path);
+				recents.visit(fs::directory_entry(current_path));
+				recent_history_need_update = true;
 			}
 		}
 
@@ -330,6 +334,8 @@ void ForestView::tool_bar()
 			globalKeyWord = "";
 			selected_path = "";
 			fileExplorer->redo(current_path);
+			recents.visit(fs::directory_entry(current_path));
+			recent_history_need_update = true;
 		}
 
 		ImGui::EndDisabled();
@@ -440,6 +446,12 @@ void ForestView::tool_bar()
 					fav.delete_fav(fs::directory_entry(selected_path));
 					favorites_need_update = true;
 				}
+
+				if (recents.remove(fs::directory_entry(selected_path))) 
+				{
+					recent_history_need_update = true;
+				}
+
 				fileExplorer->remove(selected_path);
 				entries_need_update = true;
 				tree_need_update = true;
@@ -500,6 +512,31 @@ void ForestView::folders_tree(const float& remainingHeight)
 		}
 
 		if (!fav.is_empty()) ImGui::Separator();
+
+		// Recent History ============================================================
+
+		if (recent_history_need_update)
+		{
+			recent_history = recents.get_recent_history();
+			recent_history_need_update = false;
+		}
+		for (size_t i = 0; i < (int)recent_history.size(); ++i)
+		{
+			ImGui::PushID(i);
+
+			auto u8_str = (recent_history[i].path() == recent_history[i].path().root_path()) ? recent_history[i].path().u8string() : recent_history[i].path().filename().u8string();
+			std::string favorite_to_show(u8_str.begin(), u8_str.end());
+
+			if (ImGui::Selectable(favorite_to_show.c_str()))
+			{
+				/*fileExplorer->navigate_to(recent_history[i].path());
+				current_path = recent_history[i].path();
+				selected_path = "";*/
+			}
+			
+			ImGui::PopID();
+		}
+
 
 		// Folders Tree =======================================================
 		if (tree_need_update)
@@ -597,6 +634,9 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 						globalKeyWord = "";
 						fileExplorer->navigate_to(entries[i], current_path);
 						
+						recents.visit(entries[i]);
+						recent_history_need_update = true;
+
 						current_path = entries[i];
 					}
 				}
@@ -671,12 +711,16 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 					if (ImGui::Button("Submit"))
 					{
 						RenameReturn rename = fileExplorer->rename_file(selected_path, newName);
-						if (rename.success) 
+						if (rename.success)
 						{
-							if (fav.is_exist(fs::directory_entry(selected_path))) 
+							if (fav.is_exist(fs::directory_entry(selected_path)))
 							{
-								fav.update_name(fs::directory_entry(selected_path) ,rename.finalPath);
+								fav.update_name(fs::directory_entry(selected_path), rename.finalPath);
 								favorites_need_update = true;
+							}
+							if (recents.update_name(fs::directory_entry(selected_path), rename.finalPath)) 
+							{
+								recent_history_need_update = true;
 							}
 							entries_need_update = true;
 							tree_need_update = true;

@@ -12,7 +12,7 @@ project "Core"
       "Source",                 
       "Source/tree",            
       "Source/Folder Explorer",
-      "Source/Favorites",
+      "Source/Bookmarks",
 
       "../Vendor/imgui-docking",
       "../Vendor/imgui-docking/backends",

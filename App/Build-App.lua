@@ -15,7 +15,7 @@ project "App"
       "../Core/Source",
       "../Core/Source/tree",
       "../Core/Source/Folder Explorer",
-      "../Core/Source/Favorites",
+      "../Core/Source/Bookmarks",
 
       "../Vendor/imgui-docking",
       "../Vendor/imgui-docking/backends",
