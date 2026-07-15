@@ -88,7 +88,8 @@ class Explorer
 private:
 	tree* t;
 	std::vector<fs::directory_entry> entries;
-	std::stack<fs::path> paths_undo;
+	std::stack<fs::path> redo_stack;
+	std::stack<fs::path> undo_stack;
 
 public:
 	
@@ -219,19 +220,23 @@ public:
 	{
 		if (current_path.empty())
 			load_partitions();
-		else navigate_to(current_path);
+		else 
+		{
+			load_entries_from_specific_path(current_path);
+		} 
 	}
 
-	void navigate_to(const fs::path& path) 
+	void navigate_to(const fs::path& path, const fs::path& current_path) 
 	{
 		load_entries_from_specific_path(path);
-
-		if (!paths_undo.empty()) 
-		{
 		
-			while (!paths_undo.empty()) 
+		undo_stack.push(current_path);
+
+		if (!redo_stack.empty()) 
+		{	
+			while (!redo_stack.empty()) 
 			{
-				paths_undo.pop();
+				redo_stack.pop();
 			}
 		}
 		return;
@@ -348,49 +353,37 @@ public:
 
 	void back(fs::path& current_path) 
 	{
-		if (current_path.empty()) return;
-		paths_undo.push(current_path);
+		if (undo_stack.empty()) return;
+		fs::path path_to_undo = undo_stack.top(); undo_stack.pop();
 
-		if (current_path == current_path.root_path())
-		{
-			load_partitions();
-			
-			current_path.clear();
-		}
-		else if (current_path.has_parent_path())
-		{
-			load_entries_from_specific_path(current_path.parent_path());
+		redo_stack.push(current_path);  
 
-			current_path = current_path.parent_path();
+		if (path_to_undo.empty()) load_partitions();
+		else load_entries_from_specific_path(path_to_undo);
 
-
-		}
-
-		return;
+		current_path = path_to_undo;   
 	}
 
 	bool can_go_forward() 
 	{
-		if (paths_undo.empty()) return false;
+		if (redo_stack.empty()) return false;
 		return true;
 	}
 
 	void redo(fs::path& current_path)
 	{
-		if (paths_undo.empty()) 
-		{
-			// throw std::runtime_error("void redo(): there is no path to redo");
-			return;
-		}
-		fs::path path = paths_undo.top(); paths_undo.pop();
+		if (redo_stack.empty()) return;
+		fs::path path = redo_stack.top(); redo_stack.pop();
+
+		undo_stack.push(current_path);
+
 		load_entries_from_specific_path(path);
 		current_path = path;
-		return;
 	}
 
 	fs::path get_forward_path() 
 	{
-		if (!paths_undo.empty()) return paths_undo.top();
+		if (!redo_stack.empty()) return redo_stack.top();
 		else 
 		{
 			throw std::runtime_error("void redo(): there is no path to redo");

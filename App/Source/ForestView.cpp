@@ -257,7 +257,7 @@ void ForestView::search_bar()
 				fs::path path_(globalKeyWord);
 				if (fs::is_directory(path_) && fs::exists(path_))
 				{
-					fileExplorer->navigate_to(path_);
+					fileExplorer->navigate_to(path_, current_path);
 					current_path = path_;
 					globalKeyWord = "";
 
@@ -481,7 +481,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 
 			if (ImGui::Selectable(favorite_to_show.c_str())) 
 			{
-				fileExplorer->navigate_to(favorites[i].path());
+				fileExplorer->navigate_to(favorites[i].path(), current_path);
 				current_path = favorites[i].path();
 				selected_path = "";
 			}
@@ -555,7 +555,7 @@ void ForestView::draw_tree(Node* node_to_show)
 		{
 			if (!node_to_show->path.empty())
 			{
-				fileExplorer->navigate_to(node_to_show->path);
+				fileExplorer->navigate_to(node_to_show->path, current_path);
 				current_path = node_to_show->path;
 				selected_path = "";
 			}
@@ -595,7 +595,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 					{
 						ThisDirectoryKeyWord = "";
 						globalKeyWord = "";
-						fileExplorer->navigate_to(entries[i]);
+						fileExplorer->navigate_to(entries[i], current_path);
+						
 						current_path = entries[i];
 					}
 				}
