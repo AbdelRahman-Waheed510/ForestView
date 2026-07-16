@@ -176,12 +176,15 @@ void App::run_loop()
 
 	initialize_ImGui();
 
+	on_start();
+
 	while (!glfwWindowShouldClose(window))
 	{
 		glfwPollEvents();
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
+
 		on_update();
 
 		render();
@@ -200,10 +203,14 @@ void ForestView::render_msg()
 	}
 }
 
+void ForestView::on_start()
+{
+	load_images();
+}
+
 // Main update function (each frame gets called)
 void ForestView::on_update()
 {
-
 	ImGui::SetNextWindowSizeConstraints(ImVec2(800.0f, 600.0f), ImVec2(FLT_MAX, FLT_MAX));
 
 	if (ImGui::Begin("ForestView"))
@@ -477,66 +484,89 @@ void ForestView::folders_tree(const float& remainingHeight)
 {
 	if (ImGui::BeginChild("FolderTree##identifer", ImVec2(200, remainingHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar))
 	{
-		// Favorites =========================================================
-		if (favorites_need_update) 
+
+		if (ImGui::BeginTabBar("Tabs"))
 		{
-			favorites = fav.get_favorites();
-			favorites_need_update = false;
-		}
-
-		for (size_t i = 0; i < (int)favorites.size(); ++i) 
-		{
-			ImGui::PushID(i);
-
-			auto u8_str = (favorites[i].path() == favorites[i].path().root_path()) ? favorites[i].path().u8string() : favorites[i].path().filename().u8string();
-			std::string favorite_to_show(u8_str.begin(), u8_str.end());
-
-			if (ImGui::Selectable(favorite_to_show.c_str())) 
+			if (ImGui::BeginTabItem("Favorites"))
 			{
-				fileExplorer->navigate_to(favorites[i].path(), current_path);
-				current_path = favorites[i].path();
-				selected_path = "";
-			}
-			if (ImGui::BeginPopupContextItem("favoritesRightClick"))
-			{
-				if (ImGui::Button("Unpin from favorites")) 
+				if (favorites_need_update)
 				{
-					fav.delete_fav(favorites[i]);
-					favorites_need_update = true;
-					ImGui::CloseCurrentPopup();
+					favorites = fav.get_favorites();
+					favorites_need_update = false;
 				}
-				
-				ImGui::EndPopup();
-			}
-			ImGui::PopID();
-		}
 
-		if (!fav.is_empty()) ImGui::Separator();
+				for (size_t i = 0; i < (int)favorites.size(); ++i)
+				{
+					ImGui::PushID(i);
+
+					auto u8_str = (favorites[i].path() == favorites[i].path().root_path()) ? favorites[i].path().u8string() : favorites[i].path().filename().u8string();
+					std::string favorite_to_show(u8_str.begin(), u8_str.end());
+
+					if (ImGui::Selectable(favorite_to_show.c_str()))
+					{
+						fileExplorer->navigate_to(favorites[i].path(), current_path);
+						current_path = favorites[i].path();
+						selected_path = "";
+					}
+					if (ImGui::BeginPopupContextItem("favoritesRightClick"))
+					{
+						if (ImGui::Button("Unpin from favorites"))
+						{
+							fav.delete_fav(favorites[i]);
+							favorites_need_update = true;
+							ImGui::CloseCurrentPopup();
+						}
+
+						ImGui::EndPopup();
+					}
+					ImGui::PopID();
+				}
+
+				if (fav.is_empty()) ImGui::Text("No favorites pinned...");
+
+				ImGui::Separator();
+
+				ImGui::EndTabItem();
+			}
+			if (ImGui::BeginTabItem("Recent History"))
+			{
+				if (recent_history_need_update)
+				{
+					recent_history = recents.get_recent_history();
+					recent_history_need_update = false;
+				}
+
+				for (size_t i = 0; i < (int)recent_history.size(); ++i)
+				{
+					ImGui::PushID(i);
+
+					auto u8_str = (recent_history[i].path() == recent_history[i].path().root_path()) ? recent_history[i].path().u8string() : recent_history[i].path().filename().u8string();
+					std::string favorite_to_show(u8_str.begin(), u8_str.end());
+
+					if (ImGui::Selectable(favorite_to_show.c_str()))
+					{
+						/*fileExplorer->navigate_to(recent_history[i].path());
+						current_path = recent_history[i].path();
+						selected_path = "";*/
+					}
+
+					ImGui::PopID();
+				}
+
+				if (recent_history.empty()) ImGui::Text("No Recents yet...");
+
+				ImGui::Separator();
+
+				ImGui::EndTabItem();
+			}
+			ImGui::EndTabBar();
+		}
+		// Favorites =========================================================
+		
 
 		// Recent History ============================================================
 
-		if (recent_history_need_update)
-		{
-			recent_history = recents.get_recent_history();
-			recent_history_need_update = false;
-		}
-		for (size_t i = 0; i < (int)recent_history.size(); ++i)
-		{
-			ImGui::PushID(i);
-
-			auto u8_str = (recent_history[i].path() == recent_history[i].path().root_path()) ? recent_history[i].path().u8string() : recent_history[i].path().filename().u8string();
-			std::string favorite_to_show(u8_str.begin(), u8_str.end());
-
-			if (ImGui::Selectable(favorite_to_show.c_str()))
-			{
-				/*fileExplorer->navigate_to(recent_history[i].path());
-				current_path = recent_history[i].path();
-				selected_path = "";*/
-			}
-			
-			ImGui::PopID();
-		}
-
+	
 
 		// Folders Tree =======================================================
 		if (tree_need_update)
@@ -621,6 +651,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 			auto u8_str = (entries[i].path() == entries[i].path().root_path()) ? entries[i].path().u8string() : entries[i].path().filename().u8string();
 			std::string utf8_path(u8_str.begin(), u8_str.end());
+
+			decide_icon(entries[i]);
 
 			ImGui::Selectable(utf8_path.c_str(), is_selected);
 
@@ -775,7 +807,6 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			ImGui::PopID();
 		}
 
-
 		// temporary
 
 		auto u8 = current_path.u8string();
@@ -872,3 +903,42 @@ void ForestView::stats_bar()
 	}
 	ImGui::EndChild();
 }
+
+void ForestView::load_images()
+{
+	folder_icon.loadTexture("assets/Images/Folder.png");
+	word_icon.loadTexture("assets/Images/word.png");
+	exe_icon.loadTexture("assets/Images/exe.png");
+	power_point_icon.loadTexture("assets/Images/powerpoint.png");
+	music_icon.loadTexture("assets/Images/music.png");
+	pdf_icon.loadTexture("assets/Images/pdf.png");
+	picture_icon.loadTexture("assets/Images/picture.png");
+	zip_icon.loadTexture("assets/Images/rar-format.png");
+	txt_file_icon.loadTexture("assets/Images/txt-file.png");
+	default_icon.loadTexture("assets/Images/default.png");
+}
+
+void ForestView::decide_icon(const fs::directory_entry& entry)
+{
+	if (entry.is_directory()) 
+	{
+		ImGui::Image(folder_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+	}
+	else if (entry.is_regular_file()) 
+	{
+		fs::path extention = entry.path().extension();
+
+		if (extention == ".pdf") ImGui::Image(pdf_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+		else if (extention == ".docx") ImGui::Image(word_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+		else if (extention == ".pptx") ImGui::Image(power_point_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+		else if (extention == ".exe") ImGui::Image(exe_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+		else if (extention == ".mp3") ImGui::Image(music_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+		else if (extention == ".png" || extention == ".jpeg" || extention == ".jpg") ImGui::Image(picture_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+		else if (extention == ".zip" || extention == ".rar") ImGui::Image(zip_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+		else if (extention == ".txt") ImGui::Image(txt_file_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+		else ImGui::Image(default_icon.get_texture_id(), ImVec2(icons_width, icons_height));
+	}
+	else ImGui::Image(default_icon.get_texture_id(), ImVec2(15.0f, 15.0f));
+	ImGui::SameLine();
+}
+

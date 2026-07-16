@@ -17,7 +17,7 @@
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
+#include "stb_image.h"
 
 #include <imgui.h>
 #include <imgui_impl_opengl3.h>
@@ -37,6 +37,8 @@
 
 #include "tree.h"
 
+#include "Texture.h"
+
 namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
@@ -46,6 +48,8 @@ class App
 private:
 
 	GLFWwindow* window = nullptr;
+
+	virtual void on_start() {};
 
 	virtual void on_update() = 0;
 
@@ -82,6 +86,9 @@ private:
 	Explorer* fileExplorer;
 	Favorites fav;
 	Recent recents;
+
+	float icons_width = 15.0f;
+	float icons_height = 15.0f;
 
 	bool show_create_folder = false;
 	bool show_selected_folder_options = false;
@@ -124,8 +131,19 @@ private:
 
 	tree t;
 	tree structure_tree;
-
 	Timer timer;
+
+	Texture folder_icon;
+	Texture word_icon;
+	Texture power_point_icon;
+	Texture exe_icon;
+	Texture music_icon;
+	Texture pdf_icon;
+	Texture picture_icon;
+	Texture zip_icon;
+	Texture txt_file_icon;
+	Texture default_icon;
+
 public:
 
 	ForestView() 
@@ -138,6 +156,8 @@ public:
 	}
 
 	void render_msg();
+
+	void on_start() override;
 
 	// Main update function (each frame gets called)
 
@@ -160,5 +180,7 @@ public:
 	// Stats Bar
 	void stats_bar();
 
+	void load_images();
 
+	void decide_icon(const fs::directory_entry& entry);
 };

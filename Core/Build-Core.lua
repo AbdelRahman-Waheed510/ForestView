@@ -13,7 +13,9 @@ project "Core"
       "Source/tree",            
       "Source/Folder Explorer",
       "Source/Bookmarks",
+      "source/Renderer",
 
+      "../Vendor/stb_image",
       "../Vendor/imgui-docking",
       "../Vendor/imgui-docking/backends",
       "../Vendor/imgui-docking/misc/cpp",
