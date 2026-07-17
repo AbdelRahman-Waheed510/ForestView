@@ -37,7 +37,10 @@ void App::initialize_ImGui()
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.BackendRendererName = "Task++";
-	
+
+	ImFont* default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
+	ImFont* arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 18.0f, nullptr);
+
 	dark_mode();
 	
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
