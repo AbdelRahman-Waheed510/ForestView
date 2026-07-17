@@ -785,7 +785,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 					ImGui::SameLine();
 					if (ImGui::Button("Copy Structure"))
 					{
-						folder_structure = std::async(std::launch::async, [fileExplorer = this->fileExplorer, path = selected_path]() {
+						folder_structure = std::async(std::launch::async, [path = selected_path]() {
 							// Create a local, isolated tree instance inside the thread so it doesn't touch main thread data
 							tree localTree;
 							localTree.BuildTree(path);
@@ -858,8 +858,7 @@ void ForestView::stats_bar()
 
 			if (need_file_size_call)
 			{
-				// Timer timer;
-				file_size_future.push_back(std::async(std::launch::async, [fileExplorer = this->fileExplorer, path = selected_path]() {return fileExplorer->get_total_files_size(path);}));
+				file_size_future.push_back(std::async(std::launch::async, [&fileExplorer = this->fileExplorer, path = selected_path]() {return fileExplorer->get_total_files_size(path);}));
 				need_file_size_call = false;
 				is_calulating_size = true;
 			}
