@@ -17,9 +17,5 @@ int main()
 
 	ForestView f;
 	f.run_loop();
-
-	//tree t;
-	//t.BuildTree(R"(D:\GAMES)");
-	//t.print();
 	return 0;
 }

@@ -12,8 +12,19 @@
 #include "tree.h"
 #include <functional>
 #include <chrono>
+#include <memory>
+#include <glad/glad.h>
+#include <GLFW/glfw3.h>
+#include "Texture.h"
 
 namespace fs = std::filesystem;
+
+struct Entry 
+{
+	fs::directory_entry entry;
+	GLuint textureId;
+	std::string name;
+};
 
 enum NewType
 {
@@ -86,10 +97,12 @@ public:
 class Explorer 
 {
 private:
+	TexturesManager M_texturesManager;
 	tree* t;
-	std::vector<fs::directory_entry> entries;
+	std::vector<Entry> entries;
 	std::stack<fs::path> redo_stack;
 	std::stack<fs::path> undo_stack;
+	
 
 public:
 	
@@ -109,8 +122,22 @@ public:
 			wchar_t* drive = buffer;
 			while (*drive) {
 				std::error_code ec;
-				entries.emplace_back(fs::path(drive), ec);
-				drive += wcslen(drive) + 1; 
+				fs::directory_entry ent(fs::path(drive), ec);	
+				if (ec)
+				{
+					std::cerr << "Error while loading partitions" << std::endl;
+					drive += wcslen(drive) + 1;
+					continue;
+				}
+
+				Entry e;
+				e.entry = ent;
+				e.textureId = M_texturesManager.decide_icon(ent);
+				auto u8_str = (ent.path() == ent.path().root_path()) ? ent.path().u8string() : ent.path().filename().u8string();
+				std::string utf8_path(u8_str.begin(), u8_str.end());
+				e.name = utf8_path;
+				entries.emplace_back(std::move(e));
+				drive += wcslen(drive) + 1;
 			}
 		}
 		return;
@@ -189,7 +216,7 @@ public:
 
 	}
 
-	void load_entries_from_specific_path(const fs::path& path) 
+	void load_entries_from_specific_path(fs::path path) 
 	{
 		if (!entries.empty())
 		{
@@ -211,7 +238,15 @@ public:
 			if (attr & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))
 				continue; // skip hidden/system
 
-			entries.emplace_back(entry);
+			Entry e;
+			e.entry = entry;
+			e.textureId = M_texturesManager.decide_icon(entry);
+			auto u8_str = (entry.path() == entry.path().root_path()) ? entry.path().u8string() : entry.path().filename().u8string();
+			std::string utf8_path(u8_str.begin(), u8_str.end());
+			e.name = utf8_path;
+
+			entries.emplace_back(std::move(e));
+
 		}
 		return;
 	}
@@ -276,12 +311,21 @@ public:
 			to_lower(entrypath);
 			to_lower(keyword);
 
-			if (entrypath.find(keyword) != std::string::npos) entries.emplace_back(entry);
+			if (entrypath.find(keyword) != std::string::npos)
+			{
+				Entry e;
+				e.entry = entry;
+				e.textureId = M_texturesManager.decide_icon(entry);
+				auto u8_str = (entry.path() == entry.path().root_path()) ? entry.path().u8string() : entry.path().filename().u8string();
+				std::string utf8_path(u8_str.begin(), u8_str.end());
+				e.name = utf8_path;
+				entries.emplace_back(std::move(e));	
+			}
 		}
 		return;
 	}
 
-	std::vector<fs::directory_entry> get_entries()
+	const std::vector<Entry>& get_entries()
 	{
 		return entries;
 	}
@@ -470,7 +514,7 @@ public:
 		return result;
 	}
 
-	void sort_entries(const std::function<bool(fs::directory_entry&, fs::directory_entry&)>& comp)
+	void sort_entries(const std::function<bool(Entry&, Entry&)>& comp)
 	{
 		std::sort(entries.begin(), entries.end(), comp);
 		return;
@@ -478,9 +522,9 @@ public:
 
 	void print_entries() 
 	{
-		for (const fs::directory_entry& entry : entries) 
+		for (const Entry& entry : entries) 
 		{
-			std::cout << entry.path() << std::endl;
+			std::cout << entry.entry.path() << std::endl;
 		}
 	}
 

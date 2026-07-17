@@ -37,7 +37,7 @@
 
 #include "tree.h"
 
-#include "Texture.h"
+
 
 namespace fs = std::filesystem;
 
@@ -86,7 +86,6 @@ private:
 	std::unique_ptr<Explorer> fileExplorer;
 	Favorites fav;
 	Recent recents;
-
 	float icons_width = 15.0f;
 	float icons_height = 15.0f;
 
@@ -122,6 +121,7 @@ private:
 	std::string globalKeyWord;
 	std::string ThisDirectoryKeyWord;
 
+	std::vector<Entry> entries;
 	std::vector<std::future<std::pair<double, std::string>>> file_size_future;
 	std::pair<double, std::string> file_size;
 	std::string last_modified;
@@ -133,34 +133,27 @@ private:
 	tree structure_tree;
 	Timer timer;
 
-	Texture folder_icon;
-	Texture word_icon;
-	Texture power_point_icon;
-	Texture exe_icon;
-	Texture music_icon;
-	Texture pdf_icon;
-	Texture picture_icon;
-	Texture zip_icon;
-	Texture txt_file_icon;
-	Texture default_icon;
-
 public:
 
-	ForestView() 
+	ForestView()
 	{
-		favorites = fav.get_favorites();
-		copied_structure.reserve(1024*512);
-		t.iniThisPc("THIS PC");
-		t.fillThisPcWithDrives(fileExplorer->get_partitions());
+		copied_structure.reserve(1024 * 512);
+	}
+
+	~ForestView() 
+	{
+		//delete fileExplorer;
 	}
 
 	void render_msg();
 
 	void on_start() override;
 
-	// Main update function (each frame gets called)
+	// Main update function (each frame gets called)W
 
 	void on_update();
+
+	void refocus_reload();
 
 	// Search Bar
 	void search_bar();
@@ -176,10 +169,8 @@ public:
 	// Files Navigation Panel
 	void files_navigation_panel(const float& remainingHeight);
 
+	void handle_entries_mouse_click(const fs::directory_entry& entry);
+
 	// Stats Bar
 	void stats_bar();
-
-	void load_images();
-
-	void decide_icon(const fs::directory_entry& entry);
 };
