@@ -206,6 +206,7 @@ void ForestView::render_msg()
 void ForestView::on_start()
 {
 	load_images();
+	fileExplorer = std::make_unique<Explorer>();
 }
 
 // Main update function (each frame gets called)

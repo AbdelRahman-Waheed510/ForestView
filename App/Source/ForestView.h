@@ -83,7 +83,7 @@ public:
 class ForestView : public App 
 {
 private:
-	Explorer* fileExplorer;
+	std::unique_ptr<Explorer> fileExplorer;
 	Favorites fav;
 	Recent recents;
 
@@ -150,7 +150,6 @@ public:
 	{
 		favorites = fav.get_favorites();
 		copied_structure.reserve(1024*512);
-		fileExplorer = new Explorer();
 		t.iniThisPc("THIS PC");
 		t.fillThisPcWithDrives(fileExplorer->get_partitions());
 	}
