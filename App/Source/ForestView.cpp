@@ -219,7 +219,6 @@ void ForestView::on_start()
 void ForestView::on_update()
 {
 	ImGui::SetNextWindowSizeConstraints(ImVec2(800.0f, 600.0f), ImVec2(FLT_MAX, FLT_MAX));
-
 	if (ImGui::Begin("ForestView"))
 	{
 
@@ -675,19 +674,41 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		ImGui::Text("Files");
 		ImGui::Separator();
 
+		float avalWidth = ImGui::GetContentRegionAvail().x;
+		int columnscount = (int)(avalWidth / (icons_width + padding));
+		if (columnscount < 1) columnscount = 1;
+		if (view_type == LARGE_THUMBNAILS) 
+		{
+			ImGui::Columns(columnscount, 0, false);
+		}
+
 		for (size_t i = 0; i < entries.size(); ++i)
 		{
 			ImGui::PushID(i);
-			static bool is_selected = false;
 
-			ImGui::Image(entries[i].textureId, ImVec2(icons_width, icons_height));
+			if (view_type == ROWS) 
+			{
+				bool is_selected = false;
 
-			ImGui::SameLine();
+				ImGui::Image(entries[i].textureId, ImVec2(icons_width, icons_height));
 
-			ImGui::Selectable(entries[i].name.c_str(), is_selected);
+				ImGui::SameLine();
+
+				ImGui::Selectable(entries[i].name.c_str(), is_selected);
+
+			}
+
+			if (view_type == LARGE_THUMBNAILS)
+			{
+				ImGui::ImageButton(entries[i].name.c_str(), entries[i].textureId, ImVec2(icons_width, icons_height));
+			}
 
 			handle_entries_mouse_click(entries[i].entry);
 
+			if (view_type == LARGE_THUMBNAILS)
+			{
+				ImGui::Text(entries[i].name.c_str());
+			}
 			if (show_selected_folder_options && selected_path == entries[i].entry.path())
 			{
 				if (ImGui::Button("Rename"))
@@ -762,9 +783,13 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				is_coping_structure = false;
 				copied_structure = "";
 			}
+
+			if (view_type == LARGE_THUMBNAILS) ImGui::NextColumn();
+
 			ImGui::PopID();
 		}
 
+		if (view_type == LARGE_THUMBNAILS) ImGui::Columns(1);
 		// temporary
 
 		auto u8 = current_path.u8string();
@@ -788,6 +813,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			entries = fileExplorer->get_entries();
 			entries_need_update = false;
 		}
+
 	}
 	ImGui::EndChild();
 }
@@ -925,7 +951,34 @@ void ForestView::stats_bar()
 
 			ImGui::Text(" | Coping Structure....");
 		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("ROWS"))
+		{
+			view_type = ROWS;
+			icons_height = 15.0f;
+			icons_width = 15.0f;
+		}
+		ImGui::SameLine();
+		if (ImGui::Button("Large thumbnails"))
+		{
+			view_type = LARGE_THUMBNAILS;
+			icons_height = 128.0f;
+			icons_width = 128.0f;
+		}
 	}
 	ImGui::EndChild();
+}
+
+// Progress Bar
+
+void ForestView::show_progress_bar(const std::string& overlay)
+{
+	if (ImGui::Begin("Progress"))
+	{
+		ImGui::ProgressBar(0.5f, ImVec2(.00f, 50.0f), overlay.c_str());
+	}
+	ImGui::End();
 }
 

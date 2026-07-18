@@ -43,6 +43,11 @@ namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
 
+enum viewType 
+{
+	LARGE_THUMBNAILS,
+	ROWS,
+};
 class App 
 {
 private:
@@ -88,6 +93,9 @@ private:
 	Recent recents;
 	float icons_width = 15.0f;
 	float icons_height = 15.0f;
+	float padding = 32.0f;
+	
+	viewType view_type = ROWS;
 
 	bool show_create_folder = false;
 	bool show_selected_folder_options = false;
@@ -173,4 +181,8 @@ public:
 
 	// Stats Bar
 	void stats_bar();
+
+
+	// Progress Bar
+	void show_progress_bar(const std::string& overlay);
 };
