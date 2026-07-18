@@ -26,6 +26,12 @@ struct Entry
 	std::string name;
 };
 
+struct fileSize
+{
+	double size;
+	std::string label;
+};
+
 enum NewType
 {
 	FOLDER,
@@ -163,7 +169,7 @@ public:
 		return entries.size();
 	}
 
-	std::pair<double, std::string> get_total_files_size(const fs::path& path)
+	fileSize get_total_files_size(const fs::path& path)
 	{
 		double count = 0.0;
 		std::error_code ec;

@@ -37,8 +37,6 @@
 
 #include "tree.h"
 
-
-
 namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
@@ -48,6 +46,7 @@ enum viewType
 	LARGE_THUMBNAILS,
 	ROWS,
 };
+
 class App 
 {
 private:
@@ -130,8 +129,8 @@ private:
 	std::string ThisDirectoryKeyWord;
 
 	std::vector<Entry> entries;
-	std::vector<std::future<std::pair<double, std::string>>> file_size_future;
-	std::pair<double, std::string> file_size;
+	std::vector<std::future<fileSize>> file_size_future;
+	fileSize file_size;
 	std::string last_modified;
 
 

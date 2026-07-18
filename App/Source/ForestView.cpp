@@ -846,8 +846,8 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 					show_selected_folder_options = !show_selected_folder_options;
 					show_rename_file = false;
 
-					file_size.first = 0.0;
-					file_size.second = "";
+					file_size.size = 0.0;
+					file_size.label = "";
 					last_modified = "";
 				}
 				else
@@ -928,7 +928,7 @@ void ForestView::stats_bar()
 
 			std::erase_if(file_size_future, [](auto& x) {return !x.valid() || x.wait_for(std::chrono::seconds(0)) == std::future_status::ready;});
 
-			if (!is_calulating_size) ImGui::Text((std::format("{:.2f}{}", file_size.first, file_size.second)).c_str());
+			if (!is_calulating_size) ImGui::Text((std::format("{:.2f}{}", file_size.size, file_size.label)).c_str());
 			else ImGui::Text("Calculating size....");
 
 
