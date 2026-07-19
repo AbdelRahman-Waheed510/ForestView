@@ -544,6 +544,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 					{
 						fileExplorer->navigate_to(favorites[i].path(), current_path);
 						current_path = favorites[i].path();
+						entries_need_update = true;
 						selected_path = "";
 					}
 					if (ImGui::BeginPopupContextItem("favoritesRightClick"))
