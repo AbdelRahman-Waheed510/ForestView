@@ -103,7 +103,7 @@ public:
 class Explorer 
 {
 private:
-	TexturesManager M_texturesManager;
+	TexturesManager& M_texturesManager;	
 	tree* t;
 	std::vector<Entry> entries;
 	std::stack<fs::path> redo_stack;
@@ -112,7 +112,7 @@ private:
 
 public:
 	
-	Explorer() 
+	Explorer(TexturesManager& textures_manager) : M_texturesManager(textures_manager)
 	{
 		load_partitions();
 	}

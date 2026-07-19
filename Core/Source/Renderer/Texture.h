@@ -99,7 +99,7 @@ public:
 
 	TexturesManager() 
 	{
-		load_images();
+
 	}
 
 	void load_images()

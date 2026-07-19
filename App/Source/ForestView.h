@@ -87,9 +87,13 @@ public:
 class ForestView : public App 
 {
 private:
+	TexturesManager& M_texturesManager;
+
 	std::unique_ptr<Explorer> fileExplorer;
+
 	Favorites fav;
 	Recent recents;
+
 	float icons_width = 15.0f;
 	float icons_height = 15.0f;
 	float padding = 32.0f;
@@ -142,7 +146,7 @@ private:
 
 public:
 
-	ForestView()
+	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
 	{
 		copied_structure.reserve(1024 * 512);
 	}

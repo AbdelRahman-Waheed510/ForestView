@@ -14,8 +14,10 @@ int main()
 	#ifdef _WIN32
 		_setmode(_fileno(stdout), _O_U16TEXT);
 	#endif
+	
+	TexturesManager texture_manager;
 
-	ForestView f;
+	ForestView f(texture_manager);
 	f.run_loop();
 	return 0;
 }

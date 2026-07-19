@@ -209,7 +209,8 @@ void ForestView::render_msg()
 void ForestView::on_start()
 {
 	favorites = fav.get_favorites();
-	fileExplorer = std::make_unique<Explorer>();
+	M_texturesManager.load_images();
+	fileExplorer = std::make_unique<Explorer>(M_texturesManager);
 	entries = fileExplorer->get_entries();
 	t.iniThisPc("THIS PC");
 	t.fillThisPcWithDrives(fileExplorer->get_partitions());
