@@ -144,6 +144,12 @@ private:
 	tree structure_tree;
 	Timer timer;
 
+
+	// Textures
+	GLuint rows_button_texture_id;
+	GLuint tiles_button_texture_id;
+
+
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)

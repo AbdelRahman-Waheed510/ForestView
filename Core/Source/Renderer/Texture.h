@@ -94,6 +94,9 @@ private:
 	Texture zip_icon;
 	Texture txt_file_icon;
 	Texture default_icon;
+	
+	Texture LargeThumbnail_button_icon;
+	Texture Rows_button_icon;
 
 public:
 
@@ -114,6 +117,18 @@ public:
 		zip_icon.loadTexture("assets/Images/rar-format.png");
 		txt_file_icon.loadTexture("assets/Images/txt-file.png");
 		default_icon.loadTexture("assets/Images/default.png");
+		LargeThumbnail_button_icon.loadTexture("assets/Images/tile.png");
+		Rows_button_icon.loadTexture("assets/Images/list.png");
+	}
+
+	const GLuint get_LargeThumbnail_button_icon_texture_id()
+	{
+		return LargeThumbnail_button_icon.get_texture_id();
+	}
+
+	const GLuint get_Rows_button_icon_texture_id()
+	{
+		return Rows_button_icon.get_texture_id();
 	}
 
 	const GLuint decide_icon(const fs::directory_entry& entry)

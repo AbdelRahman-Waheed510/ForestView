@@ -212,8 +212,13 @@ void ForestView::on_start()
 	M_texturesManager.load_images();
 	fileExplorer = std::make_unique<Explorer>(M_texturesManager);
 	entries = fileExplorer->get_entries();
+
+	rows_button_texture_id = M_texturesManager.get_Rows_button_icon_texture_id();
+	tiles_button_texture_id = M_texturesManager.get_LargeThumbnail_button_icon_texture_id();
+
 	t.iniThisPc("THIS PC");
 	t.fillThisPcWithDrives(fileExplorer->get_partitions());
+
 }
 
 // Main update function (each frame gets called)
@@ -954,21 +959,28 @@ void ForestView::stats_bar()
 		}
 
 		ImGui::SameLine();
+		float spacing = ImGui::GetStyle().ItemSpacing.x;
+		float padding = ImGui::GetStyle().FramePadding.x;
+		float target_pos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - (15.0f * 2 + spacing + (padding * 4));
 
-		if (ImGui::Button("ROWS"))
+		ImGui::SetCursorPosX(target_pos);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
+		if (ImGui::ImageButton("Rows", rows_button_texture_id, ImVec2(12.0f, 12.0f)))
 		{
 			view_type = ROWS;
 			icons_height = 15.0f;
 			icons_width = 15.0f;
 		}
 		ImGui::SameLine();
-		if (ImGui::Button("Large thumbnails"))
+		if (ImGui::ImageButton("Large thumbnails", tiles_button_texture_id, ImVec2(12.0f, 12.0f)))
 		{
 			view_type = LARGE_THUMBNAILS;
 			icons_height = 128.0f;
 			icons_width = 128.0f;
 		}
+		ImGui::PopStyleColor(1);
 	}
+
 	ImGui::EndChild();
 }
 
