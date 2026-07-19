@@ -525,6 +525,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 
 		if (ImGui::BeginTabBar("Tabs"))
 		{
+			// Favorites =========================================================
 			if (ImGui::BeginTabItem("Favorites"))
 			{
 				if (favorites_need_update)
@@ -567,6 +568,8 @@ void ForestView::folders_tree(const float& remainingHeight)
 
 				ImGui::EndTabItem();
 			}
+
+			// Recent History ============================================================
 			if (ImGui::BeginTabItem("Recent History"))
 			{
 				if (recent_history_need_update)
@@ -600,12 +603,6 @@ void ForestView::folders_tree(const float& remainingHeight)
 			}
 			ImGui::EndTabBar();
 		}
-		// Favorites =========================================================
-		
-
-		// Recent History ============================================================
-
-	
 
 		// Folders Tree =======================================================
 		if (tree_need_update)
@@ -714,7 +711,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 			if (view_type == LARGE_THUMBNAILS)
 			{
-				ImGui::Text(entries[i].name.c_str());
+				ImGui::TextWrapped(entries[i].name.c_str());
 			}
 			if (show_selected_folder_options && selected_path == entries[i].entry.path())
 			{
