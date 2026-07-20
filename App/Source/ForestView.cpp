@@ -227,7 +227,6 @@ void ForestView::on_update()
 	ImGui::SetNextWindowSizeConstraints(ImVec2(800.0f, 600.0f), ImVec2(FLT_MAX, FLT_MAX));
 	if (ImGui::Begin("ForestView"))
 	{
-
 		refocus_reload();
 
 		search_bar();
@@ -263,10 +262,18 @@ void ForestView::refocus_reload()
 	{
 		was_focused = false;
 	}
+
 	if (is_focused && !was_focused)
 	{
-		entries_need_update = true;
-		was_focused = true;
+		if (is_searching) 
+		{
+			entries = fileExplorer->search(current_path, ThisDirectoryKeyWord);
+		}
+		else 
+		{
+			entries_need_update = true;
+			was_focused = true;
+		}
 	}
 }
 
@@ -275,6 +282,8 @@ void ForestView::search_bar()
 {
 	if (ImGui::BeginChild("SearchBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 	{
+
+		// Navigation
 		static int ids = 0;
 		if (global_key_need_update)
 		{
@@ -283,7 +292,6 @@ void ForestView::search_bar()
 			ids++;
 			ImGui::SetKeyboardFocusHere();
 		}
-
 		ImGui::SetNextItemWidth(550.0f);
 		ImGui::PushID(ids);
 		if (ImGui::InputTextWithHint("##Global Search Bar", fileExplorer->form_breadcrumb_navigation_string(current_path).c_str(), &globalKeyWord) || !globalKeyWord.empty())
@@ -324,14 +332,23 @@ void ForestView::search_bar()
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(-1.0f);
 
+		// Normal search bar
 		ImGui::BeginDisabled(current_path.empty());
 		if (ImGui::InputText("##Search Bar", &ThisDirectoryKeyWord) || !ThisDirectoryKeyWord.empty())
 		{
-			fileExplorer->search(current_path, ThisDirectoryKeyWord);
-			entries_need_update = true;
+			entries = fileExplorer->search(current_path, ThisDirectoryKeyWord);
 			globalKeyWord = "";
 		}
 		ImGui::EndDisabled();
+
+		if (!ThisDirectoryKeyWord.empty()) 
+		{
+			is_searching = true;
+		}
+		else 
+		{
+			is_searching = false;
+		}
 	}
 	ImGui::EndChild();
 }
@@ -678,6 +695,13 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		ImGui::Text("Files");
 		ImGui::Separator();
 
+		if (entries_need_update)
+		{
+			fileExplorer->refresh(current_path);
+			entries = fileExplorer->get_entries();
+			entries_need_update = false;
+		}
+
 		float avalWidth = ImGui::GetContentRegionAvail().x;
 		int columnscount = (int)(avalWidth / (icons_width + padding));
 		if (columnscount < 1) columnscount = 1;
@@ -811,12 +835,6 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		ImGui::Text(selected_path_string_to_show.c_str());
 
 		ImGui::Separator();
-		if (entries_need_update)
-		{
-			fileExplorer->refresh(current_path);
-			entries = fileExplorer->get_entries();
-			entries_need_update = false;
-		}
 
 	}
 	ImGui::EndChild();

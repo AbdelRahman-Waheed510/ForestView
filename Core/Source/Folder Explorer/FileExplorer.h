@@ -292,11 +292,11 @@ public:
 		return;
 	}
 
-	void search(const fs::path& path, std::string& keyword) 
+	std::vector<Entry>& search(const fs::path& path, std::string keyword)
 	{
 		if (path.empty())
 		{
-			return;
+			return entries;
 		}
 		if (!entries.empty())
 		{
@@ -328,7 +328,7 @@ public:
 				entries.emplace_back(std::move(e));	
 			}
 		}
-		return;
+		return entries;
 	}
 
 	const std::vector<Entry>& get_entries()

@@ -119,6 +119,8 @@ private:
 	bool favorites_need_update = false;
 	bool recent_history_need_update = false;
 
+	bool is_searching = false;
+
 	std::vector<fs::directory_entry> favorites;
 	std::deque<fs::directory_entry> recent_history;
 
@@ -133,7 +135,9 @@ private:
 	std::string ThisDirectoryKeyWord;
 
 	std::vector<Entry> entries;
+	
 	std::vector<std::future<fileSize>> file_size_future;
+
 	fileSize file_size;
 	std::string last_modified;
 
@@ -148,8 +152,6 @@ private:
 	// Textures
 	GLuint rows_button_texture_id;
 	GLuint tiles_button_texture_id;
-
-
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
