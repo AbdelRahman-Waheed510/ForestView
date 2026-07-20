@@ -334,7 +334,8 @@ void ForestView::search_bar()
 
 		// Normal search bar
 		ImGui::BeginDisabled(current_path.empty());
-		if (ImGui::InputText("##Search Bar", &ThisDirectoryKeyWord) || !ThisDirectoryKeyWord.empty())
+
+		if (ImGui::InputTextWithHint("##Search Bar", std::format("Search {}", utf8_search_bar_hint).c_str(), &ThisDirectoryKeyWord) || !ThisDirectoryKeyWord.empty())
 		{
 			entries = fileExplorer->search(current_path, ThisDirectoryKeyWord);
 			globalKeyWord = "";
@@ -699,6 +700,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		{
 			fileExplorer->refresh(current_path);
 			entries = fileExplorer->get_entries();
+			auto u8_str = (current_path == current_path.root_path()) ? current_path.u8string() : current_path.filename().u8string();
+			utf8_search_bar_hint.assign(u8_str.begin(), u8_str.end());
 			entries_need_update = false;
 		}
 

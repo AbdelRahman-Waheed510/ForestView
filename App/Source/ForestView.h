@@ -121,6 +121,8 @@ private:
 
 	bool is_searching = false;
 
+	std::string utf8_search_bar_hint = "This PC";
+
 	std::vector<fs::directory_entry> favorites;
 	std::deque<fs::directory_entry> recent_history;
 
