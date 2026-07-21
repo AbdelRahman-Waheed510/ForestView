@@ -57,6 +57,8 @@ private:
 
 	virtual void on_update() = 0;
 
+	virtual void on_shutdown() {};
+
 	bool initialize_GLFW();
 
 	bool create_window();
@@ -176,6 +178,10 @@ public:
 
 	void refocus_reload();
 
+	// shutdown 
+
+	void on_shutdown();
+
 	// Search Bar
 	void search_bar();
 
@@ -198,4 +204,6 @@ public:
 
 	// Progress Bar
 	void show_progress_bar(const std::string& overlay);
+
+	void shutdown_background_tasks();
 };

@@ -192,6 +192,8 @@ void App::run_loop()
 
 		render();
 	}
+
+	on_shutdown();
 }
 
 void ForestView::render_msg()
@@ -275,6 +277,11 @@ void ForestView::refocus_reload()
 			was_focused = true;
 		}
 	}
+}
+
+void ForestView::on_shutdown()
+{
+	shutdown_background_tasks();
 }
 
 // Search Bar
@@ -1014,3 +1021,14 @@ void ForestView::show_progress_bar(const std::string& overlay)
 	ImGui::End();
 }
 
+void ForestView::shutdown_background_tasks()
+{
+	for (const auto& x : file_size_future) 
+	{
+		if (x.valid()) 
+		{
+			x.wait();
+		}
+	}
+	file_size_future.clear();
+}
