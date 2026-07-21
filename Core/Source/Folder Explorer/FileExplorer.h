@@ -269,7 +269,9 @@ public:
 
 	void navigate_to(const fs::path& path, const fs::path& current_path) 
 	{
-		load_entries_from_specific_path(path);
+		if (path.empty()) load_partitions();
+		else if (path == "THIS PC") load_partitions();
+		else load_entries_from_specific_path(path);
 		
 		undo_stack.push(current_path);
 
