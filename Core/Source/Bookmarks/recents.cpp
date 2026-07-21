@@ -1,6 +1,11 @@
 #include "recents.h"
 
-const std::deque<fs::directory_entry> Recent::get_recent_history()
+const bool Recent::is_empty()
+{
+	return recent_history.empty();
+}
+
+const std::deque<fs::directory_entry>& Recent::get_recent_history()
 {
 	return recent_history;
 }

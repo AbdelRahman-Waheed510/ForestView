@@ -118,15 +118,10 @@ private:
 	bool tree_need_update = false;
 	bool is_calulating_size = false;
 	bool is_coping_structure = false;
-	bool favorites_need_update = false;
-	bool recent_history_need_update = false;
 
 	bool is_searching = false;
 
 	std::string utf8_search_bar_hint = "This PC";
-
-	std::vector<fs::directory_entry> favorites;
-	std::deque<fs::directory_entry> recent_history;
 
 	fs::path selected_path;
 	fs::path current_path;
@@ -165,7 +160,6 @@ public:
 
 	~ForestView() 
 	{
-		//delete fileExplorer;
 	}
 
 	void render_msg();

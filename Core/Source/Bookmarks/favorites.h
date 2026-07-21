@@ -25,7 +25,7 @@ public:
 
 	const bool is_exist(const fs::path& entry_path) const;
 
-	const std::vector<fs::directory_entry> get_favorites() const;
+	const std::vector<fs::directory_entry>& get_favorites() const;
 
 	void update_name(const fs::directory_entry& entry, const fs::path& newPath);
 };

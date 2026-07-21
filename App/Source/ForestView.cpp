@@ -210,7 +210,6 @@ void ForestView::render_msg()
 
 void ForestView::on_start()
 {
-	favorites = fav.get_favorites();
 	M_texturesManager.load_images();
 	fileExplorer = std::make_unique<Explorer>(M_texturesManager);
 	entries = fileExplorer->get_entries();
@@ -378,7 +377,6 @@ void ForestView::tool_bar()
 					fileExplorer->back(current_path);
 					recents.visit(fs::directory_entry(current_path));
 					entries_need_update = true;
-					recent_history_need_update = true;
 				}
 			}
 			else
@@ -386,7 +384,6 @@ void ForestView::tool_bar()
 				fileExplorer->back(current_path);
 				recents.visit(fs::directory_entry(current_path));
 				entries_need_update = true;
-				recent_history_need_update = true;
 			}
 		}
 
@@ -403,7 +400,6 @@ void ForestView::tool_bar()
 			fileExplorer->redo(current_path);
 			recents.visit(fs::directory_entry(current_path));
 			entries_need_update = true;
-			recent_history_need_update = true;
 		}
 
 		ImGui::EndDisabled();
@@ -514,14 +510,8 @@ void ForestView::tool_bar()
 				if (fav.is_exist(selected_path)) 
 				{
 					fav.delete_fav(fs::directory_entry(selected_path));
-					favorites_need_update = true;
 				}
-
-				if (recents.remove(fs::directory_entry(selected_path))) 
-				{
-					recent_history_need_update = true;
-				}
-
+				recents.remove(fs::directory_entry(selected_path));
 				fileExplorer->remove(selected_path);
 				entries_need_update = true;
 				tree_need_update = true;
@@ -553,23 +543,18 @@ void ForestView::folders_tree(const float& remainingHeight)
 			// Favorites =========================================================
 			if (ImGui::BeginTabItem("Favorites"))
 			{
-				if (favorites_need_update)
-				{
-					favorites = fav.get_favorites();
-					favorites_need_update = false;
-				}
 
-				for (size_t i = 0; i < (int)favorites.size(); ++i)
+				for (const auto& favorite_item : fav.get_favorites())
 				{
-					ImGui::PushID(i);
+					ImGui::PushID(favorite_item.path().c_str());
 
-					auto u8_str = (favorites[i].path() == favorites[i].path().root_path()) ? favorites[i].path().u8string() : favorites[i].path().filename().u8string();
+					auto u8_str = (favorite_item.path() == favorite_item.path().root_path()) ? favorite_item.path().u8string() : favorite_item.path().filename().u8string();
 					std::string favorite_to_show(u8_str.begin(), u8_str.end());
 
 					if (ImGui::Selectable(favorite_to_show.c_str()))
 					{
-						fileExplorer->navigate_to(favorites[i].path(), current_path);
-						current_path = favorites[i].path();
+						fileExplorer->navigate_to(favorite_item.path(), current_path);
+						current_path = favorite_item.path();
 						entries_need_update = true;
 						selected_path = "";
 					}
@@ -577,8 +562,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 					{
 						if (ImGui::Button("Unpin from favorites"))
 						{
-							fav.delete_fav(favorites[i]);
-							favorites_need_update = true;
+							fav.delete_fav(favorite_item);
 							ImGui::CloseCurrentPopup();
 						}
 
@@ -597,30 +581,28 @@ void ForestView::folders_tree(const float& remainingHeight)
 			// Recent History ============================================================
 			if (ImGui::BeginTabItem("Recent History"))
 			{
-				if (recent_history_need_update)
+				for (const auto& recent_item : recents.get_recent_history())
 				{
-					recent_history = recents.get_recent_history();
-					recent_history_need_update = false;
-				}
+					ImGui::PushID(recent_item.path().c_str());
 
-				for (size_t i = 0; i < (int)recent_history.size(); ++i)
-				{
-					ImGui::PushID(i);
+					auto u8_str = (recent_item.path() == recent_item.path().root_path()) ? recent_item.path().u8string() : recent_item.path().filename().u8string();
+					std::string recent_to_show(u8_str.begin(), u8_str.end());
 
-					auto u8_str = (recent_history[i].path() == recent_history[i].path().root_path()) ? recent_history[i].path().u8string() : recent_history[i].path().filename().u8string();
-					std::string favorite_to_show(u8_str.begin(), u8_str.end());
+					ImGui::Selectable(recent_to_show.c_str());
 
-					if (ImGui::Selectable(favorite_to_show.c_str()))
+					if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) 
 					{
-						/*fileExplorer->navigate_to(recent_history[i].path());
-						current_path = recent_history[i].path();
-						selected_path = "";*/
+						fs::path recentPath = recent_item.path();
+						fileExplorer->navigate_to(recent_item.path(), current_path);
+						current_path = recent_item.path();
+						entries = fileExplorer->get_entries();
+						recents.visit(recent_item);
+						selected_path = "";
 					}
-
 					ImGui::PopID();
 				}
 
-				if (recent_history.empty()) ImGui::Text("No Recents yet...");
+				if (recents.is_empty()) ImGui::Text("No Recents yet...");
 
 				ImGui::Separator();
 
@@ -765,11 +747,9 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 							if (fav.is_exist(fs::directory_entry(selected_path)))
 							{
 								fav.update_name(fs::directory_entry(selected_path), rename.finalPath);
-								favorites_need_update = true;
 							}
 							if (recents.update_name(fs::directory_entry(selected_path), rename.finalPath)) 
 							{
-								recent_history_need_update = true;
 							}
 							entries_need_update = true;
 							tree_need_update = true;
@@ -863,7 +843,6 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 				recents.visit(entry);
 				fileExplorer->navigate_to(entry.path(), current_path);
 				entries_need_update = true;
-				recent_history_need_update = true;
 
 				current_path = entry.path();
 			}
@@ -906,7 +885,6 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			{
 				if (fav.add_fav(entry))
 				{
-					favorites_need_update = true;
 				}
 				ImGui::CloseCurrentPopup();
 			}
@@ -916,7 +894,6 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			if (ImGui::Button("Unpin from favorites"))
 			{
 				fav.delete_fav(entry);
-				favorites_need_update = true;
 				ImGui::CloseCurrentPopup();
 			}
 		}
@@ -1032,3 +1009,4 @@ void ForestView::shutdown_background_tasks()
 	}
 	file_size_future.clear();
 }
+

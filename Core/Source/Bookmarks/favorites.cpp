@@ -33,7 +33,7 @@ const bool Favorites::is_exist(const fs::path& entry_path) const
 	return false;
 }
 
-const std::vector<fs::directory_entry> Favorites::get_favorites() const
+const std::vector<fs::directory_entry>& Favorites::get_favorites() const
 {
 	return favorites;
 }
