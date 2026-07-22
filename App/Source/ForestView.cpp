@@ -987,6 +987,56 @@ void ForestView::stats_bar()
 	ImGui::EndChild();
 }
 
+void ForestView::icons_size_slider()
+{
+	ImGui::SetNextWindowSizeConstraints(ImVec2(50.0f, 600.f), ImVec2(50.0f, 600.f));
+	if (ImGui::Begin("##iconsSizeSlider", nullptr,  ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_AlwaysAutoResize)) 
+	{
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemInnerSpacing, ImVec2(0.0f, 0.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 5.0f));
+
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		if (ImGui::ImageButton("##resetButton" , M_texturesManager.get_reset_button_icon_texture_id(), ImVec2(15.0f, 15.0f)))
+		{
+			switch (view_type)
+			{
+			case LARGE_THUMBNAILS:
+			{
+				icons_height = 128.0f;
+				icons_width = 128.0f;
+				break;
+			}
+			case ROWS:
+			{
+				icons_height = 15.0f;
+				icons_width = 15.0f;
+				break;
+			}
+			default:
+				break;
+			}
+		}
+		ImGui::PopStyleColor(1);
+
+		if (view_type == LARGE_THUMBNAILS) 
+		{
+			if (ImGui::VSliderFloat("##vslideridentifier", ImVec2(25.0f, 540.0f), &icons_width, 64.0f, 256.0f, "%.0f"))
+			{
+				icons_height = icons_width;
+			}
+		}
+		else if (view_type == ROWS) 
+		{
+			if (ImGui::VSliderFloat("##vslideridentifier", ImVec2(25.0f, 540.0f), &icons_width, 16.0f, 128.0f, "%.0f"))
+			{
+				icons_height = icons_width;
+			}
+		}
+		ImGui::PopStyleVar(3);
+	}
+	ImGui::End();
+}
 // Progress Bar
 
 void ForestView::show_progress_bar(const std::string& overlay)

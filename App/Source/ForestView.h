@@ -103,6 +103,7 @@ private:
 	float icons_width = 15.0f;
 	float icons_height = 15.0f;
 	float padding = 32.0f;
+
 	
 	viewType view_type = ROWS;
 
@@ -199,6 +200,7 @@ public:
 	// Stats Bar
 	void stats_bar();
 
+	void icons_size_slider();
 
 	// Progress Bar
 	void show_progress_bar(const std::string& overlay);
