@@ -38,8 +38,8 @@ void App::initialize_ImGui()
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.BackendRendererName = "Task++";
 
-	ImFont* default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
-	ImFont* arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 18.0f, nullptr);
+	default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
+	arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 18.0f, nullptr);
 
 	dark_mode();
 	

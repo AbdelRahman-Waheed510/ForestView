@@ -73,6 +73,10 @@ private:
 
 	void dark_mode();
 
+protected:
+	ImFont* default_font = nullptr;
+	ImFont* arabic_font = nullptr;
+
 public:
 
 	App() = default;
