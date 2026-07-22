@@ -249,6 +249,8 @@ void ForestView::on_update()
 
 		stats_bar();
 
+		icons_size_slider();
+
 	}
 	ImGui::End();
 
@@ -714,13 +716,15 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 				ImGui::SameLine();
 
-				ImGui::Selectable(entries[i].name.c_str(), is_selected);
+				ImGui::Selectable(entries[i].name.c_str(), is_selected, 0, ImVec2(0, icons_height));
 
 			}
 
 			if (view_type == LARGE_THUMBNAILS)
 			{
+				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 				ImGui::ImageButton(entries[i].name.c_str(), entries[i].textureId, ImVec2(icons_width, icons_height));
+				ImGui::PopStyleColor(1);
 			}
 
 			handle_entries_mouse_click(entries[i].entry);
@@ -728,70 +732,6 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			if (view_type == LARGE_THUMBNAILS)
 			{
 				ImGui::TextWrapped(entries[i].name.c_str());
-			}
-			if (show_selected_folder_options && selected_path == entries[i].entry.path())
-			{
-				if (ImGui::Button("Rename"))
-				{
-					show_rename_file = !show_rename_file;
-				}
-				if (show_rename_file)
-				{
-					static std::string newName;
-					ImGui::InputText("New Name", &newName);
-					if (ImGui::Button("Submit"))
-					{
-						RenameReturn rename = fileExplorer->rename_file(selected_path, newName);
-						if (rename.success)
-						{
-							if (fav.is_exist(fs::directory_entry(selected_path)))
-							{
-								fav.update_name(fs::directory_entry(selected_path), rename.finalPath);
-							}
-							if (recents.update_name(fs::directory_entry(selected_path), rename.finalPath)) 
-							{
-							}
-							entries_need_update = true;
-							tree_need_update = true;
-							newName.clear();
-							selected_path = "";
-						}
-						else
-						{
-							message = "This name already exists";
-						}
-					}
-
-					if (!message.empty()) ImGui::SameLine();
-
-					render_msg();
-
-				}
-
-				ImGui::SameLine();
-
-				if (ImGui::Button("Copy Path"))
-				{
-					show_rename_file = false;
-					ImGui::SetClipboardText(selected_path.string().c_str());
-				}
-
-				if (fs::is_directory(selected_path))
-				{
-					ImGui::SameLine();
-					if (ImGui::Button("Copy Structure"))
-					{
-						folder_structure = std::async(std::launch::async, [path = selected_path]() {
-							// Create a local, isolated tree instance inside the thread so it doesn't touch main thread data
-							tree localTree;
-							localTree.BuildTree(path);
-							return localTree.put_structure_into_string();
-							});
-						is_coping_structure = true;
-					}
-
-				}
-
 			}
 
 			if (folder_structure.valid() && folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
@@ -808,6 +748,38 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		}
 
 		if (view_type == LARGE_THUMBNAILS) ImGui::Columns(1);
+		
+		if (ImGui::BeginPopupModal("RENAME"))
+		{
+			static std::string newName;
+			ImGui::InputText("New Name", &newName);
+			if (ImGui::Button("Submit"))
+			{
+				RenameReturn rename = fileExplorer->rename_file(selected_path, newName);
+				if (rename.success)
+				{
+					if (fav.is_exist(fs::directory_entry(selected_path)))
+					{
+						fav.update_name(fs::directory_entry(selected_path), rename.finalPath);
+					}
+					if (recents.update_name(fs::directory_entry(selected_path), rename.finalPath))
+					{
+					}
+					entries_need_update = true;
+					tree_need_update = true;
+					newName.clear();
+					selected_path = "";
+				}
+				else
+				{
+					selected_path = "";
+					message = "This name already exists";
+				}
+			}
+			if (!message.empty()) ImGui::SameLine();
+			render_msg();
+		}
+
 		// temporary
 
 		auto u8 = current_path.u8string();
@@ -847,9 +819,8 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 				current_path = entry.path();
 			}
 		}
-		else if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+		else if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 		{
-
 			if (entry.path() != entry.path().root_path())
 			{
 				if (selected_path == entry.path())
@@ -874,32 +845,106 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			else selected_path = entry.path();
 		}
 	}
-
-	if (entry.is_directory() && ImGui::BeginPopupContextItem("entriesRightClick"))
-	{
-		// Add to favorites logic
 	
-		if (!fav.is_exist(entry))
+	if (ImGui::BeginPopupContextItem("entriesRightClick"))
+	{
+		if (entry.path() != selected_path) selected_path = entry.path();
+
+		// Rename 
+		if (selected_path != selected_path.root_path()) 
 		{
-			if (ImGui::Button("Add to favorites"))
+			ImGui::Separator();
+			static std::string newName;
+			ImGui::InputText("New Name", &newName);
+			if (ImGui::Button("Rename"))
 			{
-				if (fav.add_fav(entry))
+				RenameReturn rename = fileExplorer->rename_file(selected_path, newName);
+				if (rename.success)
 				{
+					if (fav.is_exist(fs::directory_entry(selected_path)))
+					{
+						fav.update_name(fs::directory_entry(selected_path), rename.finalPath);
+					}
+					if (recents.update_name(fs::directory_entry(selected_path), rename.finalPath))
+					{
+					}
+					entries_need_update = true;
+					tree_need_update = true;
+					newName.clear();
+					selected_path = "";
+				}
+				else
+				{
+					selected_path = "";
+					message = "This name already exists";
 				}
 				ImGui::CloseCurrentPopup();
 			}
-		}
-		else
-		{
-			if (ImGui::Button("Unpin from favorites"))
-			{
-				fav.delete_fav(entry);
-				ImGui::CloseCurrentPopup();
-			}
+			if (!message.empty()) ImGui::SameLine();
+			render_msg();
+			ImGui::Separator();
+
+		
 		}
 		
+		// Copy path
+		if (ImGui::Button("Copy Path")) 
+		{
+			show_rename_file = false;
+			ImGui::SetClipboardText(selected_path.string().c_str());
+
+
+			selected_path = "";
+			ImGui::CloseCurrentPopup();
+		}
+		
+		//copy structrure
+		if (ImGui::Button("Copy Structure")) 
+		{
+			folder_structure = std::async(std::launch::async, [path = selected_path]() {
+				// Create a local, isolated tree instance inside the thread so it doesn't touch main thread data
+				tree localTree;
+				localTree.BuildTree(path);
+				return localTree.put_structure_into_string();
+				});
+			is_coping_structure = true;
+			selected_path = "";
+			ImGui::CloseCurrentPopup();
+		}
+		
+		// Add to favorites logic
+		if (entry.is_directory())
+		{
+			if (!fav.is_exist(entry))
+			{
+				if (ImGui::Button("Add to favorites"))
+				{
+					fav.add_fav(entry);
+
+					selected_path = "";
+					ImGui::CloseCurrentPopup();
+				}
+			}
+			else
+			{
+				if (ImGui::Button("Unpin from favorites"))
+				{
+					fav.delete_fav(entry);
+
+					selected_path = "";
+					ImGui::CloseCurrentPopup();
+				}
+			}
+		}
+
 		ImGui::EndPopup();
 	}
+
+	if (show_rename_file) 
+	{
+		ImGui::OpenPopup("RENAME");
+	}
+
 }
 
 // Stats Bar
@@ -1037,6 +1082,7 @@ void ForestView::icons_size_slider()
 	}
 	ImGui::End();
 }
+
 // Progress Bar
 
 void ForestView::show_progress_bar(const std::string& overlay)
@@ -1050,7 +1096,11 @@ void ForestView::show_progress_bar(const std::string& overlay)
 
 void ForestView::shutdown_background_tasks()
 {
-	for (const auto& x : file_size_future) 
+	if (folder_structure.valid()) 
+	{
+		folder_structure.wait();
+	}
+	for (const auto& x : file_size_future)
 	{
 		if (x.valid()) 
 		{
