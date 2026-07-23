@@ -103,8 +103,9 @@ private:
 	float icons_width = 15.0f;
 	float icons_height = 15.0f;
 	float padding = 32.0f;
+	float folder_icons_horizontel_indent = 20.0f;
+	float folder_icons_vertical_indent = 20.0f;
 
-	
 	viewType view_type = ROWS;
 
 	bool show_create_folder = false;
@@ -125,6 +126,8 @@ private:
 	bool is_coping_structure = false;
 
 	bool is_searching = false;
+
+	bool is_right_click_call = false;
 
 	std::string utf8_search_bar_hint = "This PC";
 
@@ -195,7 +198,15 @@ public:
 	// Files Navigation Panel
 	void files_navigation_panel(const float& remainingHeight);
 
+	void render_entries();
+	
+	void render_debug_panel();
+
 	void handle_entries_mouse_click(const fs::directory_entry& entry);
+
+	void handle_right_click_operations();
+
+
 
 	// Stats Bar
 	void stats_bar();

@@ -38,8 +38,8 @@ void App::initialize_ImGui()
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.BackendRendererName = "Task++";
 
-	default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 18.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
-	arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 18.0f, nullptr);
+	default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 16.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
+	arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 16.0f, nullptr);
 
 	dark_mode();
 	
@@ -687,6 +687,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		ImGui::Text("Files");
 		ImGui::Separator();
 
+		// Updating the entries vector ============================================================
 		if (entries_need_update)
 		{
 			fileExplorer->refresh(current_path);
@@ -696,110 +697,125 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			entries_need_update = false;
 		}
 
+		// rendring the entries logic (for loop) ==================================================
+		render_entries();
+
+		// clearing the selected_Path if i press anywhere that not an entry =======================
+		if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered())
+		{
+			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+			{
+				selected_path = "";
+			}
+		}
+
+		// the right click logic ==================================================================
+		handle_right_click_operations();
+		
+		// the current and selceted path debug panel ==============================================
+		render_debug_panel();
+
+		// asyncc folder structure copying ======================================================== 
+		if (folder_structure.valid() && folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+		{
+			copied_structure = folder_structure.get();
+			ImGui::SetClipboardText(copied_structure.c_str());
+			is_coping_structure = false;
+			copied_structure = "";
+		}
+
+	}
+	ImGui::EndChild();
+}
+
+void ForestView::render_entries()
+{
+	if (view_type == LARGE_THUMBNAILS)
+	{
 		float avalWidth = ImGui::GetContentRegionAvail().x;
 		int columnscount = (int)(avalWidth / (icons_width + padding));
 		if (columnscount < 1) columnscount = 1;
-		if (view_type == LARGE_THUMBNAILS) 
-		{
-			ImGui::Columns(columnscount, 0, false);
-		}
+		ImGui::Columns(columnscount, 0, false);
 
 		for (size_t i = 0; i < entries.size(); ++i)
 		{
 			ImGui::PushID(i);
 
-			if (view_type == ROWS) 
+			bool is_selected = (entries[i].entry.path() == selected_path) ? true : false;
+
+			if (is_selected) 
 			{
-				bool is_selected = false;
-
-				ImGui::Image(entries[i].textureId, ImVec2(icons_width, icons_height));
-
-				ImGui::SameLine();
-
-				ImGui::Selectable(entries[i].name.c_str(), is_selected, 0, ImVec2(0, icons_height));
-
+				ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyle().Colors[ImGuiCol_Header]);
 			}
-
-			if (view_type == LARGE_THUMBNAILS)
+			else 
 			{
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-				ImGui::ImageButton(entries[i].name.c_str(), entries[i].textureId, ImVec2(icons_width, icons_height));
-				ImGui::PopStyleColor(1);
 			}
+
+			ImGui::ImageButton(entries[i].name.c_str(), entries[i].textureId, ImVec2(icons_width, icons_height));
+
+			ImGui::PopStyleColor(1);
 
 			handle_entries_mouse_click(entries[i].entry);
 
-			if (view_type == LARGE_THUMBNAILS)
-			{
-				ImGui::TextWrapped(entries[i].name.c_str());
-			}
+			float cursorPosX = ImGui::GetCursorPos().x;
+			float cursorPosY = ImGui::GetCursorPos().y;
+			ImGui::SetCursorPos(ImVec2(cursorPosX + folder_icons_horizontel_indent, cursorPosY));
+			ImGui::TextWrapped(entries[i].name.c_str());
 
-			if (folder_structure.valid() && folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-			{
-				copied_structure = folder_structure.get();
-				ImGui::SetClipboardText(copied_structure.c_str());
-				is_coping_structure = false;
-				copied_structure = "";
-			}
-
-			if (view_type == LARGE_THUMBNAILS) ImGui::NextColumn();
+			ImGui::NextColumn();
 
 			ImGui::PopID();
 		}
 
-		if (view_type == LARGE_THUMBNAILS) ImGui::Columns(1);
-		
-		if (ImGui::BeginPopupModal("RENAME"))
-		{
-			static std::string newName;
-			ImGui::InputText("New Name", &newName);
-			if (ImGui::Button("Submit"))
-			{
-				RenameReturn rename = fileExplorer->rename_file(selected_path, newName);
-				if (rename.success)
-				{
-					if (fav.is_exist(fs::directory_entry(selected_path)))
-					{
-						fav.update_name(fs::directory_entry(selected_path), rename.finalPath);
-					}
-					if (recents.update_name(fs::directory_entry(selected_path), rename.finalPath))
-					{
-					}
-					entries_need_update = true;
-					tree_need_update = true;
-					newName.clear();
-					selected_path = "";
-				}
-				else
-				{
-					selected_path = "";
-					message = "This name already exists";
-				}
-			}
-			if (!message.empty()) ImGui::SameLine();
-			render_msg();
-		}
-
-		// temporary
-
-		auto u8 = current_path.u8string();
-		std::string current_path_string_to_show(u8.begin(), u8.end());
-
-		auto u8_selected = selected_path.u8string();
-		std::string selected_path_string_to_show(u8_selected.begin(), u8_selected.end());
-
-		ImGui::Separator();
-
-		ImGui::Text("Current Path: "); ImGui::SameLine();
-		ImGui::Text(current_path_string_to_show.c_str());
-
-		ImGui::Text("Seleted Path: "); ImGui::SameLine();
-		ImGui::Text(selected_path_string_to_show.c_str());
-
-		ImGui::Separator();
-
+		ImGui::Columns(1);
 	}
-	ImGui::EndChild();
+
+	else if (view_type == ROWS)
+	{
+		for (size_t i = 0; i < entries.size(); ++i)
+		{
+			ImGui::PushID(i);
+
+			bool is_selected = (entries[i].entry.path() == selected_path) ? true : false;
+
+			// ===========================================================================================
+			ImGui::Image(entries[i].textureId, ImVec2(icons_width, icons_height));
+
+			ImGui::SameLine();
+
+			ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.005f, 0.5f));
+			
+			ImGui::Selectable(entries[i].name.c_str(), is_selected, 0, ImVec2(0, icons_height));
+
+			ImGui::PopStyleVar(1);
+			// ===========================================================================================
+
+			handle_entries_mouse_click(entries[i].entry);
+
+			ImGui::PopID();
+		}
+	}
+
+}
+
+void ForestView::render_debug_panel()
+{
+	auto u8 = current_path.u8string();
+	std::string current_path_string_to_show(u8.begin(), u8.end());
+
+	auto u8_selected = selected_path.u8string();
+	std::string selected_path_string_to_show(u8_selected.begin(), u8_selected.end());
+
+	ImGui::Separator();
+
+	ImGui::Text("Current Path: "); ImGui::SameLine();
+	ImGui::Text(current_path_string_to_show.c_str());
+
+	ImGui::Text("Seleted Path: "); ImGui::SameLine();
+	ImGui::Text(selected_path_string_to_show.c_str());
+
+	ImGui::Separator();
 }
 
 void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
@@ -819,39 +835,39 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 				current_path = entry.path();
 			}
 		}
-		else if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))	
 		{
-			if (entry.path() != entry.path().root_path())
-			{
-				if (selected_path == entry.path())
-				{
-					show_selected_folder_options = !show_selected_folder_options;
-					show_rename_file = false;
-
-					file_size.size = 0.0;
-					file_size.label = "";
-					last_modified = "";
-				}
-				else
-				{
-					show_selected_folder_options = true;
-					show_rename_file = false;
-					need_file_size_call = true;
-					need_modified_since_call = true;
-				}
-			}
-			message = "";
-			if (selected_path == entry.path()) selected_path.clear();
+			selected_path = entry.path();
+			is_right_click_call = true;
+		}
+		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		{
+			if (selected_path == entry.path()) selected_path = "";
 			else selected_path = entry.path();
+			file_size.size = 0.0;
+			file_size.label = "";
+			last_modified = "";
 		}
 	}
-	
-	if (ImGui::BeginPopupContextItem("entriesRightClick"))
+}
+
+void ForestView::handle_right_click_operations()
+{
+	if (is_right_click_call) 
+	{
+		ImGui::OpenPopup("entriesRightClick");
+		is_right_click_call = false;
+	}
+	std::error_code ec;
+	fs::directory_entry entry(selected_path, ec);
+
+	static bool was_open = false;
+	bool is_open = ImGui::BeginPopup("entriesRightClick");
+	if (is_open)
 	{
 		if (entry.path() != selected_path) selected_path = entry.path();
-
 		// Rename 
-		if (selected_path != selected_path.root_path()) 
+		if (selected_path != selected_path.root_path())
 		{
 			ImGui::Separator();
 			static std::string newName;
@@ -884,11 +900,11 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			render_msg();
 			ImGui::Separator();
 
-		
+
 		}
-		
+
 		// Copy path
-		if (ImGui::Button("Copy Path")) 
+		if (ImGui::Button("Copy Path"))
 		{
 			show_rename_file = false;
 			ImGui::SetClipboardText(selected_path.string().c_str());
@@ -897,9 +913,9 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			selected_path = "";
 			ImGui::CloseCurrentPopup();
 		}
-		
+
 		//copy structrure
-		if (ImGui::Button("Copy Structure")) 
+		if (ImGui::Button("Copy Structure"))
 		{
 			folder_structure = std::async(std::launch::async, [path = selected_path]() {
 				// Create a local, isolated tree instance inside the thread so it doesn't touch main thread data
@@ -911,7 +927,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			selected_path = "";
 			ImGui::CloseCurrentPopup();
 		}
-		
+
 		// Add to favorites logic
 		if (entry.is_directory())
 		{
@@ -939,12 +955,11 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 
 		ImGui::EndPopup();
 	}
-
-	if (show_rename_file) 
+	if (was_open && !is_open)
 	{
-		ImGui::OpenPopup("RENAME");
+		selected_path = "";
 	}
-
+	was_open = is_open;
 }
 
 // Stats Bar

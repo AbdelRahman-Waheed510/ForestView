@@ -11,7 +11,7 @@ workspace "ForestView"
 OutputDir = "%{cfg.system}-%{cfg.architecture}/%{cfg.buildcfg}"
 
 group "Dependencies"
-   include "Vendor/imgui-docking/build.lua"
+   include "Vendor/imgui-docking/ImGui_Build"
 group ""
 
 group "Core"
