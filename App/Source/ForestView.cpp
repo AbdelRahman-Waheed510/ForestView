@@ -842,11 +842,19 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
-			if (selected_path == entry.path()) selected_path = "";
-			else selected_path = entry.path();
-			file_size.size = 0.0;
-			file_size.label = "";
-			last_modified = "";
+			if (selected_path == entry.path())
+			{
+				selected_path = "";
+				file_size.size = 0.0;
+				file_size.label = "";
+				last_modified = "";
+			}
+			else
+			{
+				selected_path = entry.path();
+				need_file_size_call = true;
+				need_modified_since_call = true;
+			}
 		}
 	}
 }
