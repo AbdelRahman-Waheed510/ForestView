@@ -41,10 +41,74 @@ namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
 
-enum viewType 
+enum viewType
 {
 	LARGE_THUMBNAILS,
 	ROWS,
+};
+
+struct State 
+{
+	std::unique_ptr<Explorer> fileExplorer;
+	float icons_width = 15.0f;
+	float icons_height = 15.0f;
+	float padding = 32.0f;
+
+	viewType view_type;
+
+	Favorites fav;
+	Recent recents;
+
+
+	bool show_create_folder = false;
+	bool show_selected_folder_options = false;
+	bool show_rename_file = false;
+
+	bool entries_need_update = false;
+
+	bool need_file_size_call = false;
+	bool need_modified_since_call = false;
+
+	bool show_deletion_warning = false;
+
+	bool global_key_need_update = false;
+
+	bool tree_need_update = false;
+	bool is_calulating_size = false;
+	bool is_coping_structure = false;
+
+	bool is_searching = false;
+
+	bool is_right_click_call = false;
+
+	fs::path selected_path;
+	fs::path current_path;
+	fs::path copied_path;
+	std::string copied_structure = "";
+
+	std::string message;
+
+	std::string globalKeyWord;
+	std::string ThisDirectoryKeyWord;
+
+	std::vector<Entry> entries;
+
+	std::vector<std::future<fileSize>> file_size_future;
+
+	fileSize file_size;
+	std::string last_modified;
+
+
+	std::future<std::string> folder_structure;
+
+	tree t;
+	tree structure_tree;
+
+	State() 
+	{
+		copied_structure.reserve(1024 * 512);
+		view_type = ROWS;
+	}
 };
 
 class App 
@@ -95,75 +159,23 @@ class ForestView : public App
 private:
 	TexturesManager& M_texturesManager;
 
-	std::unique_ptr<Explorer> fileExplorer;
-
-	Favorites fav;
-	Recent recents;
-
-	float icons_width = 15.0f;
-	float icons_height = 15.0f;
-	float padding = 32.0f;
 	float folder_icons_horizontel_indent = 20.0f;
 	float folder_icons_vertical_indent = 20.0f;
 
-	viewType view_type = ROWS;
-
-	bool show_create_folder = false;
-	bool show_selected_folder_options = false;
-	bool show_rename_file = false;
-
-	bool entries_need_update = false;
-
-	bool need_file_size_call = false;
-	bool need_modified_since_call = false;
-
-	bool show_deletion_warning = false;
-
-	bool global_key_need_update = false;
-
-	bool tree_need_update = false;
-	bool is_calulating_size = false;
-	bool is_coping_structure = false;
-
-	bool is_searching = false;
-
-	bool is_right_click_call = false;
-
 	std::string utf8_search_bar_hint = "This PC";
-
-	fs::path selected_path;
-	fs::path current_path;
-	fs::path copied_path;
-	std::string copied_structure = "";
-
-	std::string message;
-
-	std::string globalKeyWord;
-	std::string ThisDirectoryKeyWord;
-
-	std::vector<Entry> entries;
-	
-	std::vector<std::future<fileSize>> file_size_future;
-
-	fileSize file_size;
-	std::string last_modified;
-
-
-	std::future<std::string> folder_structure;
-
-	tree t;
-	tree structure_tree;
-	Timer timer;
-
 
 	// Textures
 	GLuint rows_button_texture_id;
 	GLuint tiles_button_texture_id;
+	
+	std::vector<std::unique_ptr<State>> tabs;
+	int current_tab;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
 	{
-		copied_structure.reserve(1024 * 512);
+		tabs.push_back(std::make_unique<State>());
+		current_tab = 0;
 	}
 
 	~ForestView() 

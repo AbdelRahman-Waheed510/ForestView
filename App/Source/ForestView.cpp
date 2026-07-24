@@ -198,27 +198,27 @@ void App::run_loop()
 
 void ForestView::render_msg()
 {
-	if (!message.empty())
+	if (!tabs[current_tab]->message.empty())
 	{
-		if (message == "Task added successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), message.c_str());
-		else if (message == "Task edtied successfuly")  ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), message.c_str());
-		else if (message == "Added dependencies successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), message.c_str());
-		else if (message == "Removed dependencies successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), message.c_str());
-		else ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), message.c_str());
+		if (tabs[current_tab]->message == "Task added successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
+		else if (tabs[current_tab]->message == "Task edtied successfuly")  ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
+		else if (tabs[current_tab]->message == "Added dependencies successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
+		else if (tabs[current_tab]->message == "Removed dependencies successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
+		else ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
 	}
 }
 
 void ForestView::on_start()
 {
 	M_texturesManager.load_images();
-	fileExplorer = std::make_unique<Explorer>(M_texturesManager);
-	entries = fileExplorer->get_entries();
+	tabs[current_tab]->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
+	tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
 
 	rows_button_texture_id = M_texturesManager.get_Rows_button_icon_texture_id();
 	tiles_button_texture_id = M_texturesManager.get_LargeThumbnail_button_icon_texture_id();
 
-	t.iniThisPc("THIS PC");
-	t.fillThisPcWithDrives(fileExplorer->get_partitions());
+	tabs[current_tab]->t.iniThisPc("THIS PC");
+	tabs[current_tab]->t.fillThisPcWithDrives(tabs[current_tab]->fileExplorer->get_partitions());
 
 }
 
@@ -268,13 +268,13 @@ void ForestView::refocus_reload()
 
 	if (is_focused && !was_focused)
 	{
-		if (is_searching) 
+		if (tabs[current_tab]->is_searching)
 		{
-			entries = fileExplorer->search(current_path, ThisDirectoryKeyWord);
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
 		}
 		else 
 		{
-			entries_need_update = true;
+			tabs[current_tab]->entries_need_update = true;
 			was_focused = true;
 		}
 	}
@@ -293,70 +293,70 @@ void ForestView::search_bar()
 
 		// Navigation
 		static int ids = 0;
-		if (global_key_need_update)
+		if (tabs[current_tab]->global_key_need_update)
 		{
-			globalKeyWord = current_path.string();
-			global_key_need_update = false;
+			tabs[current_tab]->globalKeyWord = tabs[current_tab]->current_path.string();
+			tabs[current_tab]->global_key_need_update = false;
 			ids++;
 			ImGui::SetKeyboardFocusHere();
 		}
 		ImGui::SetNextItemWidth(550.0f);
 		ImGui::PushID(ids);
-		if (ImGui::InputTextWithHint("##Global Search Bar", fileExplorer->form_breadcrumb_navigation_string(current_path).c_str(), &globalKeyWord) || !globalKeyWord.empty())
+		if (ImGui::InputTextWithHint("##Global Search Bar", tabs[current_tab]->fileExplorer->form_breadcrumb_navigation_string(tabs[current_tab]->current_path).c_str(), &tabs[current_tab]->globalKeyWord) || !tabs[current_tab]->globalKeyWord.empty())
 		{
-			ThisDirectoryKeyWord = "";
-			fileExplorer->refresh(current_path);
+			tabs[current_tab]->ThisDirectoryKeyWord = "";
+			tabs[current_tab]->fileExplorer->refresh(tabs[current_tab]->current_path);
 			if (ImGui::IsKeyReleased(ImGuiKey_Enter))
 			{
-				fs::path path_(globalKeyWord);
+				fs::path path_(tabs[current_tab]->globalKeyWord);
 				if (fs::is_directory(path_) && fs::exists(path_))
 				{
-					fileExplorer->navigate_to(path_, current_path);
-					entries_need_update = true;
-					current_path = path_;
-					globalKeyWord = "";
+					tabs[current_tab]->fileExplorer->navigate_to(path_, tabs[current_tab]->current_path);
+					tabs[current_tab]->entries_need_update = true;
+					tabs[current_tab]->current_path = path_;
+					tabs[current_tab]->globalKeyWord = "";
 
 				}
 				else
 				{
-					globalKeyWord = "";
+					tabs[current_tab]->globalKeyWord = "";
 				}
 			}
 		}
 		ImGui::PopID();
-		if (ImGui::IsItemActivated() && globalKeyWord.empty())
+		if (ImGui::IsItemActivated() && tabs[current_tab]->globalKeyWord.empty())
 		{
-			if (!current_path.empty())
+			if (!tabs[current_tab]->current_path.empty())
 			{
-				global_key_need_update = true;
+				tabs[current_tab]->global_key_need_update = true;
 			}
 
 		}
-		if (ImGui::IsItemDeactivated() && globalKeyWord == current_path.string())
+		if (ImGui::IsItemDeactivated() && tabs[current_tab]->globalKeyWord == tabs[current_tab]->current_path.string())
 		{
-			globalKeyWord = "";
+			tabs[current_tab]->globalKeyWord = "";
 		}
 
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(-1.0f);
 
 		// Normal search bar
-		ImGui::BeginDisabled(current_path.empty());
+		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
 
-		if (ImGui::InputTextWithHint("##Search Bar", std::format("Search {}", utf8_search_bar_hint).c_str(), &ThisDirectoryKeyWord) || !ThisDirectoryKeyWord.empty())
+		if (ImGui::InputTextWithHint("##Search Bar", std::format("Search {}", utf8_search_bar_hint).c_str(), &tabs[current_tab]->ThisDirectoryKeyWord) || !tabs[current_tab]->ThisDirectoryKeyWord.empty())
 		{
-			entries = fileExplorer->search(current_path, ThisDirectoryKeyWord);
-			globalKeyWord = "";
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
+			tabs[current_tab]->globalKeyWord = "";
 		}
 		ImGui::EndDisabled();
 
-		if (!ThisDirectoryKeyWord.empty()) 
+		if (!tabs[current_tab]->ThisDirectoryKeyWord.empty())
 		{
-			is_searching = true;
+			tabs[current_tab]->is_searching = true;
 		}
 		else 
 		{
-			is_searching = false;
+			tabs[current_tab]->is_searching = false;
 		}
 	}
 	ImGui::EndChild();
@@ -369,39 +369,39 @@ void ForestView::tool_bar()
 	{
 		if (ImGui::Button("<-") || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 		{
-			show_selected_folder_options = false;
-			ThisDirectoryKeyWord = "";
-			globalKeyWord = "";
-			selected_path = "";
+			tabs[current_tab]->show_selected_folder_options = false;
+			tabs[current_tab]->ThisDirectoryKeyWord = "";
+			tabs[current_tab]->globalKeyWord = "";
+			tabs[current_tab]->selected_path = "";
 			if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
 
 				if (!ImGui::GetIO().WantCaptureKeyboard) {
-					fileExplorer->back(current_path);
-					recents.visit(fs::directory_entry(current_path));
-					entries_need_update = true;
+					tabs[current_tab]->fileExplorer->back(tabs[current_tab]->current_path);
+					tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
+					tabs[current_tab]->entries_need_update = true;
 				}
 			}
 			else
 			{
-				fileExplorer->back(current_path);
-				recents.visit(fs::directory_entry(current_path));
-				entries_need_update = true;
+				tabs[current_tab]->fileExplorer->back(tabs[current_tab]->current_path);
+				tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
+				tabs[current_tab]->entries_need_update = true;
 			}
 		}
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(!fileExplorer->can_go_forward());
+		ImGui::BeginDisabled(!tabs[current_tab]->fileExplorer->can_go_forward());
 
 		if (ImGui::Button("->") || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
 		{
-			show_selected_folder_options = false;
-			ThisDirectoryKeyWord = "";
-			globalKeyWord = "";
-			selected_path = "";
-			fileExplorer->redo(current_path);
-			recents.visit(fs::directory_entry(current_path));
-			entries_need_update = true;
+			tabs[current_tab]->show_selected_folder_options = false;
+			tabs[current_tab]->ThisDirectoryKeyWord = "";
+			tabs[current_tab]->globalKeyWord = "";
+			tabs[current_tab]->selected_path = "";
+			tabs[current_tab]->fileExplorer->redo(tabs[current_tab]->current_path);
+			tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
+			tabs[current_tab]->entries_need_update = true;
 		}
 
 		ImGui::EndDisabled();
@@ -410,11 +410,11 @@ void ForestView::tool_bar()
 
 		if (ImGui::Button("Refresh"))
 		{
-			selected_path = "";
-			entries_need_update = true;
-			globalKeyWord = "";
-			ThisDirectoryKeyWord = "";
-			tree_need_update = true;
+			tabs[current_tab]->selected_path = "";
+			tabs[current_tab]->entries_need_update = true;
+			tabs[current_tab]->globalKeyWord = "";
+			tabs[current_tab]->ThisDirectoryKeyWord = "";
+			tabs[current_tab]->tree_need_update = true;
 		}
 
 		ImGui::SameLine();
@@ -426,7 +426,7 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(selected_path.empty() || selected_path == selected_path.root_path());
+		ImGui::BeginDisabled(tabs[current_tab]->selected_path.empty() || tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path());
 		if (ImGui::Button("Delete"))
 		{
 			ImGui::OpenPopup("Delete Warning?");
@@ -435,27 +435,27 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(selected_path.empty() || selected_path == selected_path.root_path());
+		ImGui::BeginDisabled(tabs[current_tab]->selected_path.empty() || tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path());
 		if (ImGui::Button("Copy"))
 		{
-			copied_path = selected_path;
+			tabs[current_tab]->copied_path = tabs[current_tab]->selected_path;
 		}
 		ImGui::EndDisabled();
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(copied_path.empty());
+		ImGui::BeginDisabled(tabs[current_tab]->copied_path.empty());
 		if (ImGui::Button("Paste"))
 		{
-			fileExplorer->copy_paste(copied_path, current_path);
-			entries_need_update = true;
-			tree_need_update = true;
-			copied_path.clear();
+			tabs[current_tab]->fileExplorer->copy_paste(tabs[current_tab]->copied_path, tabs[current_tab]->current_path);
+			tabs[current_tab]->entries_need_update = true;
+			tabs[current_tab]->tree_need_update = true;
+			tabs[current_tab]->copied_path.clear();
 		}
 		ImGui::EndDisabled();
 
 		ImGui::SameLine();
-		ImGui::BeginDisabled(current_path.empty());
+		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
 		if (ImGui::Button("Sort"))
 		{
 			ImGui::OpenPopup("Sort Type");
@@ -468,18 +468,18 @@ void ForestView::tool_bar()
 			if (ImGui::Selectable("Folder"))
 			{
 
-				std::string name_of_the_folder = Utils::generate_new_folder_name(current_path, "New folder", FOLDER);
-				fileExplorer->create_folder(current_path, name_of_the_folder, FOLDER);
-				entries_need_update = true;
-				tree_need_update = true;
+				std::string name_of_the_folder = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New folder", FOLDER);
+				tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_folder, FOLDER);
+				tabs[current_tab]->entries_need_update = true;
+				tabs[current_tab]->tree_need_update = true;
 				ImGui::CloseCurrentPopup();
 			}
 			if (ImGui::Selectable("Text Document"))
 			{
-				std::string name_of_the_file = Utils::generate_new_folder_name(current_path, "New Text Document.txt", REG_FILE);
-				fileExplorer->create_folder(current_path, name_of_the_file, REG_FILE);
-				entries_need_update = true;
-				tree_need_update = true;
+				std::string name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Text Document.txt", REG_FILE);
+				tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, REG_FILE);
+				tabs[current_tab]->entries_need_update = true;
+				tabs[current_tab]->tree_need_update = true;
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::EndPopup();
@@ -489,14 +489,14 @@ void ForestView::tool_bar()
 		{
 			if (ImGui::Selectable("Name"))
 			{
-				fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.path() < b.entry.path();});
-				entries = fileExplorer->get_entries();
+				tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.path() < b.entry.path();});
+				tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
 				ImGui::CloseCurrentPopup();
 			}
 			if (ImGui::Selectable("Last Modified time"))
 			{
-				fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.last_write_time() > b.entry.last_write_time();});
-				entries = fileExplorer->get_entries();
+				tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.last_write_time() > b.entry.last_write_time();});
+				tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::EndPopup();
@@ -509,22 +509,22 @@ void ForestView::tool_bar()
 
 			if (ImGui::Button("YES"))
 			{
-				if (fav.is_exist(selected_path)) 
+				if (tabs[current_tab]->fav.is_exist(tabs[current_tab]->selected_path))
 				{
-					fav.delete_fav(fs::directory_entry(selected_path));
+					tabs[current_tab]->fav.delete_fav(fs::directory_entry(tabs[current_tab]->selected_path));
 				}
-				recents.remove(fs::directory_entry(selected_path));
-				fileExplorer->remove(selected_path);
-				entries_need_update = true;
-				tree_need_update = true;
-				selected_path = "";
+				tabs[current_tab]->recents.remove(fs::directory_entry(tabs[current_tab]->selected_path));
+				tabs[current_tab]->fileExplorer->remove(tabs[current_tab]->selected_path);
+				tabs[current_tab]->entries_need_update = true;
+				tabs[current_tab]->tree_need_update = true;
+				tabs[current_tab]->selected_path = "";
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::SetItemDefaultFocus();
 			ImGui::SameLine();
 			if (ImGui::Button("NO"))
 			{
-				selected_path = "";
+				tabs[current_tab]->selected_path = "";
 				ImGui::CloseCurrentPopup();
 			}
 			ImGui::EndPopup();
@@ -546,7 +546,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 			if (ImGui::BeginTabItem("Favorites"))
 			{
 
-				for (const auto& favorite_item : fav.get_favorites())
+				for (const auto& favorite_item : tabs[current_tab]->fav.get_favorites())
 				{
 					ImGui::PushID(favorite_item.path().c_str());
 
@@ -555,16 +555,16 @@ void ForestView::folders_tree(const float& remainingHeight)
 
 					if (ImGui::Selectable(favorite_to_show.c_str()))
 					{
-						fileExplorer->navigate_to(favorite_item.path(), current_path);
-						current_path = favorite_item.path();
-						entries_need_update = true;
-						selected_path = "";
+						tabs[current_tab]->fileExplorer->navigate_to(favorite_item.path(), tabs[current_tab]->current_path);
+						tabs[current_tab]->current_path = favorite_item.path();
+						tabs[current_tab]->entries_need_update = true;
+						tabs[current_tab]->selected_path = "";
 					}
 					if (ImGui::BeginPopupContextItem("favoritesRightClick"))
 					{
 						if (ImGui::Button("Unpin from favorites"))
 						{
-							fav.delete_fav(favorite_item);
+							tabs[current_tab]->fav.delete_fav(favorite_item);
 							ImGui::CloseCurrentPopup();
 						}
 
@@ -573,7 +573,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 					ImGui::PopID();
 				}
 
-				if (fav.is_empty()) ImGui::Text("No favorites pinned...");
+				if (tabs[current_tab]->fav.is_empty()) ImGui::Text("No favorites pinned...");
 
 				ImGui::Separator();
 
@@ -583,7 +583,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 			// Recent History ============================================================
 			if (ImGui::BeginTabItem("Recent History"))
 			{
-				for (const auto& recent_item : recents.get_recent_history())
+				for (const auto& recent_item : tabs[current_tab]->recents.get_recent_history())
 				{
 					ImGui::PushID(recent_item.path().c_str());
 
@@ -595,16 +595,16 @@ void ForestView::folders_tree(const float& remainingHeight)
 					if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left)) 
 					{
 						fs::path recentPath = recent_item.path();
-						fileExplorer->navigate_to(recent_item.path(), current_path);
-						current_path = recent_item.path();
-						entries = fileExplorer->get_entries();
-						recents.visit(recent_item);
-						selected_path = "";
+						tabs[current_tab]->fileExplorer->navigate_to(recent_item.path(), tabs[current_tab]->current_path);
+						tabs[current_tab]->current_path = recent_item.path();
+						tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+						tabs[current_tab]->recents.visit(recent_item);
+						tabs[current_tab]->selected_path = "";
 					}
 					ImGui::PopID();
 				}
 
-				if (recents.is_empty()) ImGui::Text("No Recents yet...");
+				if (tabs[current_tab]->recents.is_empty()) ImGui::Text("No Recents yet...");
 
 				ImGui::Separator();
 
@@ -614,13 +614,13 @@ void ForestView::folders_tree(const float& remainingHeight)
 		}
 
 		// Folders Tree =======================================================
-		if (tree_need_update)
+		if (tabs[current_tab]->tree_need_update)
 		{
-			t.update_tree(fileExplorer->get_partitions());
-			tree_need_update = false;
+			tabs[current_tab]->t.update_tree(tabs[current_tab]->fileExplorer->get_partitions());
+			tabs[current_tab]->tree_need_update = false;
 		}
 
-		draw_tree(t.get_root());
+		draw_tree(tabs[current_tab]->t.get_root());
 	}
 	ImGui::EndChild();
 
@@ -650,7 +650,7 @@ void ForestView::draw_tree(Node* node_to_show)
 	{
 		if (node_to_show->is_loaded == false)
 		{
-			t.AddChildrenOf(node_to_show->path);
+			tabs[current_tab]->t.AddChildrenOf(node_to_show->path);
 			node_to_show->is_loaded = true;
 		}
 
@@ -667,9 +667,9 @@ void ForestView::draw_tree(Node* node_to_show)
 		{
 			if (!node_to_show->path.empty())
 			{
-				fileExplorer->navigate_to(node_to_show->path, current_path);
-				current_path = node_to_show->path;
-				selected_path = "";
+				tabs[current_tab]->fileExplorer->navigate_to(node_to_show->path, tabs[current_tab]->current_path);
+				tabs[current_tab]->current_path = node_to_show->path;
+				tabs[current_tab]->selected_path = "";
 			}
 		}
 	}
@@ -688,13 +688,13 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		ImGui::Separator();
 
 		// Updating the entries vector ============================================================
-		if (entries_need_update)
+		if (tabs[current_tab]->entries_need_update)
 		{
-			fileExplorer->refresh(current_path);
-			entries = fileExplorer->get_entries();
-			auto u8_str = (current_path == current_path.root_path()) ? current_path.u8string() : current_path.filename().u8string();
+			tabs[current_tab]->fileExplorer->refresh(tabs[current_tab]->current_path);
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+			auto u8_str = (tabs[current_tab]->current_path == tabs[current_tab]->current_path.root_path()) ? tabs[current_tab]->current_path.u8string() : tabs[current_tab]->current_path.filename().u8string();
 			utf8_search_bar_hint.assign(u8_str.begin(), u8_str.end());
-			entries_need_update = false;
+			tabs[current_tab]->entries_need_update = false;
 		}
 
 		// rendring the entries logic (for loop) ==================================================
@@ -705,7 +705,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		{
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 			{
-				selected_path = "";
+				tabs[current_tab]->selected_path = "";
 			}
 		}
 
@@ -716,12 +716,12 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		render_debug_panel();
 
 		// asyncc folder structure copying ======================================================== 
-		if (folder_structure.valid() && folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+		if (tabs[current_tab]->folder_structure.valid() && tabs[current_tab]->folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 		{
-			copied_structure = folder_structure.get();
-			ImGui::SetClipboardText(copied_structure.c_str());
-			is_coping_structure = false;
-			copied_structure = "";
+			tabs[current_tab]->copied_structure = tabs[current_tab]->folder_structure.get();
+			ImGui::SetClipboardText(tabs[current_tab]->copied_structure.c_str());
+			tabs[current_tab]->is_coping_structure = false;
+			tabs[current_tab]->copied_structure = "";
 		}
 
 	}
@@ -730,18 +730,18 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 void ForestView::render_entries()
 {
-	if (view_type == LARGE_THUMBNAILS)
+	if (tabs[current_tab]->view_type == LARGE_THUMBNAILS)
 	{
 		float avalWidth = ImGui::GetContentRegionAvail().x;
-		int columnscount = (int)(avalWidth / (icons_width + padding));
+		int columnscount = (int)(avalWidth / (tabs[current_tab]->icons_width + tabs[current_tab]->padding));
 		if (columnscount < 1) columnscount = 1;
 		ImGui::Columns(columnscount, 0, false);
 
-		for (size_t i = 0; i < entries.size(); ++i)
+		for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
 		{
 			ImGui::PushID(i);
 
-			bool is_selected = (entries[i].entry.path() == selected_path) ? true : false;
+			bool is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
 
 			if (is_selected) 
 			{
@@ -752,16 +752,16 @@ void ForestView::render_entries()
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 			}
 
-			ImGui::ImageButton(entries[i].name.c_str(), entries[i].textureId, ImVec2(icons_width, icons_height));
+			ImGui::ImageButton(tabs[current_tab]->entries[i].name.c_str(), tabs[current_tab]->entries[i].textureId, ImVec2(tabs[current_tab]->icons_width, tabs[current_tab]->icons_height));
 
 			ImGui::PopStyleColor(1);
 
-			handle_entries_mouse_click(entries[i].entry);
+			handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
 
 			float cursorPosX = ImGui::GetCursorPos().x;
 			float cursorPosY = ImGui::GetCursorPos().y;
 			ImGui::SetCursorPos(ImVec2(cursorPosX + folder_icons_horizontel_indent, cursorPosY));
-			ImGui::TextWrapped(entries[i].name.c_str());
+			ImGui::TextWrapped(tabs[current_tab]->entries[i].name.c_str());
 
 			ImGui::NextColumn();
 
@@ -771,27 +771,27 @@ void ForestView::render_entries()
 		ImGui::Columns(1);
 	}
 
-	else if (view_type == ROWS)
+	else if (tabs[current_tab]->view_type == ROWS)
 	{
-		for (size_t i = 0; i < entries.size(); ++i)
+		for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
 		{
 			ImGui::PushID(i);
 
-			bool is_selected = (entries[i].entry.path() == selected_path) ? true : false;
+			bool is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
 
 			// ===========================================================================================
-			ImGui::Image(entries[i].textureId, ImVec2(icons_width, icons_height));
+			ImGui::Image(tabs[current_tab]->entries[i].textureId, ImVec2(tabs[current_tab]->icons_width, tabs[current_tab]->icons_height));
 
 			ImGui::SameLine();
 
 			ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.005f, 0.5f));
 			
-			ImGui::Selectable(entries[i].name.c_str(), is_selected, 0, ImVec2(0, icons_height));
+			ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, 0, ImVec2(0, tabs[current_tab]->icons_height));
 
 			ImGui::PopStyleVar(1);
 			// ===========================================================================================
 
-			handle_entries_mouse_click(entries[i].entry);
+			handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
 
 			ImGui::PopID();
 		}
@@ -801,10 +801,10 @@ void ForestView::render_entries()
 
 void ForestView::render_debug_panel()
 {
-	auto u8 = current_path.u8string();
+	auto u8 = tabs[current_tab]->current_path.u8string();
 	std::string current_path_string_to_show(u8.begin(), u8.end());
 
-	auto u8_selected = selected_path.u8string();
+	auto u8_selected = tabs[current_tab]->selected_path.u8string();
 	std::string selected_path_string_to_show(u8_selected.begin(), u8_selected.end());
 
 	ImGui::Separator();
@@ -826,34 +826,34 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 		{
 			if (entry.is_directory())
 			{
-				ThisDirectoryKeyWord = "";
-				globalKeyWord = "";
-				recents.visit(entry);
-				fileExplorer->navigate_to(entry.path(), current_path);
-				entries_need_update = true;
+				tabs[current_tab]->ThisDirectoryKeyWord = "";
+				tabs[current_tab]->globalKeyWord = "";
+				tabs[current_tab]->recents.visit(entry);
+				tabs[current_tab]->fileExplorer->navigate_to(entry.path(), tabs[current_tab]->current_path);
+				tabs[current_tab]->entries_need_update = true;
 
-				current_path = entry.path();
+				tabs[current_tab]->current_path = entry.path();
 			}
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))	
 		{
-			selected_path = entry.path();
-			is_right_click_call = true;
+			tabs[current_tab]->selected_path = entry.path();
+			tabs[current_tab]->is_right_click_call = true;
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
-			if (selected_path == entry.path())
+			if (tabs[current_tab]->selected_path == entry.path())
 			{
-				selected_path = "";
-				file_size.size = 0.0;
-				file_size.label = "";
-				last_modified = "";
+				tabs[current_tab]->selected_path = "";
+				tabs[current_tab]->file_size.size = 0.0;
+				tabs[current_tab]->file_size.label = "";
+				tabs[current_tab]->last_modified = "";
 			}
 			else
 			{
-				selected_path = entry.path();
-				need_file_size_call = true;
-				need_modified_since_call = true;
+				tabs[current_tab]->selected_path = entry.path();
+				tabs[current_tab]->need_file_size_call = true;
+				tabs[current_tab]->need_modified_since_call = true;
 			}
 		}
 	}
@@ -861,50 +861,50 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 
 void ForestView::handle_right_click_operations()
 {
-	if (is_right_click_call) 
+	if (tabs[current_tab]->is_right_click_call)
 	{
 		ImGui::OpenPopup("entriesRightClick");
-		is_right_click_call = false;
+		tabs[current_tab]->is_right_click_call = false;
 	}
 	std::error_code ec;
-	fs::directory_entry entry(selected_path, ec);
+	fs::directory_entry entry(tabs[current_tab]->selected_path, ec);
 
 	static bool was_open = false;
 	bool is_open = ImGui::BeginPopup("entriesRightClick");
 	if (is_open)
 	{
-		if (entry.path() != selected_path) selected_path = entry.path();
+		if (entry.path() != tabs[current_tab]->selected_path) tabs[current_tab]->selected_path = entry.path();
 		// Rename 
-		if (selected_path != selected_path.root_path())
+		if (tabs[current_tab]->selected_path != tabs[current_tab]->selected_path.root_path())
 		{
 			ImGui::Separator();
 			static std::string newName;
 			ImGui::InputText("New Name", &newName);
 			if (ImGui::Button("Rename"))
 			{
-				RenameReturn rename = fileExplorer->rename_file(selected_path, newName);
+				RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, newName);
 				if (rename.success)
 				{
-					if (fav.is_exist(fs::directory_entry(selected_path)))
+					if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 					{
-						fav.update_name(fs::directory_entry(selected_path), rename.finalPath);
+						tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
 					}
-					if (recents.update_name(fs::directory_entry(selected_path), rename.finalPath))
+					if (tabs[current_tab]->recents.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath))
 					{
 					}
-					entries_need_update = true;
-					tree_need_update = true;
+					tabs[current_tab]->entries_need_update = true;
+					tabs[current_tab]->tree_need_update = true;
 					newName.clear();
-					selected_path = "";
+					tabs[current_tab]->selected_path = "";
 				}
 				else
 				{
-					selected_path = "";
-					message = "This name already exists";
+					tabs[current_tab]->selected_path = "";
+					tabs[current_tab]->message = "This name already exists";
 				}
 				ImGui::CloseCurrentPopup();
 			}
-			if (!message.empty()) ImGui::SameLine();
+			if (!tabs[current_tab]->message.empty()) ImGui::SameLine();
 			render_msg();
 			ImGui::Separator();
 
@@ -914,38 +914,38 @@ void ForestView::handle_right_click_operations()
 		// Copy path
 		if (ImGui::Button("Copy Path"))
 		{
-			show_rename_file = false;
-			ImGui::SetClipboardText(selected_path.string().c_str());
+			tabs[current_tab]->show_rename_file = false;
+			ImGui::SetClipboardText(tabs[current_tab]->selected_path.string().c_str());
 
 
-			selected_path = "";
+			tabs[current_tab]->selected_path = "";
 			ImGui::CloseCurrentPopup();
 		}
 
 		//copy structrure
 		if (ImGui::Button("Copy Structure"))
 		{
-			folder_structure = std::async(std::launch::async, [path = selected_path]() {
+			tabs[current_tab]->folder_structure = std::async(std::launch::async, [path = tabs[current_tab]->selected_path]() {
 				// Create a local, isolated tree instance inside the thread so it doesn't touch main thread data
 				tree localTree;
 				localTree.BuildTree(path);
 				return localTree.put_structure_into_string();
 				});
-			is_coping_structure = true;
-			selected_path = "";
+			tabs[current_tab]->is_coping_structure = true;
+			tabs[current_tab]->selected_path = "";
 			ImGui::CloseCurrentPopup();
 		}
 
 		// Add to favorites logic
 		if (entry.is_directory())
 		{
-			if (!fav.is_exist(entry))
+			if (!tabs[current_tab]->fav.is_exist(entry))
 			{
 				if (ImGui::Button("Add to favorites"))
 				{
-					fav.add_fav(entry);
+					tabs[current_tab]->fav.add_fav(entry);
 
-					selected_path = "";
+					tabs[current_tab]->selected_path = "";
 					ImGui::CloseCurrentPopup();
 				}
 			}
@@ -953,9 +953,9 @@ void ForestView::handle_right_click_operations()
 			{
 				if (ImGui::Button("Unpin from favorites"))
 				{
-					fav.delete_fav(entry);
+					tabs[current_tab]->fav.delete_fav(entry);
 
-					selected_path = "";
+					tabs[current_tab]->selected_path = "";
 					ImGui::CloseCurrentPopup();
 				}
 			}
@@ -965,7 +965,7 @@ void ForestView::handle_right_click_operations()
 	}
 	if (was_open && !is_open)
 	{
-		selected_path = "";
+		tabs[current_tab]->selected_path = "";
 	}
 	was_open = is_open;
 }
@@ -975,54 +975,54 @@ void ForestView::stats_bar()
 {
 	if (ImGui::BeginChild("StatsBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 	{
-		ImGui::Text(std::to_string(fileExplorer->get_size()).c_str());
+		ImGui::Text(std::to_string(tabs[current_tab]->fileExplorer->get_size()).c_str());
 		ImGui::SameLine();
 		ImGui::Text(" Items ");
 
 		ImGui::SameLine();
 
-		if (selected_path != selected_path.root_path() && !selected_path.empty())
+		if (tabs[current_tab]->selected_path != tabs[current_tab]->selected_path.root_path() && !tabs[current_tab]->selected_path.empty())
 		{
 			ImGui::Text("| File Size: ");
 			ImGui::SameLine();
 
-			if (need_file_size_call)
+			if (tabs[current_tab]->need_file_size_call)
 			{
-				file_size_future.push_back(std::async(std::launch::async, [&fileExplorer = this->fileExplorer, path = selected_path]() {return fileExplorer->get_total_files_size(path);}));
-				need_file_size_call = false;
-				is_calulating_size = true;
+				tabs[current_tab]->file_size_future.push_back(std::async(std::launch::async, [&fileExplorer = this->tabs[current_tab]->fileExplorer, path = tabs[current_tab]->selected_path]() {return fileExplorer->get_total_files_size(path);}));
+				tabs[current_tab]->need_file_size_call = false;
+				tabs[current_tab]->is_calulating_size = true;
 			}
 
-			if (is_calulating_size && !file_size_future.empty() && file_size_future.back().valid())
+			if (tabs[current_tab]->is_calulating_size && !tabs[current_tab]->file_size_future.empty() && tabs[current_tab]->file_size_future.back().valid())
 			{
-				if (file_size_future.back().wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+				if (tabs[current_tab]->file_size_future.back().wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 				{
-					file_size = file_size_future.back().get();
-					file_size_future.pop_back();
-					is_calulating_size = false;
+					tabs[current_tab]->file_size = tabs[current_tab]->file_size_future.back().get();
+					tabs[current_tab]->file_size_future.pop_back();
+					tabs[current_tab]->is_calulating_size = false;
 				}
 			}
 
-			std::erase_if(file_size_future, [](auto& x) {return !x.valid() || x.wait_for(std::chrono::seconds(0)) == std::future_status::ready;});
+			std::erase_if(tabs[current_tab]->file_size_future, [](auto& x) {return !x.valid() || x.wait_for(std::chrono::seconds(0)) == std::future_status::ready;});
 
-			if (!is_calulating_size) ImGui::Text((std::format("{:.2f}{}", file_size.size, file_size.label)).c_str());
+			if (!tabs[current_tab]->is_calulating_size) ImGui::Text((std::format("{:.2f}{}", tabs[current_tab]->file_size.size, tabs[current_tab]->file_size.label)).c_str());
 			else ImGui::Text("Calculating size....");
 
 
-			if (need_modified_since_call)
+			if (tabs[current_tab]->need_modified_since_call)
 			{
-				last_modified = fileExplorer->get_last_modified_since(selected_path);
-				need_modified_since_call = false;
+				tabs[current_tab]->last_modified = tabs[current_tab]->fileExplorer->get_last_modified_since(tabs[current_tab]->selected_path);
+				tabs[current_tab]->need_modified_since_call = false;
 			}
-			if (!last_modified.empty())
+			if (!tabs[current_tab]->last_modified.empty())
 			{
 				ImGui::SameLine();
 				ImGui::Text(" | Modified Since: ");
 				ImGui::SameLine();
-				ImGui::Text(last_modified.c_str());
+				ImGui::Text(tabs[current_tab]->last_modified.c_str());
 			}
 		}
-		if (is_coping_structure)
+		if (tabs[current_tab]->is_coping_structure)
 		{
 			ImGui::SameLine();
 
@@ -1038,16 +1038,16 @@ void ForestView::stats_bar()
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
 		if (ImGui::ImageButton("Rows", rows_button_texture_id, ImVec2(12.0f, 12.0f)))
 		{
-			view_type = ROWS;
-			icons_height = 15.0f;
-			icons_width = 15.0f;
+			tabs[current_tab]->view_type = ROWS;
+			tabs[current_tab]->icons_height = 15.0f;
+			tabs[current_tab]->icons_width = 15.0f;
 		}
 		ImGui::SameLine();
 		if (ImGui::ImageButton("Large thumbnails", tiles_button_texture_id, ImVec2(12.0f, 12.0f)))
 		{
-			view_type = LARGE_THUMBNAILS;
-			icons_height = 128.0f;
-			icons_width = 128.0f;
+			tabs[current_tab]->view_type = LARGE_THUMBNAILS;
+			tabs[current_tab]->icons_height = 128.0f;
+			tabs[current_tab]->icons_width = 128.0f;
 		}
 		ImGui::PopStyleColor(1);
 	}
@@ -1067,18 +1067,18 @@ void ForestView::icons_size_slider()
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 		if (ImGui::ImageButton("##resetButton" , M_texturesManager.get_reset_button_icon_texture_id(), ImVec2(15.0f, 15.0f)))
 		{
-			switch (view_type)
+			switch (tabs[current_tab]->view_type)
 			{
 			case LARGE_THUMBNAILS:
 			{
-				icons_height = 128.0f;
-				icons_width = 128.0f;
+				tabs[current_tab]->icons_height = 128.0f;
+				tabs[current_tab]->icons_width = 128.0f;
 				break;
 			}
 			case ROWS:
 			{
-				icons_height = 15.0f;
-				icons_width = 15.0f;
+				tabs[current_tab]->icons_height = 15.0f;
+				tabs[current_tab]->icons_width = 15.0f;
 				break;
 			}
 			default:
@@ -1087,18 +1087,18 @@ void ForestView::icons_size_slider()
 		}
 		ImGui::PopStyleColor(1);
 
-		if (view_type == LARGE_THUMBNAILS) 
+		if (tabs[current_tab]->view_type == LARGE_THUMBNAILS)
 		{
-			if (ImGui::VSliderFloat("##vslideridentifier", ImVec2(25.0f, 540.0f), &icons_width, 64.0f, 256.0f, "%.0f"))
+			if (ImGui::VSliderFloat("##vslideridentifier", ImVec2(25.0f, 540.0f), &tabs[current_tab]->icons_width, 64.0f, 256.0f, "%.0f"))
 			{
-				icons_height = icons_width;
+				tabs[current_tab]->icons_height = tabs[current_tab]->icons_width;
 			}
 		}
-		else if (view_type == ROWS) 
+		else if (tabs[current_tab]->view_type == ROWS)
 		{
-			if (ImGui::VSliderFloat("##vslideridentifier", ImVec2(25.0f, 540.0f), &icons_width, 16.0f, 128.0f, "%.0f"))
+			if (ImGui::VSliderFloat("##vslideridentifier", ImVec2(25.0f, 540.0f), &tabs[current_tab]->icons_width, 16.0f, 128.0f, "%.0f"))
 			{
-				icons_height = icons_width;
+				tabs[current_tab]->icons_height = tabs[current_tab]->icons_width;
 			}
 		}
 		ImGui::PopStyleVar(3);
@@ -1119,17 +1119,17 @@ void ForestView::show_progress_bar(const std::string& overlay)
 
 void ForestView::shutdown_background_tasks()
 {
-	if (folder_structure.valid()) 
+	if (tabs[current_tab]->folder_structure.valid())
 	{
-		folder_structure.wait();
+		tabs[current_tab]->folder_structure.wait();
 	}
-	for (const auto& x : file_size_future)
+	for (const auto& x : tabs[current_tab]->file_size_future)
 	{
 		if (x.valid()) 
 		{
 			x.wait();
 		}
 	}
-	file_size_future.clear();
+	tabs[current_tab]->file_size_future.clear();
 }
 
