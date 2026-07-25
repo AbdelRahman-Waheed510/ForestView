@@ -230,6 +230,8 @@ void ForestView::on_update()
 	{
 		refocus_reload();
 
+		tab_bar();
+
 		search_bar();
 
 		tool_bar();
@@ -1132,5 +1134,38 @@ void ForestView::shutdown_background_tasks()
 		}
 	}
 	tabs[current_tab]->file_size_future.clear();
+}
+
+// Tab Bar
+void ForestView::tab_bar()
+{
+	ImGui::BeginChild("tabs", ImVec2(0, 40), ImGuiChildFlags_Borders);
+
+	ImGui::BeginTabBar("ExplorerTabs");
+	for (size_t i = 0; i < (int)tabs.size(); ++i) 
+	{
+		std::string tabLabel = tabs[i]->utf8_search_bar_hint + "###tab" + std::to_string(i);
+		
+		if (ImGui::BeginTabItem(tabLabel.c_str()))
+		{
+			current_tab = (int)i;
+
+			ImGui::EndTabItem();
+		}
+	}
+	ImGui::EndTabBar();
+
+	ImGui::SameLine();
+	if (ImGui::Button("+")) 
+	{
+		std::unique_ptr<State> newTab = std::make_unique<State>();
+		newTab->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
+		newTab->entries = newTab->fileExplorer->get_entries();
+		newTab->t.iniThisPc("THIS PC");
+		newTab->t.fillThisPcWithDrives(newTab->fileExplorer->get_partitions());
+		tabs.emplace_back(std::move(newTab));
+	}
+
+	ImGui::EndChild();
 }
 

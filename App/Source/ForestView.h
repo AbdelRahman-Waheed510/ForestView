@@ -168,6 +168,7 @@ private:
 	GLuint tiles_button_texture_id;
 	
 	std::vector<std::unique_ptr<State>> tabs;
+
 	int current_tab;
 public:
 
@@ -217,8 +218,6 @@ public:
 
 	void handle_right_click_operations();
 
-
-
 	// Stats Bar
 	void stats_bar();
 
@@ -228,4 +227,7 @@ public:
 	void show_progress_bar(const std::string& overlay);
 
 	void shutdown_background_tasks();
+
+	// tabs Bar
+	void tab_bar();
 };
