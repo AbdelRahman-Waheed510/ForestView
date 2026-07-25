@@ -343,7 +343,7 @@ void ForestView::search_bar()
 		// Normal search bar
 		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
 
-		if (ImGui::InputTextWithHint("##Search Bar", std::format("Search {}", utf8_search_bar_hint).c_str(), &tabs[current_tab]->ThisDirectoryKeyWord) || !tabs[current_tab]->ThisDirectoryKeyWord.empty())
+		if (ImGui::InputTextWithHint("##Search Bar", std::format("Search {}", tabs[current_tab]->utf8_search_bar_hint).c_str(), &tabs[current_tab]->ThisDirectoryKeyWord) || !tabs[current_tab]->ThisDirectoryKeyWord.empty())
 		{
 			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
 			tabs[current_tab]->globalKeyWord = "";
@@ -693,7 +693,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			tabs[current_tab]->fileExplorer->refresh(tabs[current_tab]->current_path);
 			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
 			auto u8_str = (tabs[current_tab]->current_path == tabs[current_tab]->current_path.root_path()) ? tabs[current_tab]->current_path.u8string() : tabs[current_tab]->current_path.filename().u8string();
-			utf8_search_bar_hint.assign(u8_str.begin(), u8_str.end());
+			tabs[current_tab]->utf8_search_bar_hint.assign(u8_str.begin(), u8_str.end());
+			if (tabs[current_tab]->utf8_search_bar_hint.empty()) tabs[current_tab]->utf8_search_bar_hint = "This PC";
 			tabs[current_tab]->entries_need_update = false;
 		}
 

@@ -98,6 +98,7 @@ struct State
 	fileSize file_size;
 	std::string last_modified;
 
+	std::string utf8_search_bar_hint = "This PC";
 
 	std::future<std::string> folder_structure;
 
@@ -161,8 +162,6 @@ private:
 
 	float folder_icons_horizontel_indent = 20.0f;
 	float folder_icons_vertical_indent = 20.0f;
-
-	std::string utf8_search_bar_hint = "This PC";
 
 	// Textures
 	GLuint rows_button_texture_id;
