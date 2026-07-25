@@ -1080,8 +1080,8 @@ void ForestView::icons_size_slider()
 			}
 			case ROWS:
 			{
-				tabs[current_tab]->icons_height = 15.0f;
-				tabs[current_tab]->icons_width = 15.0f;
+				tabs[current_tab]->icons_height = 24.0f;
+				tabs[current_tab]->icons_width = 24.0f;
 				break;
 			}
 			default:

@@ -50,8 +50,8 @@ enum viewType
 struct State 
 {
 	std::unique_ptr<Explorer> fileExplorer;
-	float icons_width = 15.0f;
-	float icons_height = 15.0f;
+	float icons_width = 24.0f;
+	float icons_height = 24.0f;
 	float padding = 32.0f;
 
 	viewType view_type;
