@@ -47,6 +47,12 @@ enum viewType
 	ROWS,
 };
 
+enum openTapType 
+{
+NEW, 
+COPY
+};
+
 struct State 
 {
 	std::unique_ptr<Explorer> fileExplorer;
@@ -170,6 +176,10 @@ private:
 	std::vector<std::unique_ptr<State>> tabs;
 
 	int current_tab;
+
+	openTapType m_openTabType = NEW;
+
+	int open_new_tab_factor = -1; // to auto switch to the new opend tab
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
@@ -230,4 +240,8 @@ public:
 
 	// tabs Bar
 	void tab_bar();
+
+	std::unique_ptr<State> open_new_tab(std::unique_ptr<State>& newTab);
+
+	std::unique_ptr<State> open_copy_tab(std::unique_ptr<State>& newTab);
 };

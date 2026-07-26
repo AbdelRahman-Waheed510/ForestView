@@ -1145,11 +1145,21 @@ void ForestView::tab_bar()
 	for (size_t i = 0; i < (int)tabs.size(); ++i) 
 	{
 		std::string tabLabel = tabs[i]->utf8_search_bar_hint + "###tab" + std::to_string(i);
-		
-		if (ImGui::BeginTabItem(tabLabel.c_str()))
+
+		ImGuiTabItemFlags flags;
+		if (i == (int)open_new_tab_factor) 
+		{
+			flags = ImGuiTabItemFlags_SetSelected;
+			open_new_tab_factor = -1;
+		}
+		else 
+		{
+			flags = ImGuiTabItemFlags_None;
+		}
+
+		if (ImGui::BeginTabItem(tabLabel.c_str(), nullptr, flags))
 		{
 			current_tab = (int)i;
-
 			ImGui::EndTabItem();
 		}
 	}
@@ -1159,13 +1169,63 @@ void ForestView::tab_bar()
 	if (ImGui::Button("+")) 
 	{
 		std::unique_ptr<State> newTab = std::make_unique<State>();
-		newTab->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
-		newTab->entries = newTab->fileExplorer->get_entries();
-		newTab->t.iniThisPc("THIS PC");
-		newTab->t.fillThisPcWithDrives(newTab->fileExplorer->get_partitions());
-		tabs.emplace_back(std::move(newTab));
+		if (m_openTabType == NEW) 
+		{
+			tabs.emplace_back(open_new_tab(newTab));
+		}
+		else if (m_openTabType == COPY) 
+		{
+			tabs.emplace_back(open_copy_tab(newTab));
+		}
+		current_tab = (int)tabs.size() - 1;
+		open_new_tab_factor = current_tab;
+	}
+
+	if (ImGui::BeginPopupContextItem("##openTapTyoe")) 
+	{
+		if (ImGui::Button("New Tab")) 
+		{
+			m_openTabType = NEW;
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::Button("Copy Current Tab")) 
+		{
+			m_openTabType = COPY;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
 	}
 
 	ImGui::EndChild();
+}
+
+std::unique_ptr<State> ForestView::open_new_tab(std::unique_ptr<State>& newTab)
+{
+	newTab->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
+	newTab->entries = newTab->fileExplorer->get_entries();
+	newTab->t.iniThisPc("THIS PC");
+	newTab->t.fillThisPcWithDrives(newTab->fileExplorer->get_partitions());
+
+	return std::move(newTab);
+}
+
+std::unique_ptr<State> ForestView::open_copy_tab(std::unique_ptr<State>& newTab)
+{
+	newTab->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
+	newTab->fileExplorer->set_undo_stack(tabs[current_tab]->fileExplorer->get_undo_stack());
+	newTab->fileExplorer->set_redo_stack(tabs[current_tab]->fileExplorer->get_redo_stack());
+	newTab->current_path = tabs[current_tab]->current_path;
+	newTab->entries = tabs[current_tab]->entries;
+	newTab->fav = tabs[current_tab]->fav;
+	newTab->icons_height = tabs[current_tab]->icons_height;
+	newTab->icons_width = tabs[current_tab]->icons_width;
+	newTab->padding = tabs[current_tab]->padding;
+	newTab->recents = tabs[current_tab]->recents;
+	newTab->utf8_search_bar_hint = tabs[current_tab]->utf8_search_bar_hint;
+	newTab->view_type = tabs[current_tab]->view_type;
+	newTab->t.iniThisPc("THIS PC");
+	newTab->t.fillThisPcWithDrives(newTab->fileExplorer->get_partitions());
+
+	return std::move(newTab);
 }
 
