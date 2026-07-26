@@ -119,6 +119,26 @@ public:
 	
 	~Explorer() {};
 
+	const std::stack<fs::path>& get_redo_stack() 
+	{
+		return redo_stack;
+	}
+
+	void set_redo_stack(const std::stack<fs::path>& redo_stack_to_set) 
+	{
+		redo_stack = redo_stack_to_set;
+	}
+
+	const std::stack<fs::path>& get_undo_stack()
+	{
+		return undo_stack;
+	}
+
+	void set_undo_stack(const std::stack<fs::path>& undo_stack_to_set)
+	{
+		undo_stack = undo_stack_to_set;
+	}
+
 	void load_partitions() 
 	{
 		if (!entries.empty()) entries.clear();
