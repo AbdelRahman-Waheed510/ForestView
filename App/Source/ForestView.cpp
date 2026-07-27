@@ -1158,11 +1158,33 @@ void ForestView::tab_bar()
 		{
 			flags = ImGuiTabItemFlags_None;
 		}
-
 		if (ImGui::BeginTabItem(tabLabel.c_str(), nullptr, flags))
 		{
 			current_tab = (int)i;
 			ImGui::EndTabItem();
+		}
+		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Middle)) 
+		{
+			if ((current_tab == i && current_tab == (int)tabs.size() - 1) && (int)tabs.size() != 1) 
+			{
+				tabs.pop_back();
+				current_tab = tabs.size() - 1;
+
+			}
+			else 
+			{
+				if (current_tab == i)
+				{
+					open_new_tab_factor = i;
+				}
+				if ((int)tabs.size() == 1)
+				{
+					continue;
+				}
+				tabs.erase(tabs.begin() + i);
+				--i;
+			}
+
 		}
 	}
 	ImGui::EndTabBar();
