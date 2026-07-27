@@ -228,6 +228,8 @@ void ForestView::on_update()
 	ImGui::SetNextWindowSizeConstraints(ImVec2(800.0f, 600.0f), ImVec2(FLT_MAX, FLT_MAX));
 	if (ImGui::Begin("ForestView"))
 	{
+		ImGui::Text(std::format("current tab: {}", current_tab).c_str());
+
 		refocus_reload();
 
 		tab_bar();
@@ -1144,7 +1146,7 @@ void ForestView::tab_bar()
 	ImGui::BeginTabBar("ExplorerTabs");
 	for (size_t i = 0; i < (int)tabs.size(); ++i) 
 	{
-		std::string tabLabel = tabs[i]->utf8_search_bar_hint + "###tab" + std::to_string(i);
+		std::string tabLabel = tabs[i]->utf8_search_bar_hint + "###tab" + std::to_string(tabs[i]->tabID);
 
 		ImGuiTabItemFlags flags;
 		if (i == (int)open_new_tab_factor) 

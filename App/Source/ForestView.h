@@ -41,6 +41,8 @@ namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
 
+static int id = 1;
+
 enum viewType
 {
 	LARGE_THUMBNAILS,
@@ -55,6 +57,7 @@ COPY
 
 struct State 
 {
+	int tabID;
 	std::unique_ptr<Explorer> fileExplorer;
 	float icons_width = 24.0f;
 	float icons_height = 24.0f;
@@ -113,6 +116,8 @@ struct State
 
 	State() 
 	{
+		tabID = id;
+		id++;
 		copied_structure.reserve(1024 * 512);
 		view_type = ROWS;
 	}
