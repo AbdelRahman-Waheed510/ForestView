@@ -1148,6 +1148,7 @@ void ForestView::tab_bar()
 	{
 		std::string tabLabel = tabs[i]->utf8_search_bar_hint + "###tab" + std::to_string(tabs[i]->tabID);
 
+		// Reselect the tab (if needed) ==============================================================
 		ImGuiTabItemFlags flags;
 		if (i == (int)open_new_tab_factor) 
 		{
@@ -1158,11 +1159,37 @@ void ForestView::tab_bar()
 		{
 			flags = ImGuiTabItemFlags_None;
 		}
+
+		// The Tabs itself ===========================================================================
 		if (ImGui::BeginTabItem(tabLabel.c_str(), nullptr, flags))
 		{
 			current_tab = (int)i;
 			ImGui::EndTabItem();
 		}
+
+		// Drag And Drop =============================================================================
+		if (ImGui::BeginDragDropSource()) 
+		{
+			ImGui::SetDragDropPayload("TAP", &i, sizeof(int));
+			ImGui::Text(("Draging tab: " + tabs[i]->utf8_search_bar_hint).c_str());
+
+			ImGui::EndDragDropSource();
+		}
+		if (ImGui::BeginDragDropTarget()) 
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TAP"))
+			{
+				if (payload->IsDelivery()) 
+				{
+					drop_sorce = *(const int*)payload->Data;
+
+					drop_target = i;
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		// Close Tab Logic =========================================================================== 
 		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Middle)) 
 		{
 			if ((current_tab == i && current_tab == (int)tabs.size() - 1) && (int)tabs.size() != 1) 
@@ -1188,6 +1215,51 @@ void ForestView::tab_bar()
 		}
 	}
 	ImGui::EndTabBar();
+
+	// Drag And Drop Logic ===========================================================================
+	if (drop_sorce != -1 && drop_target != -1)
+	{
+		// Remove the source tab and reinsert it in the correct index to control visual order only 
+		ImGuiTabBar* tab_bar = ImGui::TabBarFindByID(ImGui::GetID("ExplorerTabs"));
+		if (tab_bar && drop_sorce < tab_bar->Tabs.Size && drop_target < tab_bar->Tabs.Size)
+		{
+			ImGuiTabItem moved = tab_bar->Tabs[drop_sorce];
+			tab_bar->Tabs.erase(tab_bar->Tabs.Data + drop_sorce);
+			tab_bar->Tabs.insert(tab_bar->Tabs.Data + drop_target, moved);
+		}
+
+		// Reoreder the main vector of tabs logic
+		std::unique_ptr dragged_tab = std::move(tabs[drop_sorce]);
+
+		if (drop_target < drop_sorce)
+		{
+			for (size_t j = drop_sorce; j > drop_target; j--)
+			{
+				tabs[j] = std::move(tabs[j - 1]);
+			}
+			tabs[drop_target] = std::move(dragged_tab);
+					// ___________
+					// |         |			              
+					// V	     |							
+			  //Tab1 Tab2 Tab3 Tab4
+		}
+		else if (drop_target > drop_sorce)
+		{
+			for (size_t j = drop_sorce; j < drop_target; j++)
+			{
+				tabs[j] = std::move(tabs[j + 1]);
+			}
+			tabs[drop_target] = std::move(dragged_tab);
+					// __________
+					// |        |			              
+					// |	    V							
+			  //Tab1 Tab2 Tab3 Tab4
+		}
+		current_tab = drop_target;
+		open_new_tab_factor = drop_target;
+		drop_sorce = -1;
+		drop_target = -1;
+	}
 
 	ImGui::SameLine();
 	if (ImGui::Button("+")) 
