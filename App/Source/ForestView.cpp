@@ -1181,7 +1181,7 @@ void ForestView::tab_bar()
 			{
 				if (payload->IsDelivery()) 
 				{
-					drop_sorce = *(const int*)payload->Data;
+					drop_source = *(const int*)payload->Data;
 
 					drop_target = i;
 				}
@@ -1217,23 +1217,23 @@ void ForestView::tab_bar()
 	ImGui::EndTabBar();
 
 	// Drag And Drop Logic ===========================================================================
-	if (drop_sorce != -1 && drop_target != -1)
+	if (drop_source != -1 && drop_target != -1)
 	{
 		// Remove the source tab and reinsert it in the correct index to control visual order only 
 		ImGuiTabBar* tab_bar = ImGui::TabBarFindByID(ImGui::GetID("ExplorerTabs"));
-		if (tab_bar && drop_sorce < tab_bar->Tabs.Size && drop_target < tab_bar->Tabs.Size)
+		if (tab_bar && drop_source < tab_bar->Tabs.Size && drop_target < tab_bar->Tabs.Size)
 		{
-			ImGuiTabItem moved = tab_bar->Tabs[drop_sorce];
-			tab_bar->Tabs.erase(tab_bar->Tabs.Data + drop_sorce);
+			ImGuiTabItem moved = tab_bar->Tabs[drop_source];
+			tab_bar->Tabs.erase(tab_bar->Tabs.Data + drop_source);
 			tab_bar->Tabs.insert(tab_bar->Tabs.Data + drop_target, moved);
 		}
 
 		// Reoreder the main vector of tabs logic
-		std::unique_ptr dragged_tab = std::move(tabs[drop_sorce]);
+		std::unique_ptr dragged_tab = std::move(tabs[drop_source]);
 
-		if (drop_target < drop_sorce)
+		if (drop_target < drop_source)
 		{
-			for (size_t j = drop_sorce; j > drop_target; j--)
+			for (size_t j = drop_source; j > drop_target; j--)
 			{
 				tabs[j] = std::move(tabs[j - 1]);
 			}
@@ -1243,9 +1243,9 @@ void ForestView::tab_bar()
 					// V	     |							
 			  //Tab1 Tab2 Tab3 Tab4
 		}
-		else if (drop_target > drop_sorce)
+		else if (drop_target > drop_source)
 		{
-			for (size_t j = drop_sorce; j < drop_target; j++)
+			for (size_t j = drop_source; j < drop_target; j++)
 			{
 				tabs[j] = std::move(tabs[j + 1]);
 			}
@@ -1257,7 +1257,7 @@ void ForestView::tab_bar()
 		}
 		current_tab = drop_target;
 		open_new_tab_factor = drop_target;
-		drop_sorce = -1;
+		drop_source = -1;
 		drop_target = -1;
 	}
 

@@ -186,7 +186,7 @@ private:
 
 	int open_new_tab_factor = -1; // to auto switch to the new opend tab
 
-	int drop_sorce = -1;
+	int drop_source = -1;
 	int drop_target = -1;
 public:
 
