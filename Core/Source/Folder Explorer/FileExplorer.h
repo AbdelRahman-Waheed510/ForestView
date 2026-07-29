@@ -189,6 +189,17 @@ public:
 		return entries.size();
 	}
 
+	const fileSize decide_file_size_format(const double& count_in_bytes)
+	{
+		if (count_in_bytes > (1024.0 * 1024.0 * 1024.0))
+			return { count_in_bytes / (1024 * 1024 * 1024), "GB" };
+		else if (count_in_bytes > (1024.0 * 1024.0))
+			return { count_in_bytes / (1024.0 * 1024.0), "MB" };
+		else if (count_in_bytes > 1024.0)
+			return { count_in_bytes / (1024.0), "KB" };
+		return { count_in_bytes, "Bytes" };
+	}
+
 	fileSize get_total_files_size(const fs::path& path)
 	{
 		double count = 0.0;
@@ -217,15 +228,10 @@ public:
 				return { 0.0,"" };
 			}
 		}
-		if (count > (1024.0 * 1024.0 * 1024.0))
-			return { count / (1024.0 * 1024.0 * 1024.0), " GB" };
-		else if (count > (1024.0 * 1024.0))
-			return { count / (1024.0 * 1024.0), " MB" };
-		else if (count > 1024.0)
-			return { count / (1024.0), " KB" };
 
-		
-		return {(double)count, " Bytes"};
+		fileSize file_size = decide_file_size_format(count);
+
+		return {(double)file_size.size, file_size.label };
 	}
 
 	const std::string get_last_modified_since(const fs::path& path)

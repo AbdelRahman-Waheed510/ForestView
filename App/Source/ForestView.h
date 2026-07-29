@@ -188,12 +188,15 @@ private:
 
 	int drop_source = -1;
 	int drop_target = -1;
+
+	fileSize size_count;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
 	{
 		tabs.push_back(std::make_unique<State>());
 		current_tab = 0;
+		size_count.size = 0.0;
 	}
 
 	~ForestView() 

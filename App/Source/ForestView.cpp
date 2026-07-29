@@ -1010,7 +1010,7 @@ void ForestView::stats_bar()
 
 			std::erase_if(tabs[current_tab]->file_size_future, [](auto& x) {return !x.valid() || x.wait_for(std::chrono::seconds(0)) == std::future_status::ready;});
 
-			if (!tabs[current_tab]->is_calulating_size) ImGui::Text((std::format("{:.2f}{}", tabs[current_tab]->file_size.size, tabs[current_tab]->file_size.label)).c_str());
+			if (!tabs[current_tab]->is_calulating_size) ImGui::Text((std::format("{:.2f} {}", tabs[current_tab]->file_size.size, tabs[current_tab]->file_size.label)).c_str());
 			else ImGui::Text("Calculating size....");
 
 
