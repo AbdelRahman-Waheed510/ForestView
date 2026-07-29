@@ -11,10 +11,10 @@ using namespace std;
 
 int main()
 {
-	#ifdef _WIN32
+	/*#ifdef _WIN32
 		_setmode(_fileno(stdout), _O_U16TEXT);
 	#endif
-	
+	*/
 	TexturesManager texture_manager;
 
 	ForestView f(texture_manager);

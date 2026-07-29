@@ -476,28 +476,73 @@ public:
 			return;
 		}
 		std::error_code ec;
-
-		fs::copy_options options = fs::copy_options::recursive | fs::copy_options::overwrite_existing;
+		
+		double count_size = 0.0; 
 
 		fs::path dest = current_path / copied_path.filename();;
 
+		// If the copied directory is a folder 
 		if (fs::is_directory(copied_path))
 		{
 			std::string name_of_the_folder = Utils::generate_new_folder_name(current_path, copied_path.filename().string(), FOLDER);
 			dest = current_path / name_of_the_folder;
+
+			fs::create_directories(dest);
+
+			for (auto entry = fs::recursive_directory_iterator(copied_path, fs::directory_options::skip_permission_denied, ec); entry != fs::recursive_directory_iterator(); entry.increment(ec))
+			{
+				fs::path relativePath = fs::relative(entry->path(), copied_path);
+				fs::path targetPath = dest / relativePath;
+
+				if (entry->is_directory())
+				{
+					fs::create_directories(targetPath);
+				}
+				else if (entry->is_regular_file())
+				{
+					fs::create_directories(targetPath.parent_path());
+
+					std::error_code ec2;
+
+					fs::copy_file(entry->path(), targetPath, fs::copy_options::overwrite_existing, ec2);
+
+					if (ec2) continue;
+
+					count_size += entry->file_size();
+				}
+
+				// Temporary for debugging, TODO: remove (note: this will slow the coping function and it will get removed in the future)
+				fileSize file_size = decide_file_size_format(count_size);
+				std::cout << "Coping Directory (" << targetPath << "), Directory Size Count = " << file_size.size << " " << file_size.label << std::endl;
+				// ========================================
+
+				if (ec)
+				{
+					continue;
+				}
+			}
 		}
+
+		// If the copied directory is a regular file so it does not need the access to the for loop
 		else if (fs::is_regular_file(copied_path))
 		{
 			std::string name_of_the_folder = Utils::generate_new_folder_name(current_path, copied_path.filename().string(), REG_FILE);
 			dest = current_path / name_of_the_folder;
-		}
 
-		fs::copy(copied_path, dest, options, ec);
+			std::error_code ec1;
+			fs::copy_file(copied_path, dest, fs::copy_options::overwrite_existing, ec1);
+			if (ec1) 
+			{
+				std::cerr << "Error while coping " << dest << "...!" << std::endl;
+			}
+			count_size += fs::directory_entry(copied_path).file_size();
+		}
 
 		if (ec) 
 		{
 			std::cerr << "Copy failed: " << ec.message() << '\n';
 		}
+		
 		return;
 	}
 
