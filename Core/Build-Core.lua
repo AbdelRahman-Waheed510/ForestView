@@ -14,6 +14,7 @@ project "Core"
       "Source/Folder Explorer",
       "Source/Bookmarks",
       "source/Renderer",
+      "source/Tasks Manager",
 
       "../Vendor/stb_image",
       "../Vendor/imgui-docking",

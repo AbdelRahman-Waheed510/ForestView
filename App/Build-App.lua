@@ -21,7 +21,8 @@ project "App"
       "../Core/Source/Folder Explorer",
       "../Core/Source/Bookmarks",
       "../Core/Source/Renderer",
-
+      "../Core/Source/Tasks Manager",
+      
       "../Vendor/stb_image",
       "../Vendor/imgui-docking",
       "../Vendor/imgui-docking/backends",
