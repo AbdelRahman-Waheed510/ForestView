@@ -17,6 +17,7 @@ bool App::create_window()
 		glfwTerminate();
 		return false;
 	}
+	glfwSetWindowSizeLimits(window, 800, 600, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 	return true;
@@ -187,6 +188,7 @@ void App::run_loop()
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
+		ImGui::DockSpaceOverViewport();
 
 		on_update();
 
