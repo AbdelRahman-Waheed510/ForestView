@@ -228,8 +228,6 @@ void ForestView::on_update()
 	ImGui::SetNextWindowSizeConstraints(ImVec2(800.0f, 600.0f), ImVec2(FLT_MAX, FLT_MAX));
 	if (ImGui::Begin("ForestView"))
 	{
-		ImGui::Text(std::format("current tab: {}", current_tab).c_str());
-
 		refocus_reload();
 
 		tab_bar();
