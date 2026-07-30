@@ -251,7 +251,16 @@ void ForestView::on_update()
 
 		stats_bar();
 
-		icons_size_slider();
+		if (show_icons_slider) icons_size_slider();
+		
+		if (tabs[current_tab]->copying_progress != 0.0) 
+		{
+			if (ImGui::Begin("p"))
+			{
+				ImGui::ProgressBar(tabs[current_tab]->copying_progress / 7932915, ImVec2(500.00f, 50.0f));
+			}
+			ImGui::End();
+		}
 
 	}
 	ImGui::End();
@@ -464,6 +473,36 @@ void ForestView::tool_bar()
 		}
 		ImGui::EndDisabled();
 
+		ImGui::SameLine();
+		if (ImGui::Button("View")) 
+		{
+		
+		}
+		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		{
+			ImGui::OpenPopup("ViewSettings");
+		}
+		if (ImGui::BeginPopup("ViewSettings")) 
+		{
+			if (!show_icons_slider) 
+			{
+				if (ImGui::Button("Open Icons Size Slider"))
+				{
+					show_icons_slider = true;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+			else 
+			{
+				if (ImGui::Button("close Icons Size Slider"))
+				{
+					show_icons_slider = false;
+					ImGui::CloseCurrentPopup();
+				}
+			}
+
+			ImGui::EndPopup();
+		}
 
 		if (ImGui::BeginPopup("New?"))
 		{

@@ -190,6 +190,7 @@ private:
 	int drop_target = -1;
 
 	fileSize size_count;
+	bool show_icons_slider = false;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
