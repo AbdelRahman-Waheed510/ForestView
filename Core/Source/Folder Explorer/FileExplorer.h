@@ -467,7 +467,7 @@ public:
 		}
 	}
 
-	void copy_paste(const fs::path& copied_path, const fs::path& current_path) 
+	void copy_paste(const fs::path& copied_path, const fs::path& current_path, std::atomic<double>& progress) 
 	{
 		if (!fs::exists(copied_path))
 		{
@@ -475,8 +475,6 @@ public:
 			return;
 		}
 		std::error_code ec;
-		
-		double count_size = 0.0; 
 
 		fs::path dest = current_path / copied_path.filename();;
 
@@ -507,11 +505,11 @@ public:
 
 					if (ec2) continue;
 
-					count_size += entry->file_size();
+					progress += entry->file_size();
 				}
 
 				// Temporary for debugging, TODO: remove (note: this will slow the coping function and it will get removed in the future)
-				fileSize file_size = decide_file_size_format(count_size);
+				fileSize file_size = decide_file_size_format(progress);
 				std::cout << "Coping Directory (" << targetPath << "), Directory Size Count = " << file_size.size << " " << file_size.label << std::endl;
 				// ========================================
 
@@ -534,7 +532,7 @@ public:
 			{
 				std::cerr << "Error while coping " << dest << "...!" << std::endl;
 			}
-			count_size += fs::directory_entry(copied_path).file_size();
+			progress += fs::directory_entry(copied_path).file_size();
 		}
 
 		if (ec) 
