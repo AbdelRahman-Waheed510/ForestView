@@ -23,4 +23,5 @@ struct Task
 	std::atomic<double> total = 0.0;
 	std::atomic<double> progress = 0.0;
 	std::atomic<bool> finished{ false };
+	std::thread worker;
 };
