@@ -1113,6 +1113,8 @@ void ForestView::stats_bar()
 		}
 
 		ImGui::SameLine();
+
+		// View Style Buttons =======================================
 		float spacing = ImGui::GetStyle().ItemSpacing.x;
 		float padding = ImGui::GetStyle().FramePadding.x;
 		float target_pos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - (15.0f * 2 + spacing + (padding * 4));
@@ -1122,8 +1124,8 @@ void ForestView::stats_bar()
 		if (ImGui::ImageButton("Rows", rows_button_texture_id, ImVec2(12.0f, 12.0f)))
 		{
 			tabs[current_tab]->view_type = ROWS;
-			tabs[current_tab]->icons_height = 15.0f;
-			tabs[current_tab]->icons_width = 15.0f;
+			tabs[current_tab]->icons_height = 24.0f;
+			tabs[current_tab]->icons_width = 24.0f;
 		}
 		ImGui::SameLine();
 		if (ImGui::ImageButton("Large thumbnails", tiles_button_texture_id, ImVec2(12.0f, 12.0f)))
