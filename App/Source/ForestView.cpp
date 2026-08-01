@@ -255,13 +255,36 @@ void ForestView::on_update()
 
 		if (show_icons_slider) icons_size_slider();
 		
-		if (tabs[current_tab]->copying_progress != 0.0) 
+		if (!tasks.empty()) 
 		{
-			if (ImGui::Begin("p"))
+
+			for (size_t i = 0; i < tasks.size(); i++) 
 			{
-				ImGui::ProgressBar(tabs[current_tab]->copying_progress / 7932915, ImVec2(500.00f, 50.0f));
+				if (!tasks[i]->finished)
+				{
+					if (ImGui::Begin("Copying"))
+					{
+						fileSize data = tabs[current_tab]->fileExplorer->decide_file_size_format(tasks[i]->progress);
+						fileSize data2 = tabs[current_tab]->fileExplorer->decide_file_size_format(tasks[i]->total);
+						ImGui::Text(std::format("Copied {:.2f} {} / {:.2f} {}", data.size, data.label, data2.size, data2.label).c_str());
+						ImGui::ProgressBar(tasks[i]->progress / tasks[i]->total, ImVec2(500.00f, 50.0f));
+					}
+					ImGui::End();
+				}
+				if (tasks[i]->finished) 
+				{
+					if (tasks[i]->worker.joinable()) 
+					{
+						tasks[i]->worker.join();
+					}
+
+					tasks.erase(tasks.begin() + i);
+					i--;
+					tabs[current_tab]->tree_need_update = true;
+					tabs[current_tab]->entries_need_update = true;
+				}
 			}
-			ImGui::End();
+
 		}
 
 	}
@@ -460,9 +483,25 @@ void ForestView::tool_bar()
 		ImGui::BeginDisabled(tabs[current_tab]->copied_path.empty());
 		if (ImGui::Button("Paste"))
 		{
-			tabs[current_tab]->fileExplorer->copy_paste(tabs[current_tab]->copied_path, tabs[current_tab]->current_path);
-			tabs[current_tab]->entries_need_update = true;
-			tabs[current_tab]->tree_need_update = true;
+			std::unique_ptr<Task> copyTask = std::make_unique<Task>();
+			
+			auto* tab = tabs[current_tab].get();
+
+			fs::path src = tabs[current_tab]->copied_path;
+			fs::path dest = tabs[current_tab]->current_path;
+
+			copyTask->total = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
+
+			Task* task = copyTask.get();
+
+			copyTask->worker = std::thread([this,src, dest, task]()
+				{
+					tabs[current_tab]->fileExplorer->copy_paste(src, dest, task->progress);
+					task->finished = true;
+				});
+
+			tasks.emplace_back(std::move(copyTask));
+
 			tabs[current_tab]->copied_path.clear();
 		}
 		ImGui::EndDisabled();

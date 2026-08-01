@@ -40,6 +40,7 @@
 namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
+#include "TasksManager.h"
 
 static int id = 1;
 
@@ -113,6 +114,8 @@ struct State
 
 	tree t;
 	tree structure_tree;
+
+	std::atomic<double> copying_progress;
 
 	State() 
 	{
@@ -190,7 +193,11 @@ private:
 	int drop_target = -1;
 
 	fileSize size_count;
+
 	bool show_icons_slider = false;
+
+	std::vector<std::unique_ptr<Task>> tasks;
+
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
