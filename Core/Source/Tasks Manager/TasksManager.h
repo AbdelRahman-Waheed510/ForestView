@@ -20,8 +20,12 @@ struct Task
 	TaskType task_type;
 	fs::path source;
 	fs::path destination;
-	std::atomic<double> total = 0.0;
-	std::atomic<double> progress = 0.0;
+	std::atomic<double> totalSize = 0.0;
+	int totalfilesCount = 0;
+	std::atomic<double> sizeProgress = 0.0;
+	std::atomic<int> filesCountProgress = 0.0;
 	std::atomic<bool> finished{ false };
+	bool is_closing = false;
 	std::thread worker;
+
 };
