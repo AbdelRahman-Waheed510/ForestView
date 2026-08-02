@@ -262,22 +262,72 @@ void ForestView::on_update()
 			{
 				if (!tasks[i]->finished)
 				{
-					if (ImGui::Begin("Copying"))
+					ImGui::SetNextWindowSizeConstraints(ImVec2(350.0f, 0.0f), ImVec2(600.0f, FLT_MAX));
+
+					if (ImGui::Begin("Copying", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
 					{
-						fileSize data = tabs[current_tab]->fileExplorer->decide_file_size_format(tasks[i]->progress);
-						fileSize data2 = tabs[current_tab]->fileExplorer->decide_file_size_format(tasks[i]->total);
+						const int files_count_progress = tasks[i]->filesCountProgress.load();
+						const int files_total_count = tasks[i]->totalfilesCount;
+
+						ImGui::Text(std::format("Coping {} items from {} to {}", files_total_count, tasks[i]->source.filename().string(), tasks[i]->destination.filename().string()).c_str());
+						
+						ImGui::Separator();
+
+						const float progressPercentage = tasks[i]->sizeProgress / tasks[i]->totalSize;
+
+						ImGui::Text("%s", std::format("{:.0f}% Completed", progressPercentage * 100).c_str());
+
+						const double size_progress = tasks[i]->sizeProgress;
+						const double size_total = tasks[i]->totalSize;
+						
+						fileSize data = tabs[current_tab]->fileExplorer->decide_file_size_format(size_progress);
+						fileSize data2 = tabs[current_tab]->fileExplorer->decide_file_size_format(size_total);
 						ImGui::Text(std::format("Copied {:.2f} {} / {:.2f} {}", data.size, data.label, data2.size, data2.label).c_str());
-						ImGui::ProgressBar(tasks[i]->progress / tasks[i]->total, ImVec2(500.00f, 50.0f));
+
+						ImGui::Text(std::format("Copied {} Files / {} Files", files_count_progress, files_total_count).c_str());
+
+						ImGui::Separator();
+						ImGui::ProgressBar(progressPercentage, ImVec2(500.00f, 50.0f), "");
+						ImGui::Separator();
+
+						const fileSize data3 = tabs[current_tab]->fileExplorer->decide_file_size_format(size_total - size_progress);
+
+						ImGui::Text(std::format("Items Remaining: {} ({:.2f} {})", files_total_count - files_count_progress, data3.size, data3.label).c_str());
+						
+						ImGui::SameLine();
+
+						ImGui::Text("   |   ");
+
+						ImGui::SameLine();
+
+						ImGui::PushID(i);
+						if (tasks[i]->is_closing)
+						{
+							ImGui::Text("Canceling....");
+							tasks[i]->finished = true;
+						}
+						else  
+						{
+							if (ImGui::Button("X")) 
+							{
+								tasks[i]->is_closing = true;
+							}
+						}
+						ImGui::PopID();
+						
+
+						if (i + 1 != tasks.size()) ImGui::Separator();
+
+
 					}
 					ImGui::End();
 				}
-				if (tasks[i]->finished) 
+				else if (tasks[i]->finished) 
 				{
 					if (tasks[i]->worker.joinable()) 
 					{
 						tasks[i]->worker.join();
 					}
-
 					tasks.erase(tasks.begin() + i);
 					i--;
 					tabs[current_tab]->tree_need_update = true;
@@ -483,20 +533,22 @@ void ForestView::tool_bar()
 		ImGui::BeginDisabled(tabs[current_tab]->copied_path.empty());
 		if (ImGui::Button("Paste"))
 		{
-			std::unique_ptr<Task> copyTask = std::make_unique<Task>();
-			
-			auto* tab = tabs[current_tab].get();
-
 			fs::path src = tabs[current_tab]->copied_path;
 			fs::path dest = tabs[current_tab]->current_path;
 
-			copyTask->total = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
+			EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
+
+			std::unique_ptr<Task> copyTask = std::make_unique<Task>();
+			copyTask->totalSize = data.directorySize;
+			copyTask->totalfilesCount = data.filesCount;
+			copyTask->source = src;
+			copyTask->destination = dest;
 
 			Task* task = copyTask.get();
 
 			copyTask->worker = std::thread([this,src, dest, task]()
 				{
-					tabs[current_tab]->fileExplorer->copy_paste(src, dest, task->progress);
+					tabs[current_tab]->fileExplorer->copy_paste(src, dest, task->sizeProgress, task->filesCountProgress, task->finished);
 					task->finished = true;
 				});
 
@@ -571,7 +623,10 @@ void ForestView::tool_bar()
 		{
 			if (ImGui::Selectable("Name"))
 			{
-				tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.path() < b.entry.path();});
+				tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) 
+					{
+						return a.entry.path() < b.entry.path();
+					});
 				tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
 				ImGui::CloseCurrentPopup();
 			}
