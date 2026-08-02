@@ -101,6 +101,11 @@ struct RenameReturn
 	bool success;
 };
 
+struct EntryDataReturn 
+{
+	double directorySize = 0.0;
+	int filesCount = 0;
+};
 class Explorer 
 {
 private:
@@ -201,9 +206,10 @@ public:
 		return { count_in_bytes, "Bytes" };
 	}
 
-	double get_total_files_size(const fs::path& path)
+	EntryDataReturn get_total_files_size(const fs::path& path)
 	{
-		double count = 0.0;
+		EntryDataReturn data;
+
 		std::error_code ec;
 		if (fs::is_directory(path, ec))
 		{
@@ -211,26 +217,30 @@ public:
 			{
 				if (fs::is_regular_file(entry.status()))
 				{
-					count += entry.file_size();
+					data.directorySize += entry.file_size();
+					data.filesCount++;
 				}
 			}
 			if (ec) 
 			{
 				std::cerr << "Error while calulating the size" << std::endl;
-				return 0.0;
+				data.directorySize = 0.0;
+				data.filesCount = 0;
+				return data;
 			}
 		}
 		else if (fs::is_regular_file(path, ec))	
 		{
-			count += fs::file_size(path);
+			data.directorySize += fs::file_size(path);
+			data.filesCount++;
 			if (ec)
 			{
 				std::cerr << "Error while calulating the size" << std::endl;
-				return 0.0;
+				return data;
 			}
 		}
 
-		return count;
+		return data;
 	}
 
 	const std::string get_last_modified_since(const fs::path& path)

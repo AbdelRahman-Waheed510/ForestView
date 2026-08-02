@@ -1071,7 +1071,7 @@ void ForestView::stats_bar()
 
 			if (tabs[current_tab]->need_file_size_call)
 			{
-				tabs[current_tab]->file_size_future.push_back(std::async(std::launch::async, [&fileExplorer = this->tabs[current_tab]->fileExplorer, path = tabs[current_tab]->selected_path]() {return fileExplorer->decide_file_size_format( fileExplorer->get_total_files_size(path));}));
+				tabs[current_tab]->file_size_future.push_back(std::async(std::launch::async, [&fileExplorer = this->tabs[current_tab]->fileExplorer, path = tabs[current_tab]->selected_path]() {return fileExplorer->decide_file_size_format( fileExplorer->get_total_files_size(path).directorySize);}));
 				tabs[current_tab]->need_file_size_call = false;
 				tabs[current_tab]->is_calulating_size = true;
 			}
