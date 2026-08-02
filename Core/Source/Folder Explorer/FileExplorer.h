@@ -477,7 +477,7 @@ public:
 		}
 	}
 
-	void copy_paste(const fs::path& copied_path, const fs::path& current_path, std::atomic<double>& progress) 
+	void copy_paste(const fs::path& copied_path, const fs::path& current_path, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& finished) 
 	{
 		if (!fs::exists(copied_path))
 		{
@@ -498,6 +498,7 @@ public:
 
 			for (auto entry = fs::recursive_directory_iterator(copied_path, fs::directory_options::skip_permission_denied, ec); entry != fs::recursive_directory_iterator(); entry.increment(ec))
 			{
+				if (finished) return;
 				fs::path relativePath = fs::relative(entry->path(), copied_path);
 				fs::path targetPath = dest / relativePath;
 
@@ -515,12 +516,13 @@ public:
 
 					if (ec2) continue;
 
-					progress += entry->file_size();
+					Sizeprogress += entry->file_size();
+					filesCountProgress++;
 				}
 
 				// Temporary for debugging, TODO: remove (note: this will slow the coping function and it will get removed in the future)
-				fileSize file_size = decide_file_size_format(progress);
-				std::cout << "Coping Directory (" << targetPath << "), Directory Size Count = " << file_size.size << " " << file_size.label << std::endl;
+				///*fileSize file_size = decide_file_size_format(progress);
+				//std::cout << "Coping Directory (" << targetPath << "), Directory Size Count = " << file_size.size << " " << file_size.label << std::endl*/;
 				// ========================================
 
 				if (ec)
@@ -542,7 +544,8 @@ public:
 			{
 				std::cerr << "Error while coping " << dest << "...!" << std::endl;
 			}
-			progress += fs::directory_entry(copied_path).file_size();
+			Sizeprogress += fs::directory_entry(copied_path).file_size();
+			filesCountProgress++;
 		}
 
 		if (ec) 
