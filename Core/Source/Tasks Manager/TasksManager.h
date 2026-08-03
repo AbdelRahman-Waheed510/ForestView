@@ -9,7 +9,7 @@
 
 namespace fs = std::filesystem;
 
-enum TaskType 
+enum class TaskType
 {
 NONE,
 COPY_PASTE,

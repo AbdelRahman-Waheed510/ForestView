@@ -330,6 +330,7 @@ void ForestView::on_update()
 
 						ImGui::SameLine();
 
+						// Canceling Button =============================================
 						ImGui::PushID(i);
 						if (tasks[i]->is_closing)
 						{
@@ -359,7 +360,8 @@ void ForestView::on_update()
 						tasks[i]->worker.join();
 					}
 					tasks.erase(tasks.begin() + i);
-					i--;
+					if (i > 0) i--;
+					else i = 0;
 					tabs[current_tab]->tree_need_update = true;
 					tabs[current_tab]->entries_need_update = true;
 				}
@@ -573,6 +575,7 @@ void ForestView::tool_bar()
 			copyTask->totalfilesCount = data.filesCount;
 			copyTask->source = src;
 			copyTask->destination = dest;
+			copyTask->task_type = TaskType::COPY_PASTE;
 
 			Task* task = copyTask.get();
 
