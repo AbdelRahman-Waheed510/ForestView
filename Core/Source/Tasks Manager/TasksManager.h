@@ -26,6 +26,13 @@ struct Task
 	std::atomic<int> filesCountProgress = 0.0;
 	std::atomic<bool> finished{ false };
 	bool is_closing = false;
+
+	// Attributes for the speed calculations
+	std::chrono::steady_clock::time_point start;
+	std::chrono::steady_clock::time_point end;
+	double sizeProgressTemp = 0.0;
+	double currentSpeed = 0.0;
+
 	std::thread worker;
 
 };

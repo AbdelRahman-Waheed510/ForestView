@@ -268,32 +268,62 @@ void ForestView::on_update()
 					{
 						const int files_count_progress = tasks[i]->filesCountProgress.load();
 						const int files_total_count = tasks[i]->totalfilesCount;
-
+		
+						// Some path info (From "Path1" to "Path2") =====================================================
 						ImGui::Text(std::format("Coping {} items from {} to {}", files_total_count, tasks[i]->source.filename().string(), tasks[i]->destination.filename().string()).c_str());
-						
+						// ==============================================================================================
+
 						ImGui::Separator();
 
 						const float progressPercentage = tasks[i]->sizeProgress / tasks[i]->totalSize;
 
+						// Percecntage completed =======================================================================
 						ImGui::Text("%s", std::format("{:.0f}% Completed", progressPercentage * 100).c_str());
+						// =============================================================================================
 
 						const double size_progress = tasks[i]->sizeProgress;
 						const double size_total = tasks[i]->totalSize;
 						
 						fileSize data = tabs[current_tab]->fileExplorer->decide_file_size_format(size_progress);
 						fileSize data2 = tabs[current_tab]->fileExplorer->decide_file_size_format(size_total);
+
+						// Number bytes (KB,MB,GB) copied =====================================================
 						ImGui::Text(std::format("Copied {:.2f} {} / {:.2f} {}", data.size, data.label, data2.size, data2.label).c_str());
 
+						// Number of files copied ============================================================
 						ImGui::Text(std::format("Copied {} Files / {} Files", files_count_progress, files_total_count).c_str());
 
+
+						// Speed calculations and UI ==========================================================
+						tasks[i]->end = std::chrono::steady_clock::now();
+
+						double duration = std::chrono::duration<double>(tasks[i]->end - tasks[i]->start).count();
+					
+						if (duration >= 0.5)
+						{
+							double bytesInThisSliceOfTime = size_progress - tasks[i]->sizeProgressTemp;
+
+							tasks[i]->currentSpeed = (bytesInThisSliceOfTime / 1048576.0) / duration;
+
+							// To reset after every 0.5 seconds so the speed will be acuurate not just accumulate over time 
+							tasks[i]->sizeProgressTemp = size_progress;
+							tasks[i]->start = tasks[i]->end;
+						}
+
+						ImGui::Text(std::format("Speed: {:.2f} MB/S", tasks[i]->currentSpeed).c_str());
+
+						// Progress Bar ===================================================
 						ImGui::Separator();
 						ImGui::ProgressBar(progressPercentage, ImVec2(500.00f, 50.0f), "");
 						ImGui::Separator();
+						// ================================================================
 
 						const fileSize data3 = tabs[current_tab]->fileExplorer->decide_file_size_format(size_total - size_progress);
 
+						// Number of remaining files to copy =============================
 						ImGui::Text(std::format("Items Remaining: {} ({:.2f} {})", files_total_count - files_count_progress, data3.size, data3.label).c_str());
-						
+						// ===============================================================
+
 						ImGui::SameLine();
 
 						ImGui::Text("   |   ");
@@ -545,6 +575,8 @@ void ForestView::tool_bar()
 			copyTask->destination = dest;
 
 			Task* task = copyTask.get();
+
+			copyTask->start = std::chrono::steady_clock::now();
 
 			copyTask->worker = std::thread([this,src, dest, task]()
 				{
