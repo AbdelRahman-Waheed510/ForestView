@@ -94,6 +94,9 @@ enum NewType
 namespace Utils 
 {
 	std::string generate_new_folder_name(const fs::path& path, const std::string& name, const NewType& type);
+
+	std::string to_lower(std::string str);
+	
 };
 
 struct RenameReturn 
@@ -524,24 +527,13 @@ public:
 				{
 					fs::create_directories(targetPath);
 				}
+
 				else if (entry->is_regular_file())
 				{
-					fs::create_directories(targetPath.parent_path());
+					copy_in_chuncks(entry->path(), targetPath, Sizeprogress, filesCountProgress, cancel_request);
+					if (cancel_request) return;
 
-					std::error_code ec2;
-
-					fs::copy_file(entry->path(), targetPath, fs::copy_options::overwrite_existing, ec2);
-
-					if (ec2) continue;
-
-					Sizeprogress += entry->file_size();
-					filesCountProgress++;
 				}
-
-				// Temporary for debugging, TODO: remove (note: this will slow the coping function and it will get removed in the future)
-				///*fileSize file_size = decide_file_size_format(progress);
-				//std::cout << "Coping Directory (" << targetPath << "), Directory Size Count = " << file_size.size << " " << file_size.label << std::endl*/;
-				// ========================================
 
 				if (ec)
 				{
@@ -565,6 +557,47 @@ public:
 		}
 		
 		return;
+	}
+
+	void copy_in_chuncks(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request)
+	{
+		constexpr int BufferSize = 1024 * 1024; // 1 MB
+
+		std::ifstream readFrom(source, std::ios::binary);
+
+		if (!readFrom.is_open()) return;
+
+		std::ofstream destionationFile(destination, std::ios::binary);
+
+		if (!destionationFile.is_open()) return;
+
+		std::vector<char> buffer(BufferSize);
+
+		while (readFrom)
+		{
+			if (cancel_request)
+			{
+				readFrom.close();
+				destionationFile.close();
+				std::filesystem::remove(destination);
+				return;
+			}
+
+			readFrom.read(buffer.data(), BufferSize);
+
+			std::streamsize bytes = readFrom.gcount();
+
+			if (bytes > 0)
+			{
+				destionationFile.write(buffer.data(), bytes);
+
+				Sizeprogress += bytes;
+
+				if (!destionationFile) return;
+			}
+
+		}
+		filesCountProgress++;
 	}
 
 	void remove(fs::path& path_to_delete) 
