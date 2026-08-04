@@ -1304,6 +1304,16 @@ void ForestView::shutdown_background_tasks()
 			x.wait();
 		}
 	}
+
+	for (std::unique_ptr<Task>& task : tasks)
+	{
+		task->cancel_request = true;
+	}
+	for (std::unique_ptr<Task>& task : tasks) 
+	{
+		if (task->worker.joinable()) task->worker.join();
+	}
+	
 	tabs[current_tab]->file_size_future.clear();
 }
 
