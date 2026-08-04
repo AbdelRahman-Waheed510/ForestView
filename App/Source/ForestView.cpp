@@ -335,7 +335,7 @@ void ForestView::on_update()
 						if (tasks[i]->is_closing)
 						{
 							ImGui::Text("Canceling....");
-							tasks[i]->finished = true;
+							tasks[i]->cancel_request = true;
 						}
 						else  
 						{
@@ -583,8 +583,7 @@ void ForestView::tool_bar()
 
 			copyTask->worker = std::thread([this,src, dest, task]()
 				{
-					tabs[current_tab]->fileExplorer->copy_paste(src, dest, task->sizeProgress, task->filesCountProgress, task->finished);
-					task->finished = true;
+					tabs[current_tab]->fileExplorer->copy_paste(src, dest, task->sizeProgress, task->filesCountProgress,task->cancel_request ,task->finished);
 				});
 
 			tasks.emplace_back(std::move(copyTask));

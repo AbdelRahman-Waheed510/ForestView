@@ -9,6 +9,7 @@
 #include <stack>
 #include <stdexcept>
 #include <fstream>
+#include <istream>
 #include "tree.h"
 #include <functional>
 #include <chrono>
@@ -106,9 +107,23 @@ struct EntryDataReturn
 	double directorySize = 0.0;
 	int filesCount = 0;
 };
+
 class Explorer 
 {
 private:
+
+	struct Guard 
+	{
+		std::atomic<bool>& m_finished;
+		Guard(std::atomic<bool>& finished) : m_finished(finished)
+		{
+		}
+		~Guard()
+		{
+			m_finished = true;
+		}
+	};
+
 	TexturesManager& M_texturesManager;	
 	tree* t;
 	std::vector<Entry> entries;
@@ -477,29 +492,32 @@ public:
 		}
 	}
 
-	void copy_paste(const fs::path& copied_path, const fs::path& current_path, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& finished) 
+	void copy_paste(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{
-		if (!fs::exists(copied_path))
+		Guard guard(finished);
+
+		if (!fs::exists(source))
 		{
-			std::cerr << "Error: source path doesnot exist: " << copied_path << std::endl;
+			std::cerr << "Error: source path doesnot exist: " << source << std::endl;
 			return;
 		}
 		std::error_code ec;
 
-		fs::path dest = current_path / copied_path.filename();;
-
 		// If the copied directory is a folder 
-		if (fs::is_directory(copied_path))
+		if (fs::is_directory(source))
 		{
-			std::string name_of_the_folder = Utils::generate_new_folder_name(current_path, copied_path.filename().string(), FOLDER);
-			dest = current_path / name_of_the_folder;
+			std::string name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), FOLDER);
+			fs::path dest = destination / name_of_the_folder;
 
 			fs::create_directories(dest);
 
-			for (auto entry = fs::recursive_directory_iterator(copied_path, fs::directory_options::skip_permission_denied, ec); entry != fs::recursive_directory_iterator(); entry.increment(ec))
+			for (auto entry = fs::recursive_directory_iterator(source, fs::directory_options::skip_permission_denied, ec); entry != fs::recursive_directory_iterator(); entry.increment(ec))
 			{
-				if (finished) return;
-				fs::path relativePath = fs::relative(entry->path(), copied_path);
+				if (cancel_request)
+				{
+					return;
+				}
+				fs::path relativePath = fs::relative(entry->path(), source);
 				fs::path targetPath = dest / relativePath;
 
 				if (entry->is_directory())
@@ -533,19 +551,12 @@ public:
 		}
 
 		// If the copied directory is a regular file so it does not need the access to the for loop
-		else if (fs::is_regular_file(copied_path))
+		else if (fs::is_regular_file(source))
 		{
-			std::string name_of_the_folder = Utils::generate_new_folder_name(current_path, copied_path.filename().string(), REG_FILE);
-			dest = current_path / name_of_the_folder;
+			std::string name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), REG_FILE);
+			fs::path dest = destination / name_of_the_folder;
 
-			std::error_code ec1;
-			fs::copy_file(copied_path, dest, fs::copy_options::overwrite_existing, ec1);
-			if (ec1) 
-			{
-				std::cerr << "Error while coping " << dest << "...!" << std::endl;
-			}
-			Sizeprogress += fs::directory_entry(copied_path).file_size();
-			filesCountProgress++;
+			copy_in_chuncks(source, dest, Sizeprogress, filesCountProgress, cancel_request);
 		}
 
 		if (ec) 

@@ -25,6 +25,7 @@ struct Task
 	std::atomic<double> sizeProgress = 0.0;
 	std::atomic<int> filesCountProgress = 0.0;
 	std::atomic<bool> finished{ false };
+	std::atomic<bool> cancel_request{ false };
 	bool is_closing = false;
 
 	// Attributes for the speed calculations
