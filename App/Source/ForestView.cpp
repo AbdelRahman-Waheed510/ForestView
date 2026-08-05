@@ -257,113 +257,140 @@ void ForestView::on_update()
 		
 		if (!tasks.empty()) 
 		{
-
 			for (size_t i = 0; i < tasks.size(); i++) 
 			{
-				if (!tasks[i]->finished)
+				if (tasks[i]->task_type == TaskType::COPY_PASTE) 
 				{
-					ImGui::SetNextWindowSizeConstraints(ImVec2(350.0f, 0.0f), ImVec2(600.0f, FLT_MAX));
-
-					if (ImGui::Begin("Copying", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
+					if (!tasks[i]->finished)
 					{
-						const int files_count_progress = tasks[i]->filesCountProgress.load();
-						const int files_total_count = tasks[i]->totalfilesCount;
-		
-						// Some path info (From "Path1" to "Path2") =====================================================
-						ImGui::Text(std::format("Coping {} items from {} to {}", files_total_count, tasks[i]->source.filename().string(), tasks[i]->destination.filename().string()).c_str());
-						// ==============================================================================================
+						ImGui::SetNextWindowSizeConstraints(ImVec2(350.0f, 0.0f), ImVec2(600.0f, FLT_MAX));
 
-						ImGui::Separator();
-
-						const float progressPercentage = tasks[i]->sizeProgress / tasks[i]->totalSize;
-
-						// Percecntage completed =======================================================================
-						ImGui::Text("%s", std::format("{:.0f}% Completed", progressPercentage * 100).c_str());
-						// =============================================================================================
-
-						const double size_progress = tasks[i]->sizeProgress;
-						const double size_total = tasks[i]->totalSize;
-						
-						fileSize data = tabs[current_tab]->fileExplorer->decide_file_size_format(size_progress);
-						fileSize data2 = tabs[current_tab]->fileExplorer->decide_file_size_format(size_total);
-
-						// Number bytes (KB,MB,GB) copied =====================================================
-						ImGui::Text(std::format("Copied {:.2f} {} / {:.2f} {}", data.size, data.label, data2.size, data2.label).c_str());
-
-						// Number of files copied ============================================================
-						ImGui::Text(std::format("Copied {} Files / {} Files", files_count_progress, files_total_count).c_str());
-
-
-						// Speed calculations and UI ==========================================================
-						tasks[i]->end = std::chrono::steady_clock::now();
-
-						double duration = std::chrono::duration<double>(tasks[i]->end - tasks[i]->start).count();
-					
-						if (duration >= 0.5)
+						if (ImGui::Begin("Copying", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
 						{
-							double bytesInThisSliceOfTime = size_progress - tasks[i]->sizeProgressTemp;
+							const int files_count_progress = tasks[i]->filesCountProgress.load();
+							const int files_total_count = tasks[i]->totalfilesCount;
 
-							tasks[i]->currentSpeed = (bytesInThisSliceOfTime / 1048576.0) / duration;
+							// Some path info (From "Path1" to "Path2") =====================================================
+							ImGui::Text(std::format("Coping {} items from {} to {}", files_total_count, tasks[i]->sourceName, tasks[i]->destinationName).c_str());
+							// ==============================================================================================
 
-							// To reset after every 0.5 seconds so the speed will be acuurate not just accumulate over time 
-							tasks[i]->sizeProgressTemp = size_progress;
-							tasks[i]->start = tasks[i]->end;
-						}
+							ImGui::Separator();
 
-						ImGui::Text(std::format("Speed: {:.2f} MB/S", tasks[i]->currentSpeed).c_str());
+							const float progressPercentage = tasks[i]->sizeProgress / tasks[i]->totalSize;
 
-						// Progress Bar ===================================================
-						ImGui::Separator();
-						ImGui::ProgressBar(progressPercentage, ImVec2(500.00f, 50.0f), "");
-						ImGui::Separator();
-						// ================================================================
+							// Percecntage completed =======================================================================
+							ImGui::Text("%s", std::format("{:.0f}% Completed", progressPercentage * 100).c_str());
+							// =============================================================================================
 
-						const fileSize data3 = tabs[current_tab]->fileExplorer->decide_file_size_format(size_total - size_progress);
+							const double size_progress = tasks[i]->sizeProgress;
+							const double size_total = tasks[i]->totalSize;
 
-						// Number of remaining files to copy =============================
-						ImGui::Text(std::format("Items Remaining: {} ({:.2f} {})", files_total_count - files_count_progress, data3.size, data3.label).c_str());
-						// ===============================================================
+							fileSize data = tabs[current_tab]->fileExplorer->decide_file_size_format(size_progress);
+							fileSize data2 = tabs[current_tab]->fileExplorer->decide_file_size_format(size_total);
 
-						ImGui::SameLine();
+							// Number bytes (KB,MB,GB) copied =====================================================
+							ImGui::Text(std::format("Copied {:.2f} {} / {:.2f} {}", data.size, data.label, data2.size, data2.label).c_str());
 
-						ImGui::Text("   |   ");
+							// Number of files copied ============================================================
+							ImGui::Text(std::format("Copied {} Files / {} Files", files_count_progress, files_total_count).c_str());
 
-						ImGui::SameLine();
 
-						// Canceling Button =============================================
-						ImGui::PushID(i);
-						if (tasks[i]->is_closing)
-						{
-							ImGui::Text("Canceling....");
-							tasks[i]->cancel_request = true;
-						}
-						else  
-						{
-							if (ImGui::Button("X")) 
+							// Speed calculations and UI ==========================================================
+							tasks[i]->end = std::chrono::steady_clock::now();
+
+							double duration = std::chrono::duration<double>(tasks[i]->end - tasks[i]->start).count();
+
+							if (duration >= 0.5)
 							{
-								tasks[i]->is_closing = true;
+								double bytesInThisSliceOfTime = size_progress - tasks[i]->sizeProgressTemp;
+
+								tasks[i]->currentSpeed = (bytesInThisSliceOfTime / 1048576.0) / duration;
+
+								// To reset after every 0.5 seconds so the speed will be acuurate not just accumulate over time 
+								tasks[i]->sizeProgressTemp = size_progress;
+								tasks[i]->start = tasks[i]->end;
 							}
+
+							ImGui::Text(std::format("Speed: {:.2f} MB/S", tasks[i]->currentSpeed).c_str());
+
+							// Progress Bar ===================================================
+							ImGui::Separator();
+							ImGui::ProgressBar(progressPercentage, ImVec2(500.00f, 50.0f), "");
+							ImGui::Separator();
+							// ================================================================
+
+							const fileSize data3 = tabs[current_tab]->fileExplorer->decide_file_size_format(size_total - size_progress);
+
+							// Number of remaining files to copy =============================
+							ImGui::Text(std::format("Items Remaining: {} ({:.2f} {})", files_total_count - files_count_progress, data3.size, data3.label).c_str());
+							// ===============================================================
+
+							ImGui::SameLine();
+
+							ImGui::Text("   |   ");
+
+							ImGui::SameLine();
+
+							// Canceling Button =============================================
+							ImGui::PushID(i);
+							if (tasks[i]->is_closing)
+							{
+								ImGui::Text("Canceling....");
+								tasks[i]->cancel_request = true;
+							}
+							else
+							{
+								if (ImGui::Button("X"))
+								{
+									tasks[i]->is_closing = true;
+								}
+							}
+							ImGui::PopID();
+
+
+							if (i + 1 != tasks.size()) ImGui::Separator();
+
+
 						}
-						ImGui::PopID();
-						
-
-						if (i + 1 != tasks.size()) ImGui::Separator();
-
-
+						ImGui::End();
 					}
-					ImGui::End();
-				}
-				else if (tasks[i]->finished) 
-				{
-					if (tasks[i]->worker.joinable()) 
+					else if (tasks[i]->finished)
 					{
-						tasks[i]->worker.join();
+						if (tasks[i]->worker.joinable())
+						{
+							tasks[i]->worker.join();
+						}
+						tasks.erase(tasks.begin() + i);
+						if (i > 0) i--;
+						else i = 0;
+						tabs[current_tab]->tree_need_update = true;
+						tabs[current_tab]->entries_need_update = true;
 					}
-					tasks.erase(tasks.begin() + i);
-					if (i > 0) i--;
-					else i = 0;
-					tabs[current_tab]->tree_need_update = true;
-					tabs[current_tab]->entries_need_update = true;
+				}
+				else if (tasks[i]->task_type == TaskType::_DELETE) 
+				{
+					if (!tasks[i]->finished) 
+					{
+						ImGui::SetNextWindowSizeConstraints(ImVec2(350.0f, 0.0f), ImVec2(600.0f, FLT_MAX));
+						if (ImGui::Begin("Deleting", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
+						{
+							ImGui::Text(std::format("Deleting {}", tasks[i]->sourceName).c_str());
+						}
+						ImGui::End();
+					}
+					else if (tasks[i]->finished)
+					{
+						if (tasks[i]->worker.joinable()) 
+						{
+							tasks[i]->worker.join();
+						}
+						tasks.erase(tasks.begin() + i);
+						if (i > 0) i--;
+						else i = 0;
+						tabs[current_tab]->tree_need_update = true;
+						tabs[current_tab]->entries_need_update = true;
+					}
+					
 				}
 			}
 
@@ -576,6 +603,8 @@ void ForestView::tool_bar()
 			copyTask->source = src;
 			copyTask->destination = dest;
 			copyTask->task_type = TaskType::COPY_PASTE;
+			copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
+			copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
 
 			Task* task = copyTask.get();
 
@@ -691,6 +720,7 @@ void ForestView::tool_bar()
 				std::unique_ptr<Task> deleteTask = std::make_unique<Task>();
 				deleteTask->task_type = TaskType::_DELETE;
 				deleteTask->source = tabs[current_tab]->selected_path;
+				deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.filename().string(), 10);
 
 				Task* task = deleteTask.get();
 

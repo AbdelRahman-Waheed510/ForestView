@@ -13,10 +13,14 @@ enum class TaskType
 {
 NONE,
 COPY_PASTE,
+_DELETE,
 };
 
 struct Task 
 {
+	std::string sourceName;
+	std::string destinationName;
+
 	TaskType task_type;
 	fs::path source;
 	fs::path destination;
