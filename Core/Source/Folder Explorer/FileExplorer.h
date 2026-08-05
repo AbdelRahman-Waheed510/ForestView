@@ -514,7 +514,14 @@ public:
 			std::string name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), FOLDER);
 			fs::path dest = destination / name_of_the_folder;
 
-			fs::create_directories(dest);
+			std::error_code ec_longPath;
+
+			fs::create_directories(dest, ec_longPath);
+
+			if (ec_longPath) 
+			{
+				std::cerr << "Failed to Create" << dest << std::endl;
+			}
 
 			for (auto entry = fs::recursive_directory_iterator(source, fs::directory_options::skip_permission_denied, ec); entry != fs::recursive_directory_iterator(); entry.increment(ec))
 			{
@@ -527,7 +534,12 @@ public:
 
 				if (entry->is_directory())
 				{
-					fs::create_directories(targetPath);
+					std::error_code ec_longPath;
+					fs::create_directories(targetPath,ec_longPath);
+					if (ec_longPath)
+					{
+						std::cerr << "Failed to Create" << targetPath << std::endl;
+					}
 				}
 
 				else if (entry->is_regular_file())
@@ -602,7 +614,7 @@ public:
 		filesCountProgress++;
 	}
 
-	void remove(fs::path& path_to_delete) 
+	void remove(const fs::path& path_to_delete) 
 	{
 		if (!fs::exists(path_to_delete)) 
 		{
@@ -616,6 +628,10 @@ public:
 		{
 			std::cerr << "Failed to wipe directory: " << ec.message() << '\n';
 		}
+#ifdef _DEBUG
+		std::cout << "Number of files deleted: " << deleted_files << std::endl;
+#endif
+		return;
 	}
 
 	std::string form_breadcrumb_navigation_string(const fs::path& path_to_format) 

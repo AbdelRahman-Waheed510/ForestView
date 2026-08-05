@@ -685,9 +685,22 @@ void ForestView::tool_bar()
 					tabs[current_tab]->fav.delete_fav(fs::directory_entry(tabs[current_tab]->selected_path));
 				}
 				tabs[current_tab]->recents.remove(fs::directory_entry(tabs[current_tab]->selected_path));
-				tabs[current_tab]->fileExplorer->remove(tabs[current_tab]->selected_path);
-				tabs[current_tab]->entries_need_update = true;
-				tabs[current_tab]->tree_need_update = true;
+
+				fs::path src = tabs[current_tab]->selected_path;
+
+				std::unique_ptr<Task> deleteTask = std::make_unique<Task>();
+				deleteTask->task_type = TaskType::_DELETE;
+				deleteTask->source = tabs[current_tab]->selected_path;
+
+				Task* task = deleteTask.get();
+
+				deleteTask->worker = std::thread([this, src, task]()
+					{
+						tabs[current_tab]->fileExplorer->remove(src);
+						task->finished = true;
+					});
+
+				tasks.emplace_back(std::move(deleteTask));
 				tabs[current_tab]->selected_path = "";
 				ImGui::CloseCurrentPopup();
 			}
