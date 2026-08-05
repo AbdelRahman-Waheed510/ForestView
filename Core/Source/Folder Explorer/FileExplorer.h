@@ -96,6 +96,8 @@ namespace Utils
 	std::string generate_new_folder_name(const fs::path& path, const std::string& name, const NewType& type);
 
 	std::string to_lower(std::string str);
+
+	std::string reform_string(const std::string& str, const int& count);
 	
 };
 

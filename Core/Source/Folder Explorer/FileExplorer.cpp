@@ -32,3 +32,16 @@ std::string Utils::generate_new_folder_name(const fs::path& path, const std::str
     }
     return name;
 }
+std::string Utils::reform_string(const std::string& str, const int& count)
+{
+    if (count > str.size()) return str;
+    if (count < 0) return str;
+
+    std::string res = str.substr(0, count);
+
+    for (size_t i = 0; i < 3; ++i) 
+    {
+        res += '.';
+    }
+    return res;
+}
