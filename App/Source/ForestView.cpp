@@ -1344,28 +1344,70 @@ void ForestView::render_entries()
 
 	else if (tabs[current_tab]->view_type == ROWS)
 	{
-		for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
+		if (ImGui::BeginTable("entries", 4, 0))
 		{
-			ImGui::PushID(i);
+			ImGui::TableSetupColumn("Name");
+			ImGui::TableSetupColumn("Last Modified");
+			ImGui::TableSetupColumn("Type");
+			ImGui::TableSetupColumn("Size");
+			ImGui::TableHeadersRow();
 
-			bool is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
+			for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
+			{
+				ImGui::TableNextRow();
 
-			// ===========================================================================================
-			ImGui::Image(tabs[current_tab]->entries[i].textureId, ImVec2(tabs[current_tab]->icons_width, tabs[current_tab]->icons_height));
+				ImGui::PushID(i);	
 
-			ImGui::SameLine();
+				// ======================================== Name ==============================================
+				ImGui::TableNextColumn();
 
-			ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.005f, 0.5f));
-			
-			ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, 0, ImVec2(0, tabs[current_tab]->icons_height));
+				bool is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
+				
+				ImGui::Image(tabs[current_tab]->entries[i].textureId, ImVec2(tabs[current_tab]->icons_width, tabs[current_tab]->icons_height));
 
-			ImGui::PopStyleVar(1);
-			// ===========================================================================================
+				ImGui::SameLine();
 
-			handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
+				ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.005f, 0.5f));
 
-			ImGui::PopID();
+				ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, 0, ImVec2(0, tabs[current_tab]->icons_height));
+
+				ImGui::PopStyleVar(1);
+
+				handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
+				
+				// ========================================== Last Modified ================================================
+				ImGui::TableNextColumn();
+
+				fs::file_time_type time = tabs[current_tab]->entries[i].entry.last_write_time();
+
+				auto sys_time = std::chrono::clock_cast<std::chrono::system_clock>(time);
+
+				auto local = std::chrono::zoned_time{ std::chrono::current_zone(), sys_time };
+
+				std::string res = std::format("{:%Y-%m-%d %H:%M}", local);
+
+				ImGui::Text(res.c_str());
+				
+				// ========================================== Type ================================================
+				ImGui::TableNextColumn();
+				fs::file_type type = tabs[current_tab]->entries[i].entry.status().type();
+
+				ImGui::Text(Utils::file_type_to_string(type).c_str());
+
+				// ========================================== Size ================================================
+				ImGui::TableNextColumn();
+				
+				if (!tabs[current_tab]->entries[i].entry.is_directory())
+				{
+					fileSize size = tabs[current_tab]->fileExplorer->decide_file_size_format(tabs[current_tab]->entries[i].entry.file_size());
+					ImGui::Text(std::format("{:.2f} {}", size.size, size.label).c_str());
+				}
+
+				ImGui::PopID();
+			}
+			ImGui::EndTable();
 		}
+		
 	}
 
 }

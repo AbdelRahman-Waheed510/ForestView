@@ -45,3 +45,53 @@ std::string Utils::reform_string(const std::string& str, const int& count)
     }
     return res;
 }
+
+const std::string Utils::file_type_to_string(const fs::file_type& type)
+{
+	switch (type)
+	{
+	case fs::file_type::directory:
+	{
+		return "File Folder";
+		break;
+	}
+	case fs::file_type::regular:
+	{
+		return "Regular File";
+		break;
+	}
+	case fs::file_type::symlink:
+	{
+		return "Symbolic Link";
+		break;
+	}
+	case fs::file_type::block:
+	{
+		return "Block";
+		break;
+	}
+	case fs::file_type::fifo:
+	{
+		return "Fifo";
+		break;
+	}
+	case fs::file_type::character:
+	{
+		return "Character";
+		break;
+	}
+	case fs::file_type::not_found:
+	{
+		return "Not Found";
+		break;
+	}
+	case fs::file_type::unknown:
+	{
+		return "Unknown File";
+		break;
+	}
+	default:
+		return "Default";
+		break;
+	}
+}
