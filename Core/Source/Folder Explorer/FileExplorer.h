@@ -272,7 +272,9 @@ public:
 
 		auto sys_time = std::chrono::clock_cast<std::chrono::system_clock>(time);
 
-		std::string res = std::format("{:%Y-%m-%d %H:%M}", sys_time);
+		auto local = std::chrono::zoned_time{ std::chrono::current_zone(), sys_time };
+
+		std::string res = std::format("{:%Y-%m-%d %H:%M}", local);
 
 		return res;
 
