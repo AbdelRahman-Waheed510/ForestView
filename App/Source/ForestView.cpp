@@ -538,6 +538,8 @@ void ForestView::on_start()
 
 	rows_button_texture_id = M_texturesManager.get_Rows_button_icon_texture_id();
 	tiles_button_texture_id = M_texturesManager.get_LargeThumbnail_button_icon_texture_id();
+	backwards_button_texture_id = M_texturesManager.get_backwards_button_icon_texture_id();
+	forward_button_texture_id = M_texturesManager.get_forward_button_icon_texture_id();
 
 	tabs[current_tab]->t.iniThisPc("THIS PC");
 	tabs[current_tab]->t.fillThisPcWithDrives(tabs[current_tab]->fileExplorer->get_partitions());
@@ -832,7 +834,8 @@ void ForestView::tool_bar()
 {
 	if (ImGui::BeginChild("ToolBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 	{
-		if (ImGui::Button("<-") || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		if (ImGui::ImageButton("##<--", backwards_button_texture_id ,ImVec2(15.0f,15.0f)) || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 		{
 			tabs[current_tab]->show_selected_folder_options = false;
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
@@ -858,7 +861,7 @@ void ForestView::tool_bar()
 
 		ImGui::BeginDisabled(!tabs[current_tab]->fileExplorer->can_go_forward());
 
-		if (ImGui::Button("->") || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
+		if (ImGui::ImageButton("##-->", forward_button_texture_id , ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
 		{
 			tabs[current_tab]->show_selected_folder_options = false;
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
@@ -870,6 +873,7 @@ void ForestView::tool_bar()
 		}
 
 		ImGui::EndDisabled();
+		ImGui::PopStyleColor(1);
 
 		ImGui::SameLine();
 
@@ -986,6 +990,7 @@ void ForestView::tool_bar()
 		{
 			change_theme(Theme::TEST);
 		}
+
 
 		if (ImGui::BeginPopup("ViewSettings")) 
 		{
@@ -1291,6 +1296,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 	}
 	ImGui::EndChild();
 }
+
+
 
 void ForestView::render_entries()
 {

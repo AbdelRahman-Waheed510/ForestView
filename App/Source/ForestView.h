@@ -197,7 +197,9 @@ private:
 	// Textures
 	GLuint rows_button_texture_id;
 	GLuint tiles_button_texture_id;
-	
+	GLuint backwards_button_texture_id;
+	GLuint forward_button_texture_id;
+
 	std::vector<std::unique_ptr<State>> tabs;
 
 	int current_tab;

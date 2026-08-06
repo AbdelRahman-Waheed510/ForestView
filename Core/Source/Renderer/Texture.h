@@ -98,7 +98,8 @@ private:
 	Texture LargeThumbnail_button_icon;
 	Texture Rows_button_icon;
 	Texture reset_button_icon;
-
+	Texture backwards_button_icon;
+	Texture forward_button_icon;
 public:
 
 	TexturesManager() 
@@ -121,6 +122,8 @@ public:
 		LargeThumbnail_button_icon.loadTexture("assets/Images/tile.png");
 		Rows_button_icon.loadTexture("assets/Images/list.png");
 		reset_button_icon.loadTexture("assets/Images/reset.png");
+		backwards_button_icon.loadTexture("assets/Images/backwards.png");
+		forward_button_icon.loadTexture("assets/Images/forward.png");
 	}
 
 	const GLuint get_LargeThumbnail_button_icon_texture_id()
@@ -131,6 +134,15 @@ public:
 	const GLuint get_Rows_button_icon_texture_id()
 	{
 		return Rows_button_icon.get_texture_id();
+	}
+
+	const GLuint get_backwards_button_icon_texture_id()
+	{
+		return backwards_button_icon.get_texture_id();
+	}
+	const GLuint get_forward_button_icon_texture_id()
+	{
+		return forward_button_icon.get_texture_id();
 	}
 
 	const GLuint get_reset_button_icon_texture_id()
