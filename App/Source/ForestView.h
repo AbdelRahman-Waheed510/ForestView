@@ -180,6 +180,8 @@ public:
 		clean_up();
 	}
 
+	void change_theme(const Theme& theme);
+
 	void run_loop();
 
 };

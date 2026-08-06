@@ -448,6 +448,37 @@ void App::test_mode()
 
 
 }
+
+void App::change_theme(const Theme& theme)
+{
+	if (theme == m_activeTheme) return;
+	m_activeTheme = theme;
+	switch (m_activeTheme)
+	{
+	case Theme::DARK_MODE:
+	{
+		dark_mode();
+		break;
+	}
+
+	case Theme::DARK_MODE_V2:
+	{
+		dark_mode_v2();
+		break;
+	}
+	case Theme::LIGHT_MODE:
+	{
+		light_mode();
+		break;
+	}
+	case Theme::TEST: 
+	{
+		test_mode();
+		break;
+	}
+	default:
+		break;
+	}
 }
 
 void App::run_loop()
@@ -927,6 +958,35 @@ void ForestView::tool_bar()
 		{
 			ImGui::OpenPopup("ViewSettings");
 		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Dark Mode")) 
+		{
+			change_theme(Theme::DARK_MODE);
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Dark Mode V2"))
+		{
+			change_theme(Theme::DARK_MODE_V2);
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Light Mode"))
+		{
+			change_theme(Theme::LIGHT_MODE);
+		}
+
+		ImGui::SameLine();
+
+		if (ImGui::Button("Test Mode"))
+		{
+			change_theme(Theme::TEST);
+		}
+
 		if (ImGui::BeginPopup("ViewSettings")) 
 		{
 			if (!show_icons_slider) 
