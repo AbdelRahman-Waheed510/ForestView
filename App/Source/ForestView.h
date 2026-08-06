@@ -126,11 +126,21 @@ struct State
 	}
 };
 
+enum class Theme 
+{
+DARK_MODE,
+DARK_MODE_V2,
+LIGHT_MODE,
+TEST,
+};
+
 class App 
 {
 private:
 
 	GLFWwindow* window = nullptr;
+
+	Theme m_activeTheme = Theme::LIGHT_MODE;
 
 	virtual void on_start() {};
 
@@ -152,6 +162,11 @@ private:
 
 	void dark_mode();
 
+	void dark_mode_v2();
+
+	void light_mode();
+
+	void test_mode();
 protected:
 	ImFont* default_font = nullptr;
 	ImFont* arabic_font = nullptr;
