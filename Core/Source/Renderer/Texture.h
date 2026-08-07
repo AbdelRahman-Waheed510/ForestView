@@ -100,6 +100,11 @@ private:
 	Texture reset_button_icon;
 	Texture backwards_button_icon;
 	Texture forward_button_icon;
+	Texture Settings_button_icon;
+
+	Texture DarkMode_button_icon;
+	Texture LightMode_button_icon;
+
 public:
 
 	TexturesManager() 
@@ -124,6 +129,9 @@ public:
 		reset_button_icon.loadTexture("assets/Images/reset.png");
 		backwards_button_icon.loadTexture("assets/Images/backwards.png");
 		forward_button_icon.loadTexture("assets/Images/forward.png");
+		Settings_button_icon.loadTexture("assets/Images/Settings.png");
+		DarkMode_button_icon.loadTexture("assets/Images/DarkMode.png");
+		LightMode_button_icon.loadTexture("assets/Images/LightMode.png");
 	}
 
 	const GLuint get_LargeThumbnail_button_icon_texture_id()
@@ -140,6 +148,7 @@ public:
 	{
 		return backwards_button_icon.get_texture_id();
 	}
+
 	const GLuint get_forward_button_icon_texture_id()
 	{
 		return forward_button_icon.get_texture_id();
@@ -148,6 +157,21 @@ public:
 	const GLuint get_reset_button_icon_texture_id()
 	{
 		return reset_button_icon.get_texture_id();
+	}
+
+	const GLuint get_settings_button_icon_texture_id()
+	{
+		return Settings_button_icon.get_texture_id();
+	}
+
+	const GLuint get_DarkMode_button_icon_texture_id()
+	{
+		return DarkMode_button_icon.get_texture_id();
+	}
+
+	const GLuint get_LightMode_button_icon_texture_id()
+	{
+		return LightMode_button_icon.get_texture_id();
 	}
 
 	const GLuint decide_icon(const fs::directory_entry& entry)

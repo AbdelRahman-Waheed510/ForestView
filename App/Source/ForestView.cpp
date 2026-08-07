@@ -98,39 +98,31 @@ void App::clean_up()
 	glfwTerminate();
 }
 
+void App::spacing_and_padding_and_stuff(ImGuiStyle& style)
+{
+	style.WindowPadding = ImVec2(10, 10);
+	style.FramePadding = ImVec2(8, 5);
+	style.ItemSpacing = ImVec2(6, 6);
+	style.ItemInnerSpacing = ImVec2(6, 4);
+	style.CellPadding = ImVec2(8, 6);
+	style.IndentSpacing = 18.0f;
+	style.ScrollbarSize = 13.0f;
+	style.GrabMinSize = 10.0f;
+
+	style.WindowRounding = 0.0f;
+	style.FrameRounding = 5.0f;
+	style.ScrollbarRounding = 5.0f;
+	style.GrabRounding = 5.0f;
+	style.TabRounding = 4.0f;
+	style.PopupRounding = 4.0f;
+	style.ChildRounding = 3.0f;
+}
+
 void App::dark_mode()
 {
 	ImGuiStyle& style = ImGui::GetStyle();
 
-	style.Alpha = 1.0f;
-	style.DisabledAlpha = 0.4f;
-	style.WindowPadding = ImVec2(12.0f, 12.0f);
-	style.WindowRounding = 0.0f;
-	style.WindowBorderSize = 0.0f;
-	style.WindowMinSize = ImVec2(20.0f, 20.0f);
-	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-	style.WindowMenuButtonPosition = ImGuiDir_Right;
-	style.ChildRounding = 0.0f;
-	style.ChildBorderSize = 1.0f;
-	style.PopupRounding = 0.0f;
-	style.PopupBorderSize = 1.0f;
-	style.FramePadding = ImVec2(20.0f, 3.4f);
-	style.FrameRounding = 5.0f;
-	style.FrameBorderSize = 0.0f;
-	style.ItemSpacing = ImVec2(4.3f, 5.5f);
-	style.ItemInnerSpacing = ImVec2(7.1f, 1.8f);
-	style.CellPadding = ImVec2(12.1f, 9.2f);
-	style.IndentSpacing = 10.0f;
-	style.ColumnsMinSpacing = 4.9f;
-	style.ScrollbarSize = 11.6f;
-	style.ScrollbarRounding = 5.0f;
-	style.GrabMinSize = 3.7f;
-	style.GrabRounding = 5.0f;
-	style.TabRounding = 0.0f;
-	style.TabBorderSize = 0.0f;
-	style.ColorButtonPosition = ImGuiDir_Right;
-	style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
-	style.SelectableTextAlign = ImVec2(0.0f, 0.0f);
+	spacing_and_padding_and_stuff(style);
 
 	// Steel Blue Accent
 	const ImVec4 Accent = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
@@ -211,35 +203,7 @@ void App::dark_mode_v2()
 {
 	ImGuiStyle& style = ImGui::GetStyle();
 
-	style.Alpha = 1.0f;
-	style.DisabledAlpha = 0.4f;
-	style.WindowPadding = ImVec2(12.0f, 12.0f);
-	style.WindowRounding = 0.0f;
-	style.WindowBorderSize = 0.0f;
-	style.WindowMinSize = ImVec2(20.0f, 20.0f);
-	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-	style.WindowMenuButtonPosition = ImGuiDir_Right;
-	style.ChildRounding = 0.0f;
-	style.ChildBorderSize = 1.0f;
-	style.PopupRounding = 0.0f;
-	style.PopupBorderSize = 1.0f;
-	style.FramePadding = ImVec2(20.0f, 3.4f);
-	style.FrameRounding = 5.0f;
-	style.FrameBorderSize = 0.0f;
-	style.ItemSpacing = ImVec2(4.3f, 5.5f);
-	style.ItemInnerSpacing = ImVec2(7.1f, 1.8f);
-	style.CellPadding = ImVec2(12.1f, 9.2f);
-	style.IndentSpacing = 10.0f;
-	style.ColumnsMinSpacing = 4.9f;
-	style.ScrollbarSize = 11.6f;
-	style.ScrollbarRounding = 5.0f;
-	style.GrabMinSize = 3.7f;
-	style.GrabRounding = 5.0f;
-	style.TabRounding = 0.0f;
-	style.TabBorderSize = 0.0f;
-	style.ColorButtonPosition = ImGuiDir_Right;
-	style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
-	style.SelectableTextAlign = ImVec2(0.0f, 0.0f);
+	spacing_and_padding_and_stuff(style);
 
 	ImVec4* colors = ImGui::GetStyle().Colors;
 
@@ -320,35 +284,7 @@ void App::light_mode()
 {
 	ImGuiStyle& style = ImGui::GetStyle();
 
-	style.Alpha = 1.0f;
-	style.DisabledAlpha = 0.4f;
-	style.WindowPadding = ImVec2(12.0f, 12.0f);
-	style.WindowRounding = 0.0f;
-	style.WindowBorderSize = 0.0f;
-	style.WindowMinSize = ImVec2(20.0f, 20.0f);
-	style.WindowTitleAlign = ImVec2(0.5f, 0.5f);
-	style.WindowMenuButtonPosition = ImGuiDir_Right;
-	style.ChildRounding = 0.0f;
-	style.ChildBorderSize = 1.0f;
-	style.PopupRounding = 0.0f;
-	style.PopupBorderSize = 1.0f;
-	style.FramePadding = ImVec2(20.0f, 3.4f);
-	style.FrameRounding = 5.0f;
-	style.FrameBorderSize = 0.0f;
-	style.ItemSpacing = ImVec2(4.3f, 5.5f);
-	style.ItemInnerSpacing = ImVec2(7.1f, 1.8f);
-	style.CellPadding = ImVec2(12.1f, 9.2f);
-	style.IndentSpacing = 10.0f;
-	style.ColumnsMinSpacing = 4.9f;
-	style.ScrollbarSize = 11.6f;
-	style.ScrollbarRounding = 5.0f;
-	style.GrabMinSize = 3.7f;
-	style.GrabRounding = 5.0f;
-	style.TabRounding = 0.0f;
-	style.TabBorderSize = 0.0f;
-	style.ColorButtonPosition = ImGuiDir_Right;
-	style.ButtonTextAlign = ImVec2(0.5f, 0.5f);
-	style.SelectableTextAlign = ImVec2(0.0f, 0.0f);
+	spacing_and_padding_and_stuff(style);
 
 	// Steel Blue Accent
 	const ImVec4 Accent = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
@@ -429,23 +365,7 @@ void App::test_mode()
 {
 	ImGuiStyle& style = ImGui::GetStyle();
 
-	style.WindowPadding = ImVec2(10, 10);
-	style.FramePadding = ImVec2(8, 5);
-	style.ItemSpacing = ImVec2(6, 6);
-	style.ItemInnerSpacing = ImVec2(6, 4);
-	style.CellPadding = ImVec2(8, 6);
-	style.IndentSpacing = 18.0f;
-	style.ScrollbarSize = 13.0f;
-	style.GrabMinSize = 10.0f;
-
-	style.WindowRounding = 0.0f;
-	style.FrameRounding = 5.0f;
-	style.ScrollbarRounding = 5.0f;
-	style.GrabRounding = 5.0f;
-	style.TabRounding = 4.0f;
-	style.PopupRounding = 4.0f;
-	style.ChildRounding = 3.0f;
-
+	spacing_and_padding_and_stuff(style);
 
 }
 
@@ -535,11 +455,6 @@ void ForestView::on_start()
 	M_texturesManager.load_images();
 	tabs[current_tab]->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
 	tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
-
-	rows_button_texture_id = M_texturesManager.get_Rows_button_icon_texture_id();
-	tiles_button_texture_id = M_texturesManager.get_LargeThumbnail_button_icon_texture_id();
-	backwards_button_texture_id = M_texturesManager.get_backwards_button_icon_texture_id();
-	forward_button_texture_id = M_texturesManager.get_forward_button_icon_texture_id();
 
 	tabs[current_tab]->t.iniThisPc("THIS PC");
 	tabs[current_tab]->t.fillThisPcWithDrives(tabs[current_tab]->fileExplorer->get_partitions());
@@ -832,10 +747,11 @@ void ForestView::search_bar()
 // Tool Bar
 void ForestView::tool_bar()
 {
+	ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(10.0f, 7.0f));
 	if (ImGui::BeginChild("ToolBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 	{
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-		if (ImGui::ImageButton("##<--", backwards_button_texture_id ,ImVec2(15.0f,15.0f)) || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
+		if (ImGui::ImageButton("##<--", M_texturesManager.get_backwards_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 		{
 			tabs[current_tab]->show_selected_folder_options = false;
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
@@ -861,7 +777,7 @@ void ForestView::tool_bar()
 
 		ImGui::BeginDisabled(!tabs[current_tab]->fileExplorer->can_go_forward());
 
-		if (ImGui::ImageButton("##-->", forward_button_texture_id , ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
+		if (ImGui::ImageButton("##-->", M_texturesManager.get_forward_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
 		{
 			tabs[current_tab]->show_selected_folder_options = false;
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
@@ -954,49 +870,52 @@ void ForestView::tool_bar()
 		ImGui::EndDisabled();
 
 		ImGui::SameLine();
-		if (ImGui::Button("View")) 
-		{
-		
-		}
-		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+
+		float spacing = ImGui::GetStyle().ItemSpacing.x;
+		float padding = ImGui::GetStyle().FramePadding.x;
+		float target_pos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - (15.0f + padding);
+
+		ImGui::SetCursorPosX(target_pos);
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+		if (ImGui::ImageButton("##Settings", M_texturesManager.get_settings_button_icon_texture_id(), ImVec2(15.0f, 15.0f)))
 		{
 			ImGui::OpenPopup("ViewSettings");
 		}
-
-		ImGui::SameLine();
-
-		if (ImGui::Button("Dark Mode")) 
-		{
-			change_theme(Theme::DARK_MODE);
-		}
-
-		ImGui::SameLine();
-
-		if (ImGui::Button("Dark Mode V2"))
-		{
-			change_theme(Theme::DARK_MODE_V2);
-		}
-
-		ImGui::SameLine();
-
-		if (ImGui::Button("Light Mode"))
-		{
-			change_theme(Theme::LIGHT_MODE);
-		}
-
-		ImGui::SameLine();
-
-		if (ImGui::Button("Test Mode"))
-		{
-			change_theme(Theme::TEST);
-		}
-
+		ImGui::PopStyleColor(1);
 
 		if (ImGui::BeginPopup("ViewSettings")) 
 		{
+			ImVec2 cursor = ImGui::GetCursorPos();
+			if (ImGui::Selectable("##DarkModeSelectable", false, ImGuiSelectableFlags_SpanAllColumns))
+			{
+				change_theme(Theme::DARK_MODE);
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SetCursorPos(cursor);
+			ImGui::Image(M_texturesManager.get_DarkMode_button_icon_texture_id(), ImVec2(15.0f, 15.0f));
+			ImGui::SameLine();
+			ImGui::Text("Dark Mode");
+	
+			cursor = ImGui::GetCursorPos();
+			if (ImGui::Selectable("##LightModeSelectable", false, ImGuiSelectableFlags_SpanAllColumns))
+			{
+				change_theme(Theme::LIGHT_MODE);
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SetCursorPos(cursor);
+			ImGui::Image(M_texturesManager.get_LightMode_button_icon_texture_id(), ImVec2(15.0f, 15.0f));
+			ImGui::SameLine();
+			ImGui::Text("Light Mode");
+
+			/*if (ImGui::Selectable("Test Mode", false, ImGuiSelectableFlags_SpanAllColumns))
+			{
+				change_theme(Theme::TEST);
+				ImGui::CloseCurrentPopup();
+			}*/
+
 			if (!show_icons_slider) 
 			{
-				if (ImGui::Button("Open Icons Size Slider"))
+				if (ImGui::Selectable("Open Icons Size Slider", false, ImGuiSelectableFlags_SpanAllColumns))
 				{
 					show_icons_slider = true;
 					ImGui::CloseCurrentPopup();
@@ -1004,7 +923,7 @@ void ForestView::tool_bar()
 			}
 			else 
 			{
-				if (ImGui::Button("close Icons Size Slider"))
+				if (ImGui::Selectable("close Icons Size Slider", false, ImGuiSelectableFlags_SpanAllColumns))
 				{
 					show_icons_slider = false;
 					ImGui::CloseCurrentPopup();
@@ -1099,7 +1018,7 @@ void ForestView::tool_bar()
 		}
 	}
 	ImGui::EndChild();
-
+	ImGui::PopStyleVar(1);
 }
 
 // Folders Tree 
@@ -1296,8 +1215,6 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 	}
 	ImGui::EndChild();
 }
-
-
 
 void ForestView::render_entries()
 {
@@ -1651,14 +1568,14 @@ void ForestView::stats_bar()
 
 		ImGui::SetCursorPosX(target_pos);
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.0f, 0.0f, 0.0f, 0.0f));
-		if (ImGui::ImageButton("Rows", rows_button_texture_id, ImVec2(12.0f, 12.0f)))
+		if (ImGui::ImageButton("Rows", M_texturesManager.get_Rows_button_icon_texture_id(), ImVec2(12.0f, 12.0f)))
 		{
 			tabs[current_tab]->view_type = ROWS;
 			tabs[current_tab]->icons_height = 24.0f;
 			tabs[current_tab]->icons_width = 24.0f;
 		}
 		ImGui::SameLine();
-		if (ImGui::ImageButton("Large thumbnails", tiles_button_texture_id, ImVec2(12.0f, 12.0f)))
+		if (ImGui::ImageButton("Large thumbnails", M_texturesManager.get_LargeThumbnail_button_icon_texture_id(), ImVec2(12.0f, 12.0f)))
 		{
 			tabs[current_tab]->view_type = LARGE_THUMBNAILS;
 			tabs[current_tab]->icons_height = 128.0f;

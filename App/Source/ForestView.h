@@ -166,6 +166,8 @@ private:
 
 	void light_mode();
 
+	void spacing_and_padding_and_stuff(ImGuiStyle& style);
+
 	void test_mode();
 protected:
 	ImFont* default_font = nullptr;
@@ -182,6 +184,9 @@ public:
 
 	void change_theme(const Theme& theme);
 
+	const Theme get_active_theme();
+	
+
 	void run_loop();
 
 };
@@ -193,12 +198,6 @@ private:
 
 	float folder_icons_horizontel_indent = 20.0f;
 	float folder_icons_vertical_indent = 20.0f;
-
-	// Textures
-	GLuint rows_button_texture_id;
-	GLuint tiles_button_texture_id;
-	GLuint backwards_button_texture_id;
-	GLuint forward_button_texture_id;
 
 	std::vector<std::unique_ptr<State>> tabs;
 
