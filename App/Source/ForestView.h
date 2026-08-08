@@ -216,6 +216,9 @@ private:
 
 	std::vector<std::unique_ptr<Task>> tasks;
 
+	std::unique_ptr<Task> m_emptyFoldersTask;
+	std::vector<fs::path> m_emptyFolders;
+
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)

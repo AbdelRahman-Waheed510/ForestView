@@ -674,6 +674,34 @@ public:
 		return;
 	}
 
+	void find_empty_folders(const fs::path& source, std::vector<fs::path>& empty_folders, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	{
+		Guard guard(finished);
+		if (!empty_folders.empty()) empty_folders.clear();
+		std::error_code ec;
+		if (!fs::is_directory(source, ec)) return;
+		
+		if (fs::is_empty(source, ec) && !ec) 
+		{
+			empty_folders.emplace_back(source);
+			return;
+		}
+		
+		for (const fs::directory_entry& entry : fs::recursive_directory_iterator(source, fs::directory_options::skip_permission_denied, ec))
+		{
+			if (cancel_request == true) break;
+			if (entry.is_directory(ec) && !ec) 
+			{
+				if (fs::is_empty(entry.path(), ec) && !ec) 
+				{
+					empty_folders.emplace_back(entry.path());
+				}
+			}
+		}
+		return;
+	}
+	
+	
 	void print_entries() 
 	{
 		for (const Entry& entry : entries) 
@@ -681,5 +709,7 @@ public:
 			std::cout << entry.entry.path() << std::endl;
 		}
 	}
+
+
 
 };

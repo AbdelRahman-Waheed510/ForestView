@@ -491,12 +491,12 @@ void ForestView::on_update()
 		stats_bar();
 
 		if (show_icons_slider) icons_size_slider();
-		
-		if (!tasks.empty()) 
+
+		if (!tasks.empty())
 		{
-			for (size_t i = 0; i < tasks.size(); i++) 
+			for (size_t i = 0; i < tasks.size(); i++)
 			{
-				if (tasks[i]->task_type == TaskType::COPY_PASTE) 
+				if (tasks[i]->task_type == TaskType::COPY_PASTE)
 				{
 					if (!tasks[i]->finished)
 					{
@@ -604,9 +604,9 @@ void ForestView::on_update()
 						tabs[current_tab]->entries_need_update = true;
 					}
 				}
-				else if (tasks[i]->task_type == TaskType::_DELETE) 
+				else if (tasks[i]->task_type == TaskType::_DELETE)
 				{
-					if (!tasks[i]->finished) 
+					if (!tasks[i]->finished)
 					{
 						ImGui::SetNextWindowSizeConstraints(ImVec2(350.0f, 0.0f), ImVec2(600.0f, FLT_MAX));
 						if (ImGui::Begin("Deleting", nullptr, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings))
@@ -617,7 +617,7 @@ void ForestView::on_update()
 					}
 					else if (tasks[i]->finished)
 					{
-						if (tasks[i]->worker.joinable()) 
+						if (tasks[i]->worker.joinable())
 						{
 							tasks[i]->worker.join();
 						}
@@ -627,15 +627,64 @@ void ForestView::on_update()
 						tabs[current_tab]->tree_need_update = true;
 						tabs[current_tab]->entries_need_update = true;
 					}
-					
+
 				}
+
 			}
 
 		}
 
-	}
-	ImGui::End();
+		// Empty Folders task UI
+		if (m_emptyFoldersTask != nullptr)
+		{
+			if (!m_emptyFoldersTask->cancel_request)
+			{
+				if (ImGui::Begin(std::format("Empty Folders in {}", m_emptyFoldersTask->sourceName).c_str()))
+				{
+					// Tool Bar for the empty folders panel
+					if (ImGui::Button("X"))
+					{
+						m_emptyFoldersTask->cancel_request = true;
+					}
 
+					ImGui::Separator();
+
+					if (!m_emptyFoldersTask->finished)
+					{
+						ImGui::Text("Searching For Empty Folders...");
+						ImGui::Separator();
+					}
+
+					for (size_t j = 0; j < (int)m_emptyFolders.size(); j++)
+					{
+						ImGui::PushID(j);
+						if (ImGui::Selectable(m_emptyFolders[j].string().c_str()))
+						{
+							tabs[current_tab]->ThisDirectoryKeyWord = "";
+							tabs[current_tab]->globalKeyWord = "";
+							tabs[current_tab]->recents.visit(fs::directory_entry(m_emptyFolders[j]));
+							tabs[current_tab]->fileExplorer->navigate_to(m_emptyFolders[j], tabs[current_tab]->current_path);
+							tabs[current_tab]->entries_need_update = true;
+
+							tabs[current_tab]->current_path = m_emptyFolders[j];
+						}
+						ImGui::PopID();
+					}
+				}
+				ImGui::End();
+			}
+			else if (m_emptyFoldersTask->finished)
+			{
+				if (m_emptyFoldersTask->worker.joinable())
+				{
+					m_emptyFoldersTask->worker.join();
+				}
+				m_emptyFoldersTask = nullptr;
+				m_emptyFolders.clear();
+			}
+		}
+	}
+		ImGui::End();
 }
 
 void ForestView::refocus_reload()
@@ -666,6 +715,194 @@ void ForestView::on_shutdown()
 {
 	shutdown_background_tasks();
 }
+
+// Tab Bar
+void ForestView::tab_bar()
+{
+	ImGui::BeginChild("tabs", ImVec2(0, 40), ImGuiChildFlags_Borders);
+
+	ImGui::BeginTabBar("ExplorerTabs");
+	for (size_t i = 0; i < (int)tabs.size(); ++i)
+	{
+		std::string tabLabel = tabs[i]->utf8_search_bar_hint + "###tab" + std::to_string(tabs[i]->tabID);
+
+		// Reselect the tab (if needed) ==============================================================
+		ImGuiTabItemFlags flags;
+		if (i == (int)open_new_tab_factor)
+		{
+			flags = ImGuiTabItemFlags_SetSelected;
+			open_new_tab_factor = -1;
+		}
+		else
+		{
+			flags = ImGuiTabItemFlags_None;
+		}
+
+		// The Tabs itself ===========================================================================
+		if (ImGui::BeginTabItem(tabLabel.c_str(), nullptr, flags))
+		{
+			current_tab = (int)i;
+			ImGui::EndTabItem();
+		}
+
+		// Drag And Drop =============================================================================
+		if (ImGui::BeginDragDropSource())
+		{
+			ImGui::SetDragDropPayload("TAP", &i, sizeof(int));
+			ImGui::Text(("Draging tab: " + tabs[i]->utf8_search_bar_hint).c_str());
+
+			ImGui::EndDragDropSource();
+		}
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TAP"))
+			{
+				if (payload->IsDelivery())
+				{
+					drop_source = *(const int*)payload->Data;
+
+					drop_target = i;
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		// Close Tab Logic =========================================================================== 
+		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Middle))
+		{
+			if ((current_tab == i && current_tab == (int)tabs.size() - 1) && (int)tabs.size() != 1)
+			{
+				tabs.pop_back();
+				current_tab = tabs.size() - 1;
+
+			}
+			else
+			{
+				if (current_tab == i)
+				{
+					open_new_tab_factor = i;
+				}
+				if ((int)tabs.size() == 1)
+				{
+					continue;
+				}
+				tabs.erase(tabs.begin() + i);
+				--i;
+			}
+
+		}
+	}
+	ImGui::EndTabBar();
+
+	// Drag And Drop Logic ===========================================================================
+	if (drop_source != -1 && drop_target != -1)
+	{
+		// Remove the source tab and reinsert it in the correct index to control visual order only 
+		ImGuiTabBar* tab_bar = ImGui::TabBarFindByID(ImGui::GetID("ExplorerTabs"));
+		if (tab_bar && drop_source < tab_bar->Tabs.Size && drop_target < tab_bar->Tabs.Size)
+		{
+			ImGuiTabItem moved = tab_bar->Tabs[drop_source];
+			tab_bar->Tabs.erase(tab_bar->Tabs.Data + drop_source);
+			tab_bar->Tabs.insert(tab_bar->Tabs.Data + drop_target, moved);
+		}
+
+		// Reoreder the main vector of tabs logic
+		std::unique_ptr dragged_tab = std::move(tabs[drop_source]);
+
+		if (drop_target < drop_source)
+		{
+			for (size_t j = drop_source; j > drop_target; j--)
+			{
+				tabs[j] = std::move(tabs[j - 1]);
+			}
+			tabs[drop_target] = std::move(dragged_tab);
+			// ___________
+			// |         |			              
+			// V	     |							
+	  //Tab1 Tab2 Tab3 Tab4
+		}
+		else if (drop_target > drop_source)
+		{
+			for (size_t j = drop_source; j < drop_target; j++)
+			{
+				tabs[j] = std::move(tabs[j + 1]);
+			}
+			tabs[drop_target] = std::move(dragged_tab);
+			// __________
+			// |        |			              
+			// |	    V							
+	  //Tab1 Tab2 Tab3 Tab4
+		}
+		current_tab = drop_target;
+		open_new_tab_factor = drop_target;
+		drop_source = -1;
+		drop_target = -1;
+	}
+
+	ImGui::SameLine();
+	if (ImGui::Button("+"))
+	{
+		std::unique_ptr<State> newTab = std::make_unique<State>();
+		if (m_openTabType == NEW)
+		{
+			tabs.emplace_back(open_new_tab(newTab));
+		}
+		else if (m_openTabType == COPY)
+		{
+			tabs.emplace_back(open_copy_tab(newTab));
+		}
+		current_tab = (int)tabs.size() - 1;
+		open_new_tab_factor = current_tab;
+	}
+
+	if (ImGui::BeginPopupContextItem("##openTapTyoe"))
+	{
+		if (ImGui::Button("New Tab"))
+		{
+			m_openTabType = NEW;
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::Button("Copy Current Tab"))
+		{
+			m_openTabType = COPY;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+
+	ImGui::EndChild();
+}
+
+std::unique_ptr<State> ForestView::open_new_tab(std::unique_ptr<State>& newTab)
+{
+	newTab->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
+	newTab->entries = newTab->fileExplorer->get_entries();
+	newTab->t.iniThisPc("THIS PC");
+	newTab->t.fillThisPcWithDrives(newTab->fileExplorer->get_partitions());
+
+	return std::move(newTab);
+}
+
+std::unique_ptr<State> ForestView::open_copy_tab(std::unique_ptr<State>& newTab)
+{
+	newTab->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
+	newTab->fileExplorer->set_undo_stack(tabs[current_tab]->fileExplorer->get_undo_stack());
+	newTab->fileExplorer->set_redo_stack(tabs[current_tab]->fileExplorer->get_redo_stack());
+	newTab->current_path = tabs[current_tab]->current_path;
+	newTab->entries = tabs[current_tab]->entries;
+	newTab->fav = tabs[current_tab]->fav;
+	newTab->icons_height = tabs[current_tab]->icons_height;
+	newTab->icons_width = tabs[current_tab]->icons_width;
+	newTab->padding = tabs[current_tab]->padding;
+	newTab->recents = tabs[current_tab]->recents;
+	newTab->utf8_search_bar_hint = tabs[current_tab]->utf8_search_bar_hint;
+	newTab->view_type = tabs[current_tab]->view_type;
+	newTab->t.iniThisPc("THIS PC");
+	newTab->t.fillThisPcWithDrives(newTab->fileExplorer->get_partitions());
+
+	return std::move(newTab);
+}
+
 
 // Search Bar
 void ForestView::search_bar()
@@ -871,9 +1108,42 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
+		ImGui::BeginDisabled(tabs[current_tab]->selected_path.empty());
+		if (ImGui::Button("Empty Folders")) 
+		{
+			// To be able to override the task mid seraching for the empty folders =======================
+			if (m_emptyFoldersTask != nullptr) 
+			{
+				m_emptyFoldersTask->cancel_request = true;
+				if (m_emptyFoldersTask->worker.joinable())
+				{
+					m_emptyFoldersTask->worker.join();
+				}
+				m_emptyFoldersTask = nullptr;
+				m_emptyFolders.clear();
+			}
+			if (!m_emptyFolders.empty()) m_emptyFolders.clear();
+			// ===========================================================================================
+
+			m_emptyFoldersTask = std::make_unique<Task>();
+			m_emptyFoldersTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
+			m_emptyFoldersTask->task_type = TaskType::FIND_EMPTY_DIRECTORIES;
+
+			Task* task = m_emptyFoldersTask.get();
+
+			m_emptyFoldersTask->worker = std::thread([this, task]()
+				{
+					tabs[current_tab]->fileExplorer->find_empty_folders(tabs[current_tab]->selected_path, m_emptyFolders, task->cancel_request, task->finished);
+				});
+
+		}
+		ImGui::EndDisabled();
+
+		ImGui::SameLine();
+
 		float spacing = ImGui::GetStyle().ItemSpacing.x;
 		float padding = ImGui::GetStyle().FramePadding.x;
-		float target_pos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - (15.0f + padding);
+		float target_pos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - (15.0f + padding * 1.7);
 
 		ImGui::SetCursorPosX(target_pos);
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
@@ -1676,194 +1946,14 @@ void ForestView::shutdown_background_tasks()
 	{
 		if (task->worker.joinable()) task->worker.join();
 	}
-	
+
+	// The empty Folder Task shut down
+	m_emptyFoldersTask->cancel_request = true;
+	if (m_emptyFoldersTask->worker.joinable()) 
+	{
+		m_emptyFoldersTask->worker.join();
+	}
 	tabs[current_tab]->file_size_future.clear();
 }
 
-// Tab Bar
-void ForestView::tab_bar()
-{
-	ImGui::BeginChild("tabs", ImVec2(0, 40), ImGuiChildFlags_Borders);
-
-	ImGui::BeginTabBar("ExplorerTabs");
-	for (size_t i = 0; i < (int)tabs.size(); ++i) 
-	{
-		std::string tabLabel = tabs[i]->utf8_search_bar_hint + "###tab" + std::to_string(tabs[i]->tabID);
-
-		// Reselect the tab (if needed) ==============================================================
-		ImGuiTabItemFlags flags;
-		if (i == (int)open_new_tab_factor) 
-		{
-			flags = ImGuiTabItemFlags_SetSelected;
-			open_new_tab_factor = -1;
-		}
-		else 
-		{
-			flags = ImGuiTabItemFlags_None;
-		}
-
-		// The Tabs itself ===========================================================================
-		if (ImGui::BeginTabItem(tabLabel.c_str(), nullptr, flags))
-		{
-			current_tab = (int)i;
-			ImGui::EndTabItem();
-		}
-
-		// Drag And Drop =============================================================================
-		if (ImGui::BeginDragDropSource()) 
-		{
-			ImGui::SetDragDropPayload("TAP", &i, sizeof(int));
-			ImGui::Text(("Draging tab: " + tabs[i]->utf8_search_bar_hint).c_str());
-
-			ImGui::EndDragDropSource();
-		}
-		if (ImGui::BeginDragDropTarget()) 
-		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("TAP"))
-			{
-				if (payload->IsDelivery()) 
-				{
-					drop_source = *(const int*)payload->Data;
-
-					drop_target = i;
-				}
-			}
-			ImGui::EndDragDropTarget();
-		}
-
-		// Close Tab Logic =========================================================================== 
-		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Middle)) 
-		{
-			if ((current_tab == i && current_tab == (int)tabs.size() - 1) && (int)tabs.size() != 1) 
-			{
-				tabs.pop_back();
-				current_tab = tabs.size() - 1;
-
-			}
-			else 
-			{
-				if (current_tab == i)
-				{
-					open_new_tab_factor = i;
-				}
-				if ((int)tabs.size() == 1)
-				{
-					continue;
-				}
-				tabs.erase(tabs.begin() + i);
-				--i;
-			}
-
-		}
-	}
-	ImGui::EndTabBar();
-
-	// Drag And Drop Logic ===========================================================================
-	if (drop_source != -1 && drop_target != -1)
-	{
-		// Remove the source tab and reinsert it in the correct index to control visual order only 
-		ImGuiTabBar* tab_bar = ImGui::TabBarFindByID(ImGui::GetID("ExplorerTabs"));
-		if (tab_bar && drop_source < tab_bar->Tabs.Size && drop_target < tab_bar->Tabs.Size)
-		{
-			ImGuiTabItem moved = tab_bar->Tabs[drop_source];
-			tab_bar->Tabs.erase(tab_bar->Tabs.Data + drop_source);
-			tab_bar->Tabs.insert(tab_bar->Tabs.Data + drop_target, moved);
-		}
-
-		// Reoreder the main vector of tabs logic
-		std::unique_ptr dragged_tab = std::move(tabs[drop_source]);
-
-		if (drop_target < drop_source)
-		{
-			for (size_t j = drop_source; j > drop_target; j--)
-			{
-				tabs[j] = std::move(tabs[j - 1]);
-			}
-			tabs[drop_target] = std::move(dragged_tab);
-					// ___________
-					// |         |			              
-					// V	     |							
-			  //Tab1 Tab2 Tab3 Tab4
-		}
-		else if (drop_target > drop_source)
-		{
-			for (size_t j = drop_source; j < drop_target; j++)
-			{
-				tabs[j] = std::move(tabs[j + 1]);
-			}
-			tabs[drop_target] = std::move(dragged_tab);
-					// __________
-					// |        |			              
-					// |	    V							
-			  //Tab1 Tab2 Tab3 Tab4
-		}
-		current_tab = drop_target;
-		open_new_tab_factor = drop_target;
-		drop_source = -1;
-		drop_target = -1;
-	}
-
-	ImGui::SameLine();
-	if (ImGui::Button("+")) 
-	{
-		std::unique_ptr<State> newTab = std::make_unique<State>();
-		if (m_openTabType == NEW) 
-		{
-			tabs.emplace_back(open_new_tab(newTab));
-		}
-		else if (m_openTabType == COPY) 
-		{
-			tabs.emplace_back(open_copy_tab(newTab));
-		}
-		current_tab = (int)tabs.size() - 1;
-		open_new_tab_factor = current_tab;
-	}
-
-	if (ImGui::BeginPopupContextItem("##openTapTyoe")) 
-	{
-		if (ImGui::Button("New Tab")) 
-		{
-			m_openTabType = NEW;
-			ImGui::CloseCurrentPopup();
-		}
-		if (ImGui::Button("Copy Current Tab")) 
-		{
-			m_openTabType = COPY;
-			ImGui::CloseCurrentPopup();
-		}
-		ImGui::EndPopup();
-	}
-
-	ImGui::EndChild();
-}
-
-std::unique_ptr<State> ForestView::open_new_tab(std::unique_ptr<State>& newTab)
-{
-	newTab->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
-	newTab->entries = newTab->fileExplorer->get_entries();
-	newTab->t.iniThisPc("THIS PC");
-	newTab->t.fillThisPcWithDrives(newTab->fileExplorer->get_partitions());
-
-	return std::move(newTab);
-}
-
-std::unique_ptr<State> ForestView::open_copy_tab(std::unique_ptr<State>& newTab)
-{
-	newTab->fileExplorer = std::make_unique<Explorer>(M_texturesManager);
-	newTab->fileExplorer->set_undo_stack(tabs[current_tab]->fileExplorer->get_undo_stack());
-	newTab->fileExplorer->set_redo_stack(tabs[current_tab]->fileExplorer->get_redo_stack());
-	newTab->current_path = tabs[current_tab]->current_path;
-	newTab->entries = tabs[current_tab]->entries;
-	newTab->fav = tabs[current_tab]->fav;
-	newTab->icons_height = tabs[current_tab]->icons_height;
-	newTab->icons_width = tabs[current_tab]->icons_width;
-	newTab->padding = tabs[current_tab]->padding;
-	newTab->recents = tabs[current_tab]->recents;
-	newTab->utf8_search_bar_hint = tabs[current_tab]->utf8_search_bar_hint;
-	newTab->view_type = tabs[current_tab]->view_type;
-	newTab->t.iniThisPc("THIS PC");
-	newTab->t.fillThisPcWithDrives(newTab->fileExplorer->get_partitions());
-
-	return std::move(newTab);
-}
 

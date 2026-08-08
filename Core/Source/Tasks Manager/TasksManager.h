@@ -16,6 +16,7 @@ enum class TaskType
 NONE,
 COPY_PASTE,
 _DELETE,
+FIND_EMPTY_DIRECTORIES,
 };
 
 struct Task 
