@@ -4,6 +4,8 @@ workspace "ForestView"
    configurations { "Debug", "Release", "Dist" }
    startproject "App"
 
+   flags { "MultiProcessorCompile" }
+   
    -- Workspace-wide build options for MSVC
    filter "system:windows"
       buildoptions { "/EHsc", "/Zc:preprocessor", "/Zc:__cplusplus" }
