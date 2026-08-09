@@ -655,20 +655,20 @@ void ForestView::on_update()
 						ImGui::Separator();
 					}
 
-					for (size_t j = 0; j < (int)m_emptyFolders.size(); j++)
-					{
-						ImGui::PushID(j);
-						if (ImGui::Selectable(m_emptyFolders[j].string().c_str()))
-						{
-							tabs[current_tab]->ThisDirectoryKeyWord = "";
-							tabs[current_tab]->globalKeyWord = "";
-							tabs[current_tab]->recents.visit(fs::directory_entry(m_emptyFolders[j]));
-							tabs[current_tab]->fileExplorer->navigate_to(m_emptyFolders[j], tabs[current_tab]->current_path);
-							tabs[current_tab]->entries_need_update = true;
+					ImGuiListClipper EmptyFoldersClipper;
 
-							tabs[current_tab]->current_path = m_emptyFolders[j];
+					EmptyFoldersClipper.Begin((int)m_emptyFolders.size());
+
+					while (EmptyFoldersClipper.Step()) 
+					{
+						for (size_t j = EmptyFoldersClipper.DisplayStart; j < EmptyFoldersClipper.DisplayEnd; j++)
+						{
+							ImGui::PushID(j);
+							ImGui::Selectable(m_emptyFolders[j].string().c_str());
+
+							handle_entries_mouse_click(fs::directory_entry(m_emptyFolders[j]));
+							ImGui::PopID();
 						}
-						ImGui::PopID();
 					}
 				}
 				ImGui::End();
