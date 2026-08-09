@@ -1652,13 +1652,22 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 		{
 			if (entry.is_directory())
 			{
-				tabs[current_tab]->ThisDirectoryKeyWord = "";
-				tabs[current_tab]->globalKeyWord = "";
-				tabs[current_tab]->recents.visit(entry);
-				tabs[current_tab]->fileExplorer->navigate_to(entry.path(), tabs[current_tab]->current_path);
-				tabs[current_tab]->entries_need_update = true;
+				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
 
-				tabs[current_tab]->current_path = entry.path();
+				if (checkAccess == DirAccessResult::ACCESS_DENIED) 
+				{
+					ImGui::OpenPopup("Access Denied");
+				}
+				else 
+				{
+					tabs[current_tab]->ThisDirectoryKeyWord = "";
+					tabs[current_tab]->globalKeyWord = "";
+					tabs[current_tab]->recents.visit(entry);
+					tabs[current_tab]->fileExplorer->navigate_to(entry.path(), tabs[current_tab]->current_path);
+					tabs[current_tab]->entries_need_update = true;
+
+					tabs[current_tab]->current_path = entry.path();
+				}
 			}
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))	
@@ -1682,6 +1691,16 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 				tabs[current_tab]->need_modified_since_call = true;
 			}
 		}
+	}
+
+	if (ImGui::BeginPopupModal("Access Denied", NULL, ImGuiWindowFlags_AlwaysAutoResize)) 
+	{
+		ImGui::Text("You don't currently have permission to access this folder.");
+		if (ImGui::Button("Ok")) 
+		{
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
 	}
 }
 

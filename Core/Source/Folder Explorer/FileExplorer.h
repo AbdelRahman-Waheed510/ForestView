@@ -71,7 +71,6 @@ public:
 	}
 };
 
-
 struct Entry 
 {
 	fs::directory_entry entry;
@@ -89,6 +88,14 @@ enum NewType
 {
 	FOLDER,
 	REG_FILE
+};
+
+enum class DirAccessResult {
+	OK,
+	ACCESS_DENIED,
+	NOT_FOUND,
+	NOT_A_DIRECTORY,
+	OTHER
 };
 
 namespace Utils 
@@ -280,6 +287,24 @@ public:
 
 	}
 
+	DirAccessResult check_directory_access(const fs::path& path)
+	{
+		std::error_code ec;
+		auto it = fs::directory_iterator(path, ec);
+
+
+		if (!ec) return DirAccessResult::OK;
+
+		if (ec == std::errc::permission_denied)
+			return DirAccessResult::ACCESS_DENIED;
+		if (ec == std::errc::no_such_file_or_directory)
+			return DirAccessResult::NOT_FOUND;
+		if (ec == std::errc::not_a_directory)
+			return DirAccessResult::NOT_A_DIRECTORY;
+
+		return DirAccessResult::OTHER;
+	}
+
 	void load_entries_from_specific_path(fs::path path) 
 	{
 		if (!entries.empty())
@@ -299,7 +324,7 @@ public:
 			if (attr == INVALID_FILE_ATTRIBUTES)
 				continue; // couldn't stat it, skip
 
-			if (attr & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))
+			if (attr & (/*FILE_ATTRIBUTE_HIDDEN | */FILE_ATTRIBUTE_SYSTEM))
 				continue; // skip hidden/system
 
 			Entry e;
