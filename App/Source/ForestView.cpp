@@ -1633,6 +1633,10 @@ void ForestView::render_debug_panel()
 	auto u8_selected = tabs[current_tab]->selected_path.u8string();
 	std::string selected_path_string_to_show(u8_selected.begin(), u8_selected.end());
 
+	auto u8_deleted = tabs[current_tab]->deleted_path.u8string();
+	std::string deleted_path_string_to_show(u8_deleted.begin(), u8_deleted.end());
+
+
 	ImGui::Separator();
 
 	ImGui::Text("Current Path: "); ImGui::SameLine();
@@ -1640,6 +1644,13 @@ void ForestView::render_debug_panel()
 
 	ImGui::Text("Seleted Path: "); ImGui::SameLine();
 	ImGui::Text(selected_path_string_to_show.c_str());
+
+	ImGui::Text("Deleted Path: "); ImGui::SameLine();
+	ImGui::Text(deleted_path_string_to_show.c_str());
+
+	/*std::string flag = (is_serching_for_empty_folders) ? "True" : "False";
+	ImGui::Text("is_serching_for_empty_folders Flag: "); ImGui::SameLine();
+	ImGui::Text(flag.c_str());*/
 
 	ImGui::Separator();
 }
