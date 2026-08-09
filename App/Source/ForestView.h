@@ -95,6 +95,7 @@ struct State
 	fs::path current_path;
 	fs::path copied_path;
 	std::string copied_structure = "";
+	fs::path deleted_path;
 
 	std::string message;
 
@@ -212,13 +213,14 @@ private:
 
 	fileSize size_count;
 
+	bool need_delete_confirmation = false;
 	bool show_icons_slider = false;
 
 	std::vector<std::unique_ptr<Task>> tasks;
 
 	std::unique_ptr<Task> m_emptyFoldersTask;
 	std::vector<fs::path> m_emptyFolders;
-
+	bool is_serching_for_empty_folders = false;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
@@ -251,6 +253,8 @@ public:
 
 	// Tool Bar
 	void tool_bar();
+
+	void delete_warning();
 
 	// Folders Tree 
 	void folders_tree(const float& remainingHeight);

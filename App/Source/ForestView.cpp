@@ -639,6 +639,7 @@ void ForestView::on_update()
 		{
 			if (!m_emptyFoldersTask->cancel_request)
 			{
+				is_serching_for_empty_folders = true;
 				if (ImGui::Begin(std::format("Empty Folders in {}", m_emptyFoldersTask->sourceName).c_str()))
 				{
 					// Tool Bar for the empty folders panel
@@ -673,8 +674,10 @@ void ForestView::on_update()
 				}
 				ImGui::End();
 			}
+
 			else if (m_emptyFoldersTask->finished)
 			{
+				is_serching_for_empty_folders = false;
 				if (m_emptyFoldersTask->worker.joinable())
 				{
 					m_emptyFoldersTask->worker.join();
@@ -683,6 +686,7 @@ void ForestView::on_update()
 				m_emptyFolders.clear();
 			}
 		}
+		
 	}
 		ImGui::End();
 }
@@ -1051,7 +1055,8 @@ void ForestView::tool_bar()
 		ImGui::BeginDisabled(tabs[current_tab]->selected_path.empty() || tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path());
 		if (ImGui::Button("Delete"))
 		{
-			ImGui::OpenPopup("Delete Warning?");
+			need_delete_confirmation = true;
+			tabs[current_tab]->deleted_path = tabs[current_tab]->selected_path;
 		}
 		ImGui::EndDisabled();
 
@@ -1245,50 +1250,66 @@ void ForestView::tool_bar()
 			ImGui::EndPopup();
 		}
 
-		if (ImGui::BeginPopupModal("Delete Warning?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		if (need_delete_confirmation)
 		{
-			ImGui::Text("Are you sure you want to delete this folder?\nThe deleted file will be deleted permanently and will not go to the recycle bin \nThis action cannot be undone.");
-			ImGui::Separator();
-
-			if (ImGui::Button("YES"))
-			{
-				if (tabs[current_tab]->fav.is_exist(tabs[current_tab]->selected_path))
-				{
-					tabs[current_tab]->fav.delete_fav(fs::directory_entry(tabs[current_tab]->selected_path));
-				}
-				tabs[current_tab]->recents.remove(fs::directory_entry(tabs[current_tab]->selected_path));
-
-				fs::path src = tabs[current_tab]->selected_path;
-
-				std::unique_ptr<Task> deleteTask = std::make_unique<Task>();
-				deleteTask->task_type = TaskType::_DELETE;
-				deleteTask->source = tabs[current_tab]->selected_path;
-				deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.filename().string(), 10);
-
-				Task* task = deleteTask.get();
-
-				deleteTask->worker = std::thread([this, src, task]()
-					{
-						tabs[current_tab]->fileExplorer->remove(src);
-						task->finished = true;
-					});
-
-				tasks.emplace_back(std::move(deleteTask));
-				tabs[current_tab]->selected_path = "";
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::SetItemDefaultFocus();
-			ImGui::SameLine();
-			if (ImGui::Button("NO"))
-			{
-				tabs[current_tab]->selected_path = "";
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::EndPopup();
+			ImGui::OpenPopup("Delete Warning?");
+			need_delete_confirmation = false; 
 		}
+		delete_warning();
 	}
 	ImGui::EndChild();
 	ImGui::PopStyleVar(1);
+}
+
+// Deleting Warning
+void ForestView::delete_warning()
+{
+	if (ImGui::BeginPopupModal("Delete Warning?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text("Are you sure you want to delete this folder?\nThe deleted file will be deleted permanently and will not go to the recycle bin \nThis action cannot be undone.");
+		ImGui::Separator();
+
+		if (ImGui::Button("YES"))
+		{
+			if (is_serching_for_empty_folders)
+			{
+				std::erase(m_emptyFolders, tabs[current_tab]->deleted_path);
+			}
+			if (tabs[current_tab]->fav.is_exist(tabs[current_tab]->deleted_path))
+			{
+				tabs[current_tab]->fav.delete_fav(fs::directory_entry(tabs[current_tab]->deleted_path));
+			}
+			tabs[current_tab]->recents.remove(fs::directory_entry(tabs[current_tab]->deleted_path));
+
+			fs::path src = tabs[current_tab]->deleted_path;
+
+			std::unique_ptr<Task> deleteTask = std::make_unique<Task>();
+			deleteTask->task_type = TaskType::_DELETE;
+			deleteTask->source = tabs[current_tab]->deleted_path;
+			deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->deleted_path.filename().string(), 10);
+
+			Task* task = deleteTask.get();
+
+			deleteTask->worker = std::thread([this, src, task]()
+				{
+					tabs[current_tab]->fileExplorer->remove(src);
+					task->finished = true;
+				});
+
+			tasks.emplace_back(std::move(deleteTask));
+			tabs[current_tab]->deleted_path = "";
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SetItemDefaultFocus();
+		ImGui::SameLine();
+		if (ImGui::Button("NO"))
+		{
+			tabs[current_tab]->selected_path = "";
+			tabs[current_tab]->deleted_path = "";
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
 }
 
 // Folders Tree 
@@ -1716,6 +1737,13 @@ void ForestView::handle_right_click_operations()
 
 		}
 
+		if (ImGui::Button("Delete")) 
+		{
+			need_delete_confirmation = true;
+			tabs[current_tab]->deleted_path = tabs[current_tab]->selected_path;
+			ImGui::CloseCurrentPopup();
+		}
+
 		// Copy path
 		if (ImGui::Button("Copy Path"))
 		{
@@ -1727,7 +1755,7 @@ void ForestView::handle_right_click_operations()
 			ImGui::CloseCurrentPopup();
 		}
 
-		//copy structrure
+		// copy structrure
 		if (ImGui::Button("Copy Structure"))
 		{
 			tabs[current_tab]->folder_structure = std::async(std::launch::async, [path = tabs[current_tab]->selected_path]() {
