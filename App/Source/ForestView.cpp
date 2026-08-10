@@ -1045,10 +1045,12 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
+		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
 		if (ImGui::Button("New"))
 		{
 			ImGui::OpenPopup("New?");
 		}
+		ImGui::EndDisabled();
 
 		ImGui::SameLine();
 
@@ -1158,110 +1160,133 @@ void ForestView::tool_bar()
 		}
 		ImGui::PopStyleColor(1);
 
-		if (ImGui::BeginPopup("ViewSettings")) 
-		{
-			ImVec2 cursor = ImGui::GetCursorPos();
-			if (ImGui::Selectable("##DarkModeSelectable", false, ImGuiSelectableFlags_SpanAllColumns))
-			{
-				change_theme(Theme::DARK_MODE);
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::SetCursorPos(cursor);
-			ImGui::Image(M_texturesManager.get_DarkMode_button_icon_texture_id(), ImVec2(15.0f, 15.0f));
-			ImGui::SameLine();
-			ImGui::Text("Dark Mode");
-	
-			cursor = ImGui::GetCursorPos();
-			if (ImGui::Selectable("##LightModeSelectable", false, ImGuiSelectableFlags_SpanAllColumns))
-			{
-				change_theme(Theme::LIGHT_MODE);
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::SetCursorPos(cursor);
-			ImGui::Image(M_texturesManager.get_LightMode_button_icon_texture_id(), ImVec2(15.0f, 15.0f));
-			ImGui::SameLine();
-			ImGui::Text("Light Mode");
-
-			/*if (ImGui::Selectable("Test Mode", false, ImGuiSelectableFlags_SpanAllColumns))
-			{
-				change_theme(Theme::TEST);
-				ImGui::CloseCurrentPopup();
-			}*/
-
-			if (!show_icons_slider) 
-			{
-				if (ImGui::Selectable("Open Icons Size Slider", false, ImGuiSelectableFlags_SpanAllColumns))
-				{
-					show_icons_slider = true;
-					ImGui::CloseCurrentPopup();
-				}
-			}
-			else 
-			{
-				if (ImGui::Selectable("close Icons Size Slider", false, ImGuiSelectableFlags_SpanAllColumns))
-				{
-					show_icons_slider = false;
-					ImGui::CloseCurrentPopup();
-				}
-			}
-
-			ImGui::EndPopup();
-		}
-
-		if (ImGui::BeginPopup("New?"))
-		{
-			if (ImGui::Selectable("Folder"))
-			{
-
-				std::string name_of_the_folder = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New folder", FOLDER);
-				tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_folder, FOLDER);
-				tabs[current_tab]->entries_need_update = true;
-				tabs[current_tab]->tree_need_update = true;
-				ImGui::CloseCurrentPopup();
-			}
-			if (ImGui::Selectable("Text Document"))
-			{
-				std::string name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Text Document.txt", REG_FILE);
-				tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, REG_FILE);
-				tabs[current_tab]->entries_need_update = true;
-				tabs[current_tab]->tree_need_update = true;
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::EndPopup();
-		}
-
-		if (ImGui::BeginPopup("Sort Type"))
-		{
-			if (ImGui::Selectable("Name"))
-			{
-				tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) 
-					{
-						return a.entry.path() < b.entry.path();
-					});
-				tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
-				ImGui::CloseCurrentPopup();
-			}
-			if (ImGui::Selectable("Last Modified time"))
-			{
-				tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.last_write_time() > b.entry.last_write_time();});
-				tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
-				ImGui::CloseCurrentPopup();
-			}
-			ImGui::EndPopup();
-		}
-
 		if (need_delete_confirmation)
 		{
 			ImGui::OpenPopup("Delete Warning?");
 			need_delete_confirmation = false; 
 		}
+
+		view_settings();
+
+		new_whatever();
+
+		view_sort_options();
+
 		delete_warning();
 	}
 	ImGui::EndChild();
 	ImGui::PopStyleVar(1);
 }
 
-// Deleting Warning
+// ####################################################### POPUPS ######################################################
+// View Settings Popup
+void ForestView::view_settings() 
+{
+	if (ImGui::BeginPopup("ViewSettings"))
+	{
+		// Dark Mode button
+		ImVec2 cursor = ImGui::GetCursorPos();
+		if (ImGui::Selectable("##DarkModeSelectable", false, ImGuiSelectableFlags_SpanAllColumns))
+		{
+			change_theme(Theme::DARK_MODE);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SetCursorPos(cursor);
+		ImGui::Image(M_texturesManager.get_DarkMode_button_icon_texture_id(), ImVec2(15.0f, 15.0f));
+		ImGui::SameLine();
+		ImGui::Text("Dark Mode");
+
+		// Light Mode Button
+		cursor = ImGui::GetCursorPos();
+		if (ImGui::Selectable("##LightModeSelectable", false, ImGuiSelectableFlags_SpanAllColumns))
+		{
+			change_theme(Theme::LIGHT_MODE);
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::SetCursorPos(cursor);
+		ImGui::Image(M_texturesManager.get_LightMode_button_icon_texture_id(), ImVec2(15.0f, 15.0f));
+		ImGui::SameLine();
+		ImGui::Text("Light Mode");
+
+		/*if (ImGui::Selectable("Test Mode", false, ImGuiSelectableFlags_SpanAllColumns))
+		{
+			change_theme(Theme::TEST);
+			ImGui::CloseCurrentPopup();
+		}*/
+
+		// icons size slider
+		if (!show_icons_slider)
+		{
+			if (ImGui::Selectable("Open Icons Size Slider", false, ImGuiSelectableFlags_SpanAllColumns))
+			{
+				show_icons_slider = true;
+				ImGui::CloseCurrentPopup();
+			}
+		}
+		else
+		{
+			if (ImGui::Selectable("close Icons Size Slider", false, ImGuiSelectableFlags_SpanAllColumns))
+			{
+				show_icons_slider = false;
+				ImGui::CloseCurrentPopup();
+			}
+		}
+
+		ImGui::EndPopup();
+	}
+}
+
+// New popup (New folder or file)
+void ForestView::new_whatever() 
+{
+	if (ImGui::BeginPopup("New?"))
+	{
+		if (ImGui::Selectable("Folder"))
+		{
+
+			std::string name_of_the_folder = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New folder", FOLDER);
+			tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_folder, FOLDER);
+			tabs[current_tab]->entries_need_update = true;
+			tabs[current_tab]->tree_need_update = true;
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::Selectable("Text Document"))
+		{
+			std::string name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Text Document.txt", REG_FILE);
+			tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, REG_FILE);
+			tabs[current_tab]->entries_need_update = true;
+			tabs[current_tab]->tree_need_update = true;
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+}
+
+// Sorting popup
+void ForestView::view_sort_options() 
+{
+	if (ImGui::BeginPopup("Sort Type"))
+	{
+		if (ImGui::Selectable("Name"))
+		{
+			tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b)
+				{
+					return a.entry.path() < b.entry.path();
+				});
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::Selectable("Last Modified time"))
+		{
+			tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.last_write_time() > b.entry.last_write_time();});
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+}
+
+// Deleting Warning popup
 void ForestView::delete_warning()
 {
 	if (ImGui::BeginPopupModal("Delete Warning?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
@@ -1311,13 +1336,14 @@ void ForestView::delete_warning()
 		ImGui::EndPopup();
 	}
 }
+// ######################################################################################################################
 
 // Folders Tree 
 void ForestView::folders_tree(const float& remainingHeight)
 {
 	if (ImGui::BeginChild("FolderTree##identifer", ImVec2(200, remainingHeight), ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar))
 	{
-
+		// Bookmarks ===================================================== 
 		if (ImGui::BeginTabBar("Tabs"))
 		{
 			// Favorites =========================================================
@@ -1838,12 +1864,14 @@ void ForestView::stats_bar()
 {
 	if (ImGui::BeginChild("StatsBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 	{
+		// Number of entries =========================================================================================================================================
 		ImGui::Text(std::to_string(tabs[current_tab]->fileExplorer->get_size()).c_str());
 		ImGui::SameLine();
 		ImGui::Text(" Items ");
 
 		ImGui::SameLine();
 
+		// Size of selected entry (the if condition is = we calculate the size only and only if the selected path is NOT empty and NOT a root path like (D:\, C;\))
 		if (tabs[current_tab]->selected_path != tabs[current_tab]->selected_path.root_path() && !tabs[current_tab]->selected_path.empty())
 		{
 			ImGui::Text("| File Size: ");
@@ -1885,6 +1913,8 @@ void ForestView::stats_bar()
 				ImGui::Text(tabs[current_tab]->last_modified.c_str());
 			}
 		}
+
+		// Copying strucure msg (only if we actually coping a structure) ===========================================================================================
 		if (tabs[current_tab]->is_coping_structure)
 		{
 			ImGui::SameLine();

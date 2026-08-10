@@ -254,6 +254,13 @@ public:
 	// Tool Bar
 	void tool_bar();
 
+	// Popups
+	void view_settings();
+
+	void new_whatever();
+
+	void view_sort_options();
+
 	void delete_warning();
 
 	// Folders Tree 
