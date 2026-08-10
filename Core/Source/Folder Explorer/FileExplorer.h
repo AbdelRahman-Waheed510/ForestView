@@ -489,10 +489,24 @@ public:
 	void back(fs::path& current_path) 
 	{
 		if (undo_stack.empty()) return;
-		fs::path path_to_undo = undo_stack.top(); undo_stack.pop();
 
-		redo_stack.push(current_path);  
-
+		fs::path path_to_undo;
+		while (!undo_stack.empty()) 
+		{
+			if (undo_stack.top().empty()) 
+			{
+				path_to_undo = ""; undo_stack.pop();
+				redo_stack.push(current_path);
+				break;
+			}
+			else if (check_directory_access(undo_stack.top()) == DirAccessResult::NOT_FOUND) undo_stack.pop();
+			else
+			{
+				path_to_undo = undo_stack.top(); undo_stack.pop();
+				redo_stack.push(current_path);
+				break;
+			}
+		}
 		if (path_to_undo.empty()) load_partitions();
 		else load_entries_from_specific_path(path_to_undo);
 
@@ -502,18 +516,28 @@ public:
 	bool can_go_forward() 
 	{
 		if (redo_stack.empty()) return false;
+
 		return true;
 	}
 
 	void redo(fs::path& current_path)
 	{
 		if (redo_stack.empty()) return;
-		fs::path path = redo_stack.top(); redo_stack.pop();
+		fs::path path_to_redo;
 
-		undo_stack.push(current_path);
-
-		load_entries_from_specific_path(path);
-		current_path = path;
+		while (!redo_stack.empty())
+		{
+			DirAccessResult state = check_directory_access(redo_stack.top());
+			if (state == DirAccessResult::NOT_FOUND) redo_stack.pop();
+			else
+			{
+				path_to_redo = redo_stack.top(); redo_stack.pop();
+				undo_stack.push(current_path);
+				load_entries_from_specific_path(path_to_redo);
+				current_path = path_to_redo;
+				break;
+			}
+		}
 	}
 
 	fs::path get_forward_path() 
