@@ -121,6 +121,14 @@ struct EntryDataReturn
 	int filesCount = 0;
 };
 
+enum class FilterOptions 
+{
+NONE,
+FILES,
+FOLDERS,
+WHATEVER
+};
+
 class Explorer 
 {
 private:
@@ -143,7 +151,7 @@ private:
 	std::stack<fs::path> redo_stack;
 	std::stack<fs::path> undo_stack;
 	
-
+	FilterOptions filterBy = FilterOptions::WHATEVER;
 public:
 	
 	Explorer(TexturesManager& textures_manager) : M_texturesManager(textures_manager)
@@ -305,7 +313,7 @@ public:
 		return DirAccessResult::OTHER;
 	}
 
-	void load_entries_from_specific_path(fs::path path) 
+	void load_entries_from_specific_path(fs::path path)
 	{
 		if (!entries.empty())
 		{
@@ -327,10 +335,39 @@ public:
 			if (attr & (/*FILE_ATTRIBUTE_HIDDEN | */FILE_ATTRIBUTE_SYSTEM))
 				continue; // skip hidden/system
 
+			switch (filterBy)
+			{
+			case FilterOptions::FILES: 
+			{
+				if (entry.is_regular_file()) 
+				{
 					Entry entryToAdd = setup_entry(entry);
 					entries.emplace_back(entryToAdd);
+				}
+				break;
+			}
+			case FilterOptions::FOLDERS:
+			{
+				if (entry.is_directory())
+				{
+					Entry entryToAdd = setup_entry(entry);
+					entries.emplace_back(entryToAdd);
+				}
+				break;
+			}
+			case FilterOptions::WHATEVER:
+			{
+				Entry entryToAdd = setup_entry(entry);
+				entries.emplace_back(entryToAdd);
+				break;
+			}
+			default:
+				break;
+			}
+		}
+		return;
+	}
 
-			entries.emplace_back(std::move(e));
 	Entry setup_entry(const fs::directory_entry& entry) 
 	{
 		Entry e;
@@ -342,8 +379,15 @@ public:
 		return e;
 	}
 
-		}
+	void set_filter_by(const FilterOptions& option) 
+	{
+		filterBy = option;
 		return;
+	}
+
+	const FilterOptions get_filter_by() 
+	{
+		return filterBy;
 	}
 
 	void refresh(const fs::path& current_path)
@@ -356,7 +400,7 @@ public:
 		} 
 	}
 
-	void navigate_to(const fs::path& path, const fs::path& current_path) 
+	void navigate_to(const fs::path& path, const fs::path& current_path)
 	{
 		if (path.empty()) load_partitions();
 		else if (path == "THIS PC") load_partitions();
