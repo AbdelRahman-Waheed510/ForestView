@@ -263,6 +263,8 @@ public:
 
 	void delete_warning();
 
+	void filter_by();
+
 	// Folders Tree 
 	void folders_tree(const float& remainingHeight);
 

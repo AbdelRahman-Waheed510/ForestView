@@ -1148,6 +1148,45 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
+		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
+		if (ImGui::Button("Filter")) 
+		{
+			ImGui::OpenPopup("FilterByOptions");
+		}
+		ImGui::EndDisabled();
+		if (ImGui::BeginItemTooltip())
+		{
+			std::string filter_by_type = "Entries being filterd by: ";
+			switch (tabs[current_tab]->fileExplorer->get_filter_by())
+			{
+			case FilterOptions::NONE: 
+			{
+				filter_by_type += "None";
+				break;
+			}
+			case FilterOptions::WHATEVER:
+			{
+				filter_by_type += "Nothing";
+				break;
+			}
+			case FilterOptions::FOLDERS:
+			{
+				filter_by_type += "Folders";
+				break;
+			}
+			case FilterOptions::FILES:
+			{
+				filter_by_type += "Files";
+				break;
+			}
+			default:
+				break;
+			}
+			ImGui::Text(filter_by_type.c_str());
+			ImGui::EndTooltip();
+		}
+		ImGui::SameLine();
+
 		float spacing = ImGui::GetStyle().ItemSpacing.x;
 		float padding = ImGui::GetStyle().FramePadding.x;
 		float target_pos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - (15.0f + padding * 1.7);
@@ -1173,6 +1212,8 @@ void ForestView::tool_bar()
 		view_sort_options();
 
 		delete_warning();
+
+		filter_by();
 	}
 	ImGui::EndChild();
 	ImGui::PopStyleVar(1);
@@ -1333,6 +1374,33 @@ void ForestView::delete_warning()
 			tabs[current_tab]->deleted_path = "";
 			ImGui::CloseCurrentPopup();
 		}
+		ImGui::EndPopup();
+	}
+}
+
+void ForestView::filter_by()
+{
+	if (ImGui::BeginPopup("FilterByOptions"))
+	{
+		if (ImGui::Selectable("Nothing")) 
+		{
+			tabs[current_tab]->fileExplorer->set_filter_by(FilterOptions::WHATEVER);
+			tabs[current_tab]->entries_need_update = true;
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::Selectable("Files"))
+		{
+			tabs[current_tab]->fileExplorer->set_filter_by(FilterOptions::FILES);
+			tabs[current_tab]->entries_need_update = true;
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::Selectable("Folders")) 
+		{
+			tabs[current_tab]->fileExplorer->set_filter_by(FilterOptions::FOLDERS);
+			tabs[current_tab]->entries_need_update = true;
+			ImGui::CloseCurrentPopup();
+		}
+
 		ImGui::EndPopup();
 	}
 }
