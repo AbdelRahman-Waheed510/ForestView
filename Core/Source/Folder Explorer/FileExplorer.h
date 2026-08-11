@@ -327,14 +327,20 @@ public:
 			if (attr & (/*FILE_ATTRIBUTE_HIDDEN | */FILE_ATTRIBUTE_SYSTEM))
 				continue; // skip hidden/system
 
-			Entry e;
-			e.entry = entry;
-			e.textureId = M_texturesManager.decide_icon(entry);
-			auto u8_str = (entry.path() == entry.path().root_path()) ? entry.path().u8string() : entry.path().filename().u8string();
-			std::string utf8_path(u8_str.begin(), u8_str.end());
-			e.name = utf8_path;
+					Entry entryToAdd = setup_entry(entry);
+					entries.emplace_back(entryToAdd);
 
 			entries.emplace_back(std::move(e));
+	Entry setup_entry(const fs::directory_entry& entry) 
+	{
+		Entry e;
+		e.entry = entry;
+		e.textureId = M_texturesManager.decide_icon(entry);
+		auto u8_str = (entry.path() == entry.path().root_path()) ? entry.path().u8string() : entry.path().filename().u8string();
+		std::string utf8_path(u8_str.begin(), u8_str.end());
+		e.name = utf8_path;
+		return e;
+	}
 
 		}
 		return;
