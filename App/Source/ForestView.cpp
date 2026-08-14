@@ -1156,7 +1156,7 @@ void ForestView::tool_bar()
 		ImGui::EndDisabled();
 		if (ImGui::BeginItemTooltip())
 		{
-			std::string filter_by_type = "Entries being filterd by: ";
+			std::string filter_by_type = "Entries being filtered by: ";
 			switch (tabs[current_tab]->fileExplorer->get_filter_by())
 			{
 			case FilterOptions::NONE: 
@@ -1164,9 +1164,9 @@ void ForestView::tool_bar()
 				filter_by_type += "None";
 				break;
 			}
-			case FilterOptions::WHATEVER:
+			case FilterOptions::ALL:
 			{
-				filter_by_type += "Nothing";
+				filter_by_type += "All";
 				break;
 			}
 			case FilterOptions::FOLDERS:
@@ -1378,13 +1378,14 @@ void ForestView::delete_warning()
 	}
 }
 
+// Filter By popup
 void ForestView::filter_by()
 {
 	if (ImGui::BeginPopup("FilterByOptions"))
 	{
-		if (ImGui::Selectable("Nothing")) 
+		if (ImGui::Selectable("All")) 
 		{
-			tabs[current_tab]->fileExplorer->set_filter_by(FilterOptions::WHATEVER);
+			tabs[current_tab]->fileExplorer->set_filter_by(FilterOptions::ALL);
 			tabs[current_tab]->entries_need_update = true;
 			ImGui::CloseCurrentPopup();
 		}

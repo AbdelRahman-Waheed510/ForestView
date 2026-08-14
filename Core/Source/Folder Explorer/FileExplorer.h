@@ -126,7 +126,7 @@ enum class FilterOptions
 NONE,
 FILES,
 FOLDERS,
-WHATEVER
+ALL
 };
 
 class Explorer 
@@ -151,7 +151,7 @@ private:
 	std::stack<fs::path> redo_stack;
 	std::stack<fs::path> undo_stack;
 	
-	FilterOptions filterBy = FilterOptions::WHATEVER;
+	FilterOptions filterBy = FilterOptions::ALL;
 public:
 	
 	Explorer(TexturesManager& textures_manager) : M_texturesManager(textures_manager)
@@ -355,7 +355,13 @@ public:
 				}
 				break;
 			}
-			case FilterOptions::WHATEVER:
+			case FilterOptions::ALL:
+			{
+				Entry entryToAdd = setup_entry(entry);
+				entries.emplace_back(entryToAdd);
+				break;
+			}
+			case FilterOptions::NONE:
 			{
 				Entry entryToAdd = setup_entry(entry);
 				entries.emplace_back(entryToAdd);
@@ -799,7 +805,6 @@ public:
 		}
 		return;
 	}
-	
 	
 	void print_entries() 
 	{
