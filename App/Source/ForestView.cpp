@@ -686,6 +686,51 @@ void ForestView::on_update()
 				m_emptyFolders.clear();
 			}
 		}
+
+		// Duplicate Files Ui
+		if (m_duplicateFilesTask != nullptr)
+		{
+			if (m_duplicateFilesTask->cancel_request == false) 
+			{
+				if (ImGui::Begin(std::format("Finding Duplicates in {}", m_duplicateFilesTask->sourceName).c_str() )) 
+				{
+					if (ImGui::Button("X")) 
+					{
+						m_duplicateFilesTask->cancel_request = true;
+					}
+					if (!m_duplicateFilesTask->finished) 
+					{
+						ImGui::Separator();
+						ImGui::Text("Searching for duplicate files...");
+					}
+					ImGui::Separator();
+				
+					for (const auto& [key, value] : m_duplicateFiles)
+					{
+						for (const fs::path& duplicate : value) 
+						{
+							ImGui::PushID(duplicate.string().c_str());
+
+							ImGui::Selectable(duplicate.string().c_str());
+
+							ImGui::PopID();
+						}
+						ImGui::Separator();
+					}
+				}
+				ImGui::End();
+			}
+			else if (m_duplicateFilesTask->finished == true) 
+			{
+				if (m_duplicateFilesTask->worker.joinable()) 
+				{
+					m_duplicateFilesTask->worker.join();
+				}
+				m_duplicateFilesTask = nullptr;
+				m_duplicateFiles.clear();
+
+			}
+		}
 		
 	}
 		ImGui::End();
@@ -1186,6 +1231,37 @@ void ForestView::tool_bar()
 			ImGui::EndTooltip();
 		}
 		ImGui::SameLine();
+
+		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
+		if (ImGui::Button("Find Duplicates"))
+		{
+			if (m_duplicateFilesTask != nullptr) 
+			{
+				m_duplicateFilesTask->cancel_request = true;
+
+				if (m_duplicateFilesTask->worker.joinable()) 
+				{
+					m_duplicateFilesTask->worker.join();
+				}
+				m_duplicateFilesTask = nullptr;
+				m_duplicateFiles.clear();
+			}
+			if (!m_emptyFolders.empty()) m_emptyFolders.clear();
+
+			m_duplicateFilesTask = std::make_unique<Task>();
+			m_duplicateFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
+			m_duplicateFilesTask->task_type = TaskType::FIND_DUPLICATE_FILES;
+
+			Task* task = m_duplicateFilesTask.get();
+
+			m_duplicateFilesTask->worker = std::thread([this, task]()
+				{
+					tabs[current_tab]->fileExplorer->find_duplicates(m_duplicateFiles, tabs[current_tab]->selected_path, task->cancel_request, task->finished);
+				});
+
+		}
+		ImGui::EndDisabled();
+
 
 		float spacing = ImGui::GetStyle().ItemSpacing.x;
 		float padding = ImGui::GetStyle().FramePadding.x;
@@ -2071,7 +2147,6 @@ void ForestView::icons_size_slider()
 }
 
 // Progress Bar
-
 void ForestView::show_progress_bar(const std::string& overlay)
 {
 	if (ImGui::Begin("Progress"))

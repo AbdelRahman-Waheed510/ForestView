@@ -221,6 +221,10 @@ private:
 	std::unique_ptr<Task> m_emptyFoldersTask;
 	std::vector<fs::path> m_emptyFolders;
 	bool is_serching_for_empty_folders = false;
+
+	std::unique_ptr<Task> m_duplicateFilesTask;
+	std::unordered_map<std::string ,std::vector<fs::path>> m_duplicateFiles;
+
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
