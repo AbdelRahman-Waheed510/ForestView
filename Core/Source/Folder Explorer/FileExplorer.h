@@ -8,6 +8,7 @@
 #include <format>
 #include <stack>
 #include <stdexcept>
+#include <ostream>
 #include <fstream>
 #include <istream>
 #include "tree.h"
@@ -17,6 +18,7 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 #include "Texture.h"
+#include "SHA256.h"
 
 namespace fs = std::filesystem;
 
@@ -814,6 +816,164 @@ public:
 		}
 	}
 
+	// Duplicates APIs
+	void find_duplicates(std::unordered_map<std::string, std::vector<fs::path>>& duplicates, const fs::path target, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	{
+		Guard guard(finished);
+		if (cancel_request) 
+		{
+			return;
+		}
+		std::error_code ec;
 
+		std::vector<fs::directory_entry> candidets;
 
+		// putting the files in the candidtes vector [First Round]
+		for (const auto& entry : fs::directory_iterator(target,fs::directory_options::skip_permission_denied, ec))
+		{
+			if (cancel_request)
+			{
+				return;
+			}
+			if (ec) 
+			{
+				std::cerr << "find_duplicates() Error 1st call for ec...." << std::endl;
+				continue;
+			}
+			
+			if (entry.is_regular_file(ec)) 
+			{
+				if (ec) 
+				{
+					std::cerr << "find_duplicates() Error 2nd call for ec...." << std::endl;
+					continue;
+				}
+				candidets.emplace_back(entry);
+			}
+		
+		}
+
+		// [First Filter] Comparing the sizes of the files and remove the ones that has no similer size [Second Round]
+		if (cancel_request)
+		{
+			return;
+		}
+		std::sort(candidets.begin(), candidets.end(), [](const fs::directory_entry& a, const fs::directory_entry& b)
+			{
+				return a.file_size() < b.file_size();
+			});
+		int count = 0;
+		int iterator = 0;
+		for (size_t i = 0; i < candidets.size(); ++i) 
+		{
+			if (cancel_request)
+			{
+				return;
+			}
+			if (i + 1 >= candidets.size())
+			{
+				if (count == 0)
+				{
+					continue;
+				}
+				else if (count != 0)
+				{
+					candidets[iterator] = candidets[i];
+					iterator++;
+					count = 0;
+				}
+				break;
+			}
+			if (candidets[i].file_size() == candidets[i + 1].file_size()) 
+			{
+				candidets[iterator] = candidets[i];
+				count++;
+				iterator++;
+			}
+			else 
+			{
+				if (count == 0)
+				{
+					continue;
+				}
+				else if (count != 0)
+				{
+					candidets[iterator] = candidets[i];
+					iterator++;
+					count = 0;
+				}
+			}
+		}
+
+		// [Second Filter] Compating the first 64 Bytes [Third Round]
+		std::unordered_map<std::string, std::vector<fs::directory_entry>> groups;
+
+		for (size_t i = 0; i < iterator; i++)
+		{
+			if (cancel_request)
+			{
+				return;
+			}
+			std::ifstream read(candidets[i].path(), std::ios::binary);
+			if (!read)
+			{
+				continue;
+			}
+			std::array<uint8_t, 64> buffer;
+
+			read.read(reinterpret_cast<char*>(buffer.data()), 64);
+			std::streamsize bytesCount = read.gcount();
+
+			HashForge::SHA256 Hasher;
+			Hasher.Update(std::span<const uint8_t>(
+				buffer.data(),
+				static_cast<size_t>(bytesCount)
+			));
+			groups[Hasher.Finalize()].emplace_back(candidets[i]);
+			read.close();
+		}
+		iterator = 0;
+		for (const auto& [key, value] : groups) 
+		{
+			if (cancel_request)
+			{
+				return;
+			}
+			if (value.size() < 2) 
+			{
+				continue;
+			}
+			for (const auto& entry : value) 
+			{
+				candidets[iterator] = entry;
+				iterator++;
+			}
+		}
+
+		// [Third Filter] Hashing each remaining file form the last 2 filters and compare the hashes
+		std::unordered_map<std::string, std::vector<fs::path>> groups2;
+		for (size_t i = 0; i < iterator; i++)
+		{
+			if (cancel_request)
+			{
+				return;
+			}
+			HashForge::SHA256 Hasher;
+			groups2[Hasher.HashFile(candidets[i])].emplace_back(candidets[i]);
+		}
+
+		for (const auto& [key, value] : groups2)
+		{
+			if (cancel_request)
+			{
+				return;
+			}
+			if (value.size() < 2)
+			{
+				continue;
+			}
+			duplicates[key] = value;
+		}
+		return;
+	}
 };
