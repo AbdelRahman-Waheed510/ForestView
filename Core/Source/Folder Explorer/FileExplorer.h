@@ -817,7 +817,7 @@ public:
 	}
 
 	// Duplicates APIs
-	void find_duplicates(std::unordered_map<std::string, std::vector<fs::path>>& duplicates, const fs::path target, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	void find_duplicates(std::unordered_map<std::string, std::vector<fs::directory_entry>>& duplicates, const fs::path target, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{
 		Guard guard(finished);
 		if (cancel_request) 
@@ -951,7 +951,7 @@ public:
 		}
 
 		// [Third Filter] Hashing each remaining file form the last 2 filters and compare the hashes
-		std::unordered_map<std::string, std::vector<fs::path>> groups2;
+		std::unordered_map<std::string, std::vector<fs::directory_entry>> groups2;
 		for (size_t i = 0; i < iterator; i++)
 		{
 			if (cancel_request)
@@ -959,7 +959,7 @@ public:
 				return;
 			}
 			HashForge::SHA256 Hasher;
-			groups2[Hasher.HashFile(candidets[i])].emplace_back(candidets[i]);
+			groups2[Hasher.HashFile(candidets[i], cancel_request)].emplace_back(candidets[i]);
 		}
 
 		for (const auto& [key, value] : groups2)

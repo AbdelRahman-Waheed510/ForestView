@@ -223,7 +223,7 @@ private:
 	bool is_serching_for_empty_folders = false;
 
 	std::unique_ptr<Task> m_duplicateFilesTask;
-	std::unordered_map<std::string ,std::vector<fs::path>> m_duplicateFiles;
+	std::unordered_map<std::string ,std::vector<fs::directory_entry>> m_duplicateFiles;
 
 public:
 

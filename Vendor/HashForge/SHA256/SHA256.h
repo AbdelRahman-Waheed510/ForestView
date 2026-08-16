@@ -98,5 +98,6 @@ namespace HashForge
 
 		std::string HashFile(const std::filesystem::path& filePath);
 
+		std::string HashFile(const std::filesystem::path& filePath, std::atomic<bool>& cancelRequest);
 	};
 }

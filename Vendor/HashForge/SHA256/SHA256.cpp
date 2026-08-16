@@ -210,4 +210,44 @@ namespace HashForge
 		Reset();
 		return hash;
 	}
+
+	std::string SHA256::HashFile(const std::filesystem::path& filePath, std::atomic<bool>& cancelRequest)
+	{
+		if (cancelRequest) 
+		{
+			return "";
+		}
+		if (m_totalBytes != 0)
+		{
+			Reset();
+		}
+		constexpr int BufferSize = 1024 * 512;
+		std::array<uint8_t, BufferSize> Buffer;
+
+		std::ifstream readFile;
+		readFile.rdbuf()->pubsetbuf(nullptr, 0);
+		readFile.open(filePath, std::ios::in | std::ios::binary);
+
+		if (!readFile.is_open()) {
+			std::cerr << "Failed to open file.\n";
+			return "Error";
+		}
+		while (readFile)
+		{
+			if (cancelRequest)
+			{
+				readFile.close();
+				return "";
+			}
+			readFile.read(reinterpret_cast<char*>(Buffer.data()), Buffer.size());
+			std::streamsize bytesRead = readFile.gcount();
+			if (bytesRead > 0)
+			{
+				Update(std::span<const uint8_t>(Buffer.data(), static_cast<size_t>(bytesRead)));
+			}
+		}
+		std::string hash = Finalize();
+		Reset();
+		return hash;
+	}
 }
