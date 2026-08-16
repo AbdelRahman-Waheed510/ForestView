@@ -692,6 +692,7 @@ void ForestView::on_update()
 		{
 			if (m_duplicateFilesTask->cancel_request == false) 
 			{
+				is_searching_for_duplicates_files = true;
 				if (ImGui::Begin(std::format("Finding Duplicates in {}", m_duplicateFilesTask->sourceName).c_str() )) 
 				{
 					if (ImGui::Button("X")) 
@@ -707,11 +708,13 @@ void ForestView::on_update()
 				
 					for (const auto& [key, value] : m_duplicateFiles)
 					{
-						for (const fs::path& duplicate : value) 
+						for (const fs::directory_entry& duplicate : value) 
 						{
-							ImGui::PushID(duplicate.string().c_str());
+							ImGui::PushID(duplicate.path().string().c_str());
 
-							ImGui::Selectable(duplicate.string().c_str());
+							ImGui::Selectable(duplicate.path().string().c_str());
+
+							handle_entries_mouse_click(duplicate);
 
 							ImGui::PopID();
 						}
@@ -722,6 +725,7 @@ void ForestView::on_update()
 			}
 			else if (m_duplicateFilesTask->finished == true) 
 			{
+				is_searching_for_duplicates_files = false;
 				if (m_duplicateFilesTask->worker.joinable()) 
 				{
 					m_duplicateFilesTask->worker.join();
@@ -1819,9 +1823,13 @@ void ForestView::render_debug_panel()
 	ImGui::Text("Deleted Path: "); ImGui::SameLine();
 	ImGui::Text(deleted_path_string_to_show.c_str());
 
-	/*std::string flag = (is_serching_for_empty_folders) ? "True" : "False";
+	std::string flag = (is_serching_for_empty_folders) ? "True" : "False";
 	ImGui::Text("is_serching_for_empty_folders Flag: "); ImGui::SameLine();
-	ImGui::Text(flag.c_str());*/
+	ImGui::Text(flag.c_str());
+
+	std::string flag2 = (is_searching_for_duplicates_files) ? "True" : "False";
+	ImGui::Text("is_searching_for_duplicates_files Flag: "); ImGui::SameLine();
+	ImGui::Text(flag2.c_str());
 
 	ImGui::Separator();
 }
