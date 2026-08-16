@@ -8,8 +8,10 @@ project "App"
    { "Source/**.h",
      "Source/**.cpp",
      "../Vendor/stb_image/stb_image.h",
-     "../Vendor/stb_image/stb_image.cpp"
-   }
+     "../Vendor/stb_image/stb_image.cpp",
+     "../Vendor/HashForge/SHA256/SHA256.cpp",
+     "../Vendor/HashForge/SHA256/SHA256.h",
+    }
 
    includedirs
    {
@@ -28,6 +30,7 @@ project "App"
       "../Vendor/imgui-docking/backends",
       "../Vendor/imgui-docking/misc/cpp",
       "../Vendor/imgui-docking/misc/freetype",
+      "../Vendor/HashForge/SHA256"
    }
 
    links

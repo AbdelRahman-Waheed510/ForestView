@@ -20,7 +20,8 @@ project "Core"
       "../Vendor/imgui-docking",
       "../Vendor/imgui-docking/backends",
       "../Vendor/imgui-docking/misc/cpp",
-      "../Vendor/imgui-docking/misc/freetype"
+      "../Vendor/imgui-docking/misc/freetype",
+      "../Vendor/HashForge/SHA256"
    }
 
    links
