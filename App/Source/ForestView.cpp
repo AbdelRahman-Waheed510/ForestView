@@ -712,10 +712,102 @@ void ForestView::on_update()
 						{
 							ImGui::PushID(duplicate.path().string().c_str());
 
-							ImGui::Selectable(duplicate.path().string().c_str());
+							bool is_duplicate_selected = (duplicate.path() == tabs[current_tab]->selected_path) ? true : false;
 
-							handle_entries_mouse_click(duplicate);
+							ImGui::Selectable(duplicate.path().string().c_str(), &is_duplicate_selected);
 
+							if (ImGui::IsItemHovered()) 
+							{
+								if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) 
+								{
+									if (tabs[current_tab]->selected_path != duplicate.path()) 
+									{
+										tabs[current_tab]->selected_path = duplicate.path();
+										tabs[current_tab]->need_file_size_call = true;
+										tabs[current_tab]->need_modified_since_call = true;
+									}
+
+									ImGui::OpenPopup("DuplicatesRightClick");
+								}
+							}
+
+							bool duplicate_is_open = ImGui::BeginPopup("DuplicatesRightClick");
+							if (duplicate_is_open)
+							{
+								if (duplicate.path() != tabs[current_tab]->selected_path) tabs[current_tab]->selected_path = duplicate.path();
+								// Rename 
+								if (tabs[current_tab]->selected_path != tabs[current_tab]->selected_path.root_path())
+								{
+									ImGui::Separator();
+									static std::string newName;
+									ImGui::InputText("New Name", &newName);
+									if (ImGui::Button("Rename"))
+									{
+										RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, newName);
+										if (rename.success)
+										{
+											if (is_serching_for_empty_folders && fs::is_directory(rename.finalPath))
+											{
+												for (auto& path : m_emptyFolders)
+												{
+													if (path == tabs[current_tab]->selected_path)
+													{
+														path = rename.finalPath;
+													}
+												}
+											}
+											if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
+											{
+												tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
+											}
+											if (tabs[current_tab]->recents.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath))
+											{
+											}
+											tabs[current_tab]->entries_need_update = true;
+											tabs[current_tab]->tree_need_update = true;
+											newName.clear();
+											tabs[current_tab]->selected_path = "";
+										}
+										else
+										{
+											tabs[current_tab]->selected_path = "";
+											tabs[current_tab]->message = "This name already exists";
+										}
+										ImGui::CloseCurrentPopup();
+									}
+									if (!tabs[current_tab]->message.empty()) ImGui::SameLine();
+									render_msg();
+									ImGui::Separator();
+
+
+								}
+
+								// Delete
+								if (ImGui::Button("Delete"))
+								{
+									need_delete_confirmation = true;
+									tabs[current_tab]->deleted_path = tabs[current_tab]->selected_path;
+									ImGui::CloseCurrentPopup();
+								}
+
+								// Copy path
+								if (ImGui::Button("Copy Path"))
+								{
+									tabs[current_tab]->show_rename_file = false;
+									ImGui::SetClipboardText(tabs[current_tab]->selected_path.string().c_str());
+
+
+									tabs[current_tab]->selected_path = "";
+									ImGui::CloseCurrentPopup();
+								}
+
+								ImGui::EndPopup();
+							}
+							if (tabs[current_tab]->selected_path == duplicate.path() && !duplicate_is_open)
+							{
+								tabs[current_tab]->selected_path = "";
+							}
+							
 							ImGui::PopID();
 						}
 						ImGui::Separator();
@@ -1915,6 +2007,7 @@ void ForestView::handle_right_click_operations()
 
 		}
 
+		// Delete
 		if (ImGui::Button("Delete")) 
 		{
 			need_delete_confirmation = true;
