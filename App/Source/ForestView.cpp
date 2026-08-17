@@ -1981,6 +1981,16 @@ void ForestView::handle_right_click_operations()
 				RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, newName);
 				if (rename.success)
 				{
+					if (is_serching_for_empty_folders && fs::is_directory(rename.finalPath)) 
+					{
+						for (auto& path : m_emptyFolders) 
+						{
+							if (path == tabs[current_tab]->selected_path) 
+							{
+								path = rename.finalPath;
+							}
+						}
+					}
 					if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 					{
 						tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
@@ -2119,6 +2129,7 @@ void ForestView::right_click(const fs::directory_entry& entry)
 	tabs[current_tab]->selected_path = entry.path();
 	tabs[current_tab]->is_right_click_call = true;
 }
+
 // Stats Bar
 void ForestView::stats_bar()
 {
