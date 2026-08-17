@@ -286,6 +286,12 @@ public:
 
 	void handle_right_click_operations();
 
+	void left_double_click(const fs::directory_entry& entry);
+
+	void left_click(const fs::directory_entry& entry);
+
+	void right_click(const fs::directory_entry& entry);
+
 	// Stats Bar
 	void stats_bar();
 
