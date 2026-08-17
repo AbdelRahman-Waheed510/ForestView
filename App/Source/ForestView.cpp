@@ -1840,46 +1840,15 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 	{
 		if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
-			if (entry.is_directory())
-			{
-				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
-
-				if (checkAccess == DirAccessResult::ACCESS_DENIED) 
-				{
-					ImGui::OpenPopup("Access Denied");
-				}
-				else 
-				{
-					tabs[current_tab]->ThisDirectoryKeyWord = "";
-					tabs[current_tab]->globalKeyWord = "";
-					tabs[current_tab]->recents.visit(entry);
-					tabs[current_tab]->fileExplorer->navigate_to(entry.path(), tabs[current_tab]->current_path);
-					tabs[current_tab]->entries_need_update = true;
-
-					tabs[current_tab]->current_path = entry.path();
-				}
-			}
+			left_double_click(entry);
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))	
 		{
-			tabs[current_tab]->selected_path = entry.path();
-			tabs[current_tab]->is_right_click_call = true;
+			right_click(entry);
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
-			if (tabs[current_tab]->selected_path == entry.path())
-			{
-				tabs[current_tab]->selected_path = "";
-				tabs[current_tab]->file_size.size = 0.0;
-				tabs[current_tab]->file_size.label = "";
-				tabs[current_tab]->last_modified = "";
-			}
-			else
-			{
-				tabs[current_tab]->selected_path = entry.path();
-				tabs[current_tab]->need_file_size_call = true;
-				tabs[current_tab]->need_modified_since_call = true;
-			}
+			left_click(entry);
 		}
 	}
 
@@ -2012,6 +1981,51 @@ void ForestView::handle_right_click_operations()
 	was_open = is_open;
 }
 
+void ForestView::left_double_click(const fs::directory_entry& entry)
+{
+	if (entry.is_directory())
+	{
+		DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
+
+		if (checkAccess == DirAccessResult::ACCESS_DENIED)
+		{
+			ImGui::OpenPopup("Access Denied");
+		}
+		else
+		{
+			tabs[current_tab]->ThisDirectoryKeyWord = "";
+			tabs[current_tab]->globalKeyWord = "";
+			tabs[current_tab]->recents.visit(entry);
+			tabs[current_tab]->fileExplorer->navigate_to(entry.path(), tabs[current_tab]->current_path);
+			tabs[current_tab]->entries_need_update = true;
+
+			tabs[current_tab]->current_path = entry.path();
+		}
+	}
+}
+
+void ForestView::left_click(const fs::directory_entry& entry)
+{
+	if (tabs[current_tab]->selected_path == entry.path())
+	{
+		tabs[current_tab]->selected_path = "";
+		tabs[current_tab]->file_size.size = 0.0;
+		tabs[current_tab]->file_size.label = "";
+		tabs[current_tab]->last_modified = "";
+	}
+	else
+	{
+		tabs[current_tab]->selected_path = entry.path();
+		tabs[current_tab]->need_file_size_call = true;
+		tabs[current_tab]->need_modified_since_call = true;
+	}
+}
+
+void ForestView::right_click(const fs::directory_entry& entry)
+{
+	tabs[current_tab]->selected_path = entry.path();
+	tabs[current_tab]->is_right_click_call = true;
+}
 // Stats Bar
 void ForestView::stats_bar()
 {
