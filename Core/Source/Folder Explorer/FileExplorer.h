@@ -817,7 +817,7 @@ public:
 	}
 
 	// Duplicates APIs
-	void find_duplicates(std::unordered_map<std::string, std::vector<fs::directory_entry>>& duplicates, const fs::path target, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	void find_duplicates(std::vector<std::vector<fs::directory_entry>>& duplicates, const fs::path target, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{
 		Guard guard(finished);
 		if (cancel_request) 
@@ -972,7 +972,7 @@ public:
 			{
 				continue;
 			}
-			duplicates[key] = value;
+			duplicates.emplace_back(value);
 		}
 		return;
 	}

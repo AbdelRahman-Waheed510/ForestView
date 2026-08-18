@@ -693,6 +693,7 @@ void ForestView::on_update()
 			if (m_duplicateFilesTask->cancel_request == false) 
 			{
 				is_searching_for_duplicates_files = true;
+
 				if (ImGui::Begin(std::format("Finding Duplicates in {}", m_duplicateFilesTask->sourceName).c_str() )) 
 				{
 					if (ImGui::Button("X")) 
@@ -706,9 +707,9 @@ void ForestView::on_update()
 					}
 					ImGui::Separator();
 				
-					for (const auto& [key, value] : m_duplicateFiles)
+					for (const auto& group : m_duplicateFiles)
 					{
-						for (const fs::directory_entry& duplicate : value) 
+						for (const fs::directory_entry& duplicate : group) 
 						{
 							ImGui::PushID(duplicate.path().string().c_str());
 
