@@ -730,6 +730,13 @@ void ForestView::on_update()
 
 									ImGui::OpenPopup("DuplicatesRightClick");
 								}
+								if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) 
+								{
+									if (duplicate.path() == tabs[current_tab]->selected_path) 
+									{
+										tabs[current_tab]->selected_path.clear();
+									}
+								}
 							}
 
 							bool duplicate_is_open = ImGui::BeginPopup("DuplicatesRightClick");
@@ -741,19 +748,22 @@ void ForestView::on_update()
 								{
 									ImGui::Separator();
 									static std::string newName;
-									ImGui::InputText("New Name", &newName);
-									if (ImGui::Button("Rename"))
+									ImGui::InputText("New Name##Duplicate", &newName);
+									if (ImGui::Button("Rename##Duplicate"))
 									{
 										RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, newName);
 										if (rename.success)
 										{
-											if (is_serching_for_empty_folders && fs::is_directory(rename.finalPath))
+											if (is_searching_for_duplicates_files) 
 											{
-												for (auto& path : m_emptyFolders)
+												for (std::vector<fs::directory_entry>& group : m_duplicateFiles) 
 												{
-													if (path == tabs[current_tab]->selected_path)
+													for (fs::directory_entry& duplicate_to_rename : group) 
 													{
-														path = rename.finalPath;
+														if (duplicate_to_rename.path() == tabs[current_tab]->selected_path) 
+														{
+															duplicate_to_rename.assign(rename.finalPath);
+														}
 													}
 												}
 											}
@@ -784,7 +794,7 @@ void ForestView::on_update()
 								}
 
 								// Delete
-								if (ImGui::Button("Delete"))
+								if (ImGui::Button("Delete##Duplicate"))
 								{
 									need_delete_confirmation = true;
 									tabs[current_tab]->deleted_path = tabs[current_tab]->selected_path;
@@ -792,7 +802,7 @@ void ForestView::on_update()
 								}
 
 								// Copy path
-								if (ImGui::Button("Copy Path"))
+								if (ImGui::Button("Copy Path##Duplicate"))
 								{
 									tabs[current_tab]->show_rename_file = false;
 									ImGui::SetClipboardText(tabs[current_tab]->selected_path.string().c_str());
@@ -803,10 +813,6 @@ void ForestView::on_update()
 								}
 
 								ImGui::EndPopup();
-							}
-							if (tabs[current_tab]->selected_path == duplicate.path() && !duplicate_is_open)
-							{
-								tabs[current_tab]->selected_path = "";
 							}
 							
 							ImGui::PopID();
@@ -1510,10 +1516,24 @@ void ForestView::delete_warning()
 
 		if (ImGui::Button("YES"))
 		{
-			if (is_serching_for_empty_folders)
+			if (is_serching_for_empty_folders && fs::is_directory(tabs[current_tab]->deleted_path))
 			{
 				std::erase(m_emptyFolders, tabs[current_tab]->deleted_path);
 			}
+			
+			if (is_searching_for_duplicates_files && fs::is_regular_file(tabs[current_tab]->deleted_path))
+			{
+				for (std::vector<fs::directory_entry>& group : m_duplicateFiles) 
+				{
+					size_t count_deleted = std::erase_if(group, [this](const fs::directory_entry& entry) { return tabs[current_tab]->deleted_path == entry.path();});
+					if (count_deleted != 0 && (int)group.size() < 2)
+					{
+						std::erase(m_duplicateFiles, group);
+						break;
+					}
+				}
+			}
+
 			if (tabs[current_tab]->fav.is_exist(tabs[current_tab]->deleted_path))
 			{
 				tabs[current_tab]->fav.delete_fav(fs::directory_entry(tabs[current_tab]->deleted_path));
@@ -1992,6 +2012,19 @@ void ForestView::handle_right_click_operations()
 							}
 						}
 					}
+					if (is_searching_for_duplicates_files && fs::is_regular_file(rename.finalPath))
+					{
+						for (std::vector<fs::directory_entry>& group : m_duplicateFiles)
+						{
+							for (fs::directory_entry& duplicate_to_rename : group)
+							{
+								if (duplicate_to_rename.path() == tabs[current_tab]->selected_path)
+								{
+									duplicate_to_rename.assign(rename.finalPath);
+								}
+							}
+						}
+					}
 					if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 					{
 						tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
@@ -2014,8 +2047,6 @@ void ForestView::handle_right_click_operations()
 			if (!tabs[current_tab]->message.empty()) ImGui::SameLine();
 			render_msg();
 			ImGui::Separator();
-
-
 		}
 
 		// Delete
