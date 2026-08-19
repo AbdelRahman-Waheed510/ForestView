@@ -1274,39 +1274,6 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(tabs[current_tab]->selected_path.empty());
-		if (ImGui::Button("Empty Folders")) 
-		{
-			// To be able to override the task mid seraching for the empty folders =======================
-			if (m_emptyFoldersTask != nullptr) 
-			{
-				m_emptyFoldersTask->cancel_request = true;
-				if (m_emptyFoldersTask->worker.joinable())
-				{
-					m_emptyFoldersTask->worker.join();
-				}
-				m_emptyFoldersTask = nullptr;
-				m_emptyFolders.clear();
-			}
-			if (!m_emptyFolders.empty()) m_emptyFolders.clear();
-			// ===========================================================================================
-
-			m_emptyFoldersTask = std::make_unique<Task>();
-			m_emptyFoldersTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
-			m_emptyFoldersTask->task_type = TaskType::FIND_EMPTY_DIRECTORIES;
-
-			Task* task = m_emptyFoldersTask.get();
-
-			m_emptyFoldersTask->worker = std::thread([this, task]()
-				{
-					tabs[current_tab]->fileExplorer->find_empty_folders(tabs[current_tab]->selected_path, m_emptyFolders, task->cancel_request, task->finished);
-				});
-
-		}
-		ImGui::EndDisabled();
-
-		ImGui::SameLine();
-
 		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
 		if (ImGui::Button("Filter")) 
 		{
@@ -1344,11 +1311,61 @@ void ForestView::tool_bar()
 			ImGui::Text(filter_by_type.c_str());
 			ImGui::EndTooltip();
 		}
+
+		ImGui::SameLine();
+
+		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
+		if (ImGui::Button("Empty Folders")) 
+		{
+			// To be able to override the task mid seraching for the empty folders =======================
+			if (m_emptyFoldersTask != nullptr) 
+			{
+				m_emptyFoldersTask->cancel_request = true;
+				if (m_emptyFoldersTask->worker.joinable())
+				{
+					m_emptyFoldersTask->worker.join();
+				}
+				m_emptyFoldersTask = nullptr;
+				m_emptyFolders.clear();
+			}
+			if (!m_emptyFolders.empty()) m_emptyFolders.clear();
+			// ===========================================================================================
+
+			if (tabs[current_tab]->selected_path.empty()) 
+			{
+				m_emptyFoldersTask = std::make_unique<Task>();
+				m_emptyFoldersTask->sourceName = Utils::reform_string(tabs[current_tab]->current_path.string(), 32);
+				m_emptyFoldersTask->task_type = TaskType::FIND_EMPTY_DIRECTORIES;
+
+				Task* task = m_emptyFoldersTask.get();
+
+				m_emptyFoldersTask->worker = std::thread([this, task]()
+					{
+						tabs[current_tab]->fileExplorer->find_empty_folders(tabs[current_tab]->current_path, m_emptyFolders, task->cancel_request, task->finished);
+					});
+			}
+			else if (!tabs[current_tab]->selected_path.empty()) 
+			{
+				m_emptyFoldersTask = std::make_unique<Task>();
+				m_emptyFoldersTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
+				m_emptyFoldersTask->task_type = TaskType::FIND_EMPTY_DIRECTORIES;
+
+				Task* task = m_emptyFoldersTask.get();
+
+				m_emptyFoldersTask->worker = std::thread([this, task]()
+					{
+						tabs[current_tab]->fileExplorer->find_empty_folders(tabs[current_tab]->selected_path, m_emptyFolders, task->cancel_request, task->finished);
+					});
+			}
+		}
+		ImGui::EndDisabled();
+
 		ImGui::SameLine();
 
 		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
 		if (ImGui::Button("Find Duplicates"))
 		{
+			// To be able to override the task mid seraching for the Duplicate files =====================
 			if (m_duplicateFilesTask != nullptr) 
 			{
 				m_duplicateFilesTask->cancel_request = true;
@@ -1361,17 +1378,34 @@ void ForestView::tool_bar()
 				m_duplicateFiles.clear();
 			}
 			if (!m_emptyFolders.empty()) m_emptyFolders.clear();
+			// ===========================================================================================
 
-			m_duplicateFilesTask = std::make_unique<Task>();
-			m_duplicateFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
-			m_duplicateFilesTask->task_type = TaskType::FIND_DUPLICATE_FILES;
+			if (tabs[current_tab]->selected_path.empty()) 
+			{
+				m_duplicateFilesTask = std::make_unique<Task>();
+				m_duplicateFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->current_path.string(), 32);
+				m_duplicateFilesTask->task_type = TaskType::FIND_DUPLICATE_FILES;
 
-			Task* task = m_duplicateFilesTask.get();
+				Task* task = m_duplicateFilesTask.get();
 
-			m_duplicateFilesTask->worker = std::thread([this, task]()
-				{
-					tabs[current_tab]->fileExplorer->find_duplicates(m_duplicateFiles, tabs[current_tab]->selected_path, task->cancel_request, task->finished);
-				});
+				m_duplicateFilesTask->worker = std::thread([this, task]()
+					{
+						tabs[current_tab]->fileExplorer->find_duplicates(m_duplicateFiles, tabs[current_tab]->current_path, task->cancel_request, task->finished);
+					});
+			}
+			else if (!tabs[current_tab]->selected_path.empty()) 
+			{
+				m_duplicateFilesTask = std::make_unique<Task>();
+				m_duplicateFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
+				m_duplicateFilesTask->task_type = TaskType::FIND_DUPLICATE_FILES;
+
+				Task* task = m_duplicateFilesTask.get();
+
+				m_duplicateFilesTask->worker = std::thread([this, task]()
+					{
+						tabs[current_tab]->fileExplorer->find_duplicates(m_duplicateFiles, tabs[current_tab]->selected_path, task->cancel_request, task->finished);
+					});
+			}
 
 		}
 		ImGui::EndDisabled();
