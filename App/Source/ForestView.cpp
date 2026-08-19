@@ -696,6 +696,7 @@ void ForestView::on_update()
 
 				if (ImGui::Begin(std::format("Finding Duplicates in {}", m_duplicateFilesTask->sourceName).c_str() )) 
 				{
+					// Duplicates tool bar ==========================================================================
 					if (ImGui::Button("X")) 
 					{
 						m_duplicateFilesTask->cancel_request = true;
@@ -707,21 +708,26 @@ void ForestView::on_update()
 					}
 					ImGui::Separator();
 				
-					for (const auto& group : m_duplicateFiles)
+					// Rendering the Duplicates =====================================================================
+					ImGuiListClipper DuplicatesClipper;
+					DuplicatesClipper.Begin(m_duplicateFiles.size());
+					while (DuplicatesClipper.Step()) 
 					{
-						for (const fs::directory_entry& duplicate : group) 
+						for (size_t i = DuplicatesClipper.DisplayStart ; i < DuplicatesClipper.DisplayEnd; ++i) 
 						{
-							ImGui::PushID(duplicate.path().string().c_str());
+							const fs::directory_entry& duplicate = m_duplicateFiles[i].duplicateEntry;
+							ImGui::PushID(i);
 
 							bool is_duplicate_selected = (duplicate.path() == tabs[current_tab]->selected_path) ? true : false;
 
 							ImGui::Selectable(duplicate.path().string().c_str(), &is_duplicate_selected);
 
-							if (ImGui::IsItemHovered()) 
+							// The mouse clicks behaviour ================================================================
+							if (ImGui::IsItemHovered())
 							{
-								if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) 
+								if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 								{
-									if (tabs[current_tab]->selected_path != duplicate.path()) 
+									if (tabs[current_tab]->selected_path != duplicate.path())
 									{
 										tabs[current_tab]->selected_path = duplicate.path();
 										tabs[current_tab]->need_file_size_call = true;
@@ -730,15 +736,22 @@ void ForestView::on_update()
 
 									ImGui::OpenPopup("DuplicatesRightClick");
 								}
-								if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) 
+								if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 								{
-									if (duplicate.path() == tabs[current_tab]->selected_path) 
+									if (duplicate.path() == tabs[current_tab]->selected_path)
 									{
 										tabs[current_tab]->selected_path.clear();
 									}
 								}
 							}
 
+							// To add a seprator after the last duplicate in the group ===================================
+							if (i + 1 < m_duplicateFiles.size() && m_duplicateFiles[i + 1].groupId != m_duplicateFiles[i].groupId)
+							{
+								ImGui::Separator();
+							}
+
+							// The Duplicates right click popup ========================================================== 
 							bool duplicate_is_open = ImGui::BeginPopup("DuplicatesRightClick");
 							if (duplicate_is_open)
 							{
