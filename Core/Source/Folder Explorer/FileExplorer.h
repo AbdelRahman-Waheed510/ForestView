@@ -131,6 +131,12 @@ FOLDERS,
 ALL
 };
 
+struct Duplicate 
+{
+	fs::directory_entry duplicateEntry;
+	int groupId = 0;
+};
+
 class Explorer 
 {
 private:
@@ -817,7 +823,7 @@ public:
 	}
 
 	// Duplicates APIs
-	void find_duplicates(std::vector<std::vector<fs::directory_entry>>& duplicates, const fs::path target, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	void find_duplicates(std::vector<Duplicate>& duplicates, const fs::path target, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{
 		Guard guard(finished);
 		if (cancel_request) 
@@ -962,6 +968,7 @@ public:
 			groups2[Hasher.HashFile(candidets[i], cancel_request)].emplace_back(candidets[i]);
 		}
 
+		int groupIdTemp = 0;
 		for (const auto& [key, value] : groups2)
 		{
 			if (cancel_request)
@@ -972,7 +979,15 @@ public:
 			{
 				continue;
 			}
-			duplicates.emplace_back(value);
+
+			for (const fs::directory_entry& entry : value) 
+			{
+				Duplicate duplicate;
+				duplicate.duplicateEntry = entry;
+				duplicate.groupId = groupIdTemp;
+				duplicates.emplace_back(duplicate);
+			}
+			groupIdTemp++;
 		}
 		return;
 	}
