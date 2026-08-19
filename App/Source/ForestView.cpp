@@ -767,18 +767,16 @@ void ForestView::on_update()
 										RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, newName);
 										if (rename.success)
 										{
-											if (is_searching_for_duplicates_files) 
+											if (is_searching_for_duplicates_files)
 											{
-												for (std::vector<fs::directory_entry>& group : m_duplicateFiles) 
+												for (Duplicate& DuplicateObject : m_duplicateFiles) 
 												{
-													for (fs::directory_entry& duplicate_to_rename : group) 
+													if (DuplicateObject.duplicateEntry.path() == tabs[current_tab]->selected_path) 
 													{
-														if (duplicate_to_rename.path() == tabs[current_tab]->selected_path) 
-														{
-															duplicate_to_rename.assign(rename.finalPath);
-														}
+														DuplicateObject.duplicateEntry.assign(rename.finalPath);
+														break;
 													}
-												}
+												}	
 											}
 											if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 											{
@@ -800,9 +798,10 @@ void ForestView::on_update()
 										ImGui::CloseCurrentPopup();
 									}
 									if (!tabs[current_tab]->message.empty()) ImGui::SameLine();
-									render_msg();
-									ImGui::Separator();
 
+									render_msg();
+
+									ImGui::Separator();
 
 								}
 
@@ -827,10 +826,9 @@ void ForestView::on_update()
 
 								ImGui::EndPopup();
 							}
-							
+
 							ImGui::PopID();
 						}
-						ImGui::Separator();
 					}
 				}
 				ImGui::End();
@@ -1536,13 +1534,34 @@ void ForestView::delete_warning()
 			
 			if (is_searching_for_duplicates_files && fs::is_regular_file(tabs[current_tab]->deleted_path))
 			{
-				for (std::vector<fs::directory_entry>& group : m_duplicateFiles) 
-				{
-					size_t count_deleted = std::erase_if(group, [this](const fs::directory_entry& entry) { return tabs[current_tab]->deleted_path == entry.path();});
-					if (count_deleted != 0 && (int)group.size() < 2)
+				auto targetIt = std::find_if(m_duplicateFiles.begin(), m_duplicateFiles.end(),
+					[this](const Duplicate& duplicateObj) {
+						return tabs[current_tab]->deleted_path == duplicateObj.duplicateEntry.path();
+					});
+
+				int tempId = 0;
+				size_t count_deleted = std::erase_if(m_duplicateFiles, [this, &tempId](const Duplicate& duplicateObj)
 					{
-						std::erase(m_duplicateFiles, group);
-						break;
+						if (tabs[current_tab]->deleted_path == duplicateObj.duplicateEntry.path())
+						{
+							tempId = duplicateObj.groupId;
+							return true;
+						}
+						return false;
+					});
+				if (count_deleted != 0)
+				{
+					size_t remainingInGroup = std::count_if(m_duplicateFiles.begin(), m_duplicateFiles.end(), [&tempId](const Duplicate& duplicateObj)
+						{
+							return duplicateObj.groupId == tempId;
+						});
+
+					if (remainingInGroup < 2) 
+					{
+						std::erase_if(m_duplicateFiles, [&tempId](const Duplicate& cleanUp)
+							{
+								return cleanUp.groupId == tempId;
+							});
 					}
 				}
 			}
@@ -1989,6 +2008,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 	}
 }
 
+// FOLDERS RIGHT CLICK 
 void ForestView::handle_right_click_operations()
 {
 	if (tabs[current_tab]->is_right_click_call)
@@ -2027,14 +2047,12 @@ void ForestView::handle_right_click_operations()
 					}
 					if (is_searching_for_duplicates_files && fs::is_regular_file(rename.finalPath))
 					{
-						for (std::vector<fs::directory_entry>& group : m_duplicateFiles)
+						for (Duplicate& DuplicateObject : m_duplicateFiles)
 						{
-							for (fs::directory_entry& duplicate_to_rename : group)
+							if (DuplicateObject.duplicateEntry.path() == tabs[current_tab]->selected_path)
 							{
-								if (duplicate_to_rename.path() == tabs[current_tab]->selected_path)
-								{
-									duplicate_to_rename.assign(rename.finalPath);
-								}
+								DuplicateObject.duplicateEntry.assign(rename.finalPath);
+								break;
 							}
 						}
 					}
