@@ -2519,6 +2519,8 @@ void ForestView::show_progress_bar(const std::string& overlay)
 
 void ForestView::shutdown_background_tasks()
 {
+	auto start = std::chrono::high_resolution_clock::now();
+
 	if (tabs[current_tab]->folder_structure.valid())
 	{
 		tabs[current_tab]->folder_structure.wait();
@@ -2541,12 +2543,44 @@ void ForestView::shutdown_background_tasks()
 	}
 
 	// The empty Folder Task shut down
-	m_emptyFoldersTask->cancel_request = true;
-	if (m_emptyFoldersTask->worker.joinable()) 
+	if (m_emptyFoldersTask != nullptr) 
+	{
+		m_emptyFoldersTask->cancel_request = true;
+		if (m_emptyFoldersTask->worker.joinable()) 
 	{
 		m_emptyFoldersTask->worker.join();
 	}
+	}
 	tabs[current_tab]->file_size_future.clear();
+
+	// The Duplicate Files Task shut down
+	if (m_duplicateFilesTask != nullptr) 
+	{
+		m_duplicateFilesTask->cancel_request = true;
+		if (m_duplicateFilesTask->worker.joinable())
+		{
+			m_duplicateFilesTask->worker.join();
+		}
+	}
+
+	// The Largest Files Task shut down
+	if (m_largestFilesTask != nullptr)
+	{
+		m_largestFilesTask->cancel_request = true;
+		if (m_largestFilesTask->worker.joinable())
+		{
+			m_largestFilesTask->worker.join();
+		}
+	}
+
+	auto end = std::chrono::high_resolution_clock::now();
+
+	std::chrono::duration<double> duration = end - start;
+	double durationToShow = duration.count();
+
+	if (durationToShow < 0.001) std::cout << "Time taken to shutdown the multithreaded tasks: " << durationToShow * 1000 * 1000 << " Microseconds" << std::endl;
+	else if (durationToShow < 1) std::cout << "Time taken to shutdown the multithreaded tasks: " << durationToShow * 1000 << " Milliseconds" << std::endl;
+	else std::cout << "Time taken to shutdown the multithreaded tasks: " << std::endl << duration.count() << " Seconds" << std::endl;
 }
 
 
