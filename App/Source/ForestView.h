@@ -226,6 +226,10 @@ private:
 	std::vector<Duplicate> m_duplicateFiles;
 	bool is_searching_for_duplicates_files = false;
 
+	std::unique_ptr<Task> m_largestFilesTask;
+	std::vector<fs::directory_entry> m_largestFiles;
+	bool is_searching_for_largest_files = false;
+
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
@@ -269,6 +273,8 @@ public:
 	void delete_warning();
 
 	void filter_by();
+
+	void largest_files_slider();
 
 	// Folders Tree 
 	void folders_tree(const float& remainingHeight);

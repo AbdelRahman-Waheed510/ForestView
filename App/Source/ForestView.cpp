@@ -687,7 +687,7 @@ void ForestView::on_update()
 			}
 		}
 
-		// Duplicate Files Ui
+		// Duplicate Files UI
 		if (m_duplicateFilesTask != nullptr)
 		{
 			if (m_duplicateFilesTask->cancel_request == false) 
@@ -846,6 +846,77 @@ void ForestView::on_update()
 			}
 		}
 		
+		// Largest Files UI
+		if (m_largestFilesTask != nullptr) 
+		{
+			if (m_largestFilesTask->cancel_request == false) 
+			{
+				is_searching_for_largest_files = true;
+				if (ImGui::Begin("Largest Files Window"))
+				{
+					// Largest Files Tool bar
+					if (ImGui::Button("Cancel"))
+					{
+						m_largestFilesTask->cancel_request = true;
+					}
+					if (!m_largestFilesTask->finished)
+					{
+						ImGui::Separator();
+						ImGui::Text("Searching for the largest files...");
+					}
+
+					ImGui::Separator();
+
+					if (ImGui::BeginTable("LargestFilesTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+					{
+						ImGui::TableSetupColumn("File Path");
+						ImGui::TableSetupColumn("File Size");
+						ImGui::TableHeadersRow();
+
+						ImGuiListClipper LargestFilesClipper;
+						LargestFilesClipper.Begin(m_largestFiles.size());
+						while (LargestFilesClipper.Step())
+						{
+							for (int i = LargestFilesClipper.DisplayStart; i < LargestFilesClipper.DisplayEnd; ++i)
+							{
+								ImGui::TableNextRow();
+
+								// File path ================================
+								ImGui::TableNextColumn();
+								std::u8string utf8_path = m_largestFiles[i].path().u8string();
+#if defined(__cpp_lib_char8_t)
+								std::string display_path(utf8_path.begin(), utf8_path.end());
+#else
+								std::string display_path = utf8_path;
+#endif
+								std::string label = display_path + "##" + std::to_string(i);
+								ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+
+								// File Size =================================
+								ImGui::TableNextColumn();
+								fileSize fileDataInfo = tabs[current_tab]->fileExplorer->decide_file_size_format(m_largestFiles[i].file_size());
+								ImGui::Text(std::format("{:.2f} {}", fileDataInfo.size, fileDataInfo.label).c_str());
+							}
+						}
+
+						ImGui::EndTable();
+					}
+
+					
+				}
+				ImGui::End();	
+			}
+			else if (m_largestFilesTask->finished == true) 
+			{
+				is_searching_for_largest_files = false;
+				if (m_largestFilesTask->worker.joinable()) 
+				{
+					m_largestFilesTask->worker.join();
+				}
+				m_largestFilesTask.reset();
+				m_largestFiles.clear();
+			}
+		}
 	}
 		ImGui::End();
 }
@@ -1410,6 +1481,14 @@ void ForestView::tool_bar()
 		}
 		ImGui::EndDisabled();
 
+		ImGui::SameLine();
+
+		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
+		if (ImGui::Button("Largest Files")) 
+		{
+			ImGui::OpenPopup("LargestFilesSizeMaximumSlider");
+		}
+		ImGui::EndDisabled();
 
 		float spacing = ImGui::GetStyle().ItemSpacing.x;
 		float padding = ImGui::GetStyle().FramePadding.x;
@@ -1438,6 +1517,8 @@ void ForestView::tool_bar()
 		delete_warning();
 
 		filter_by();
+
+		largest_files_slider();
 	}
 	ImGui::EndChild();
 	ImGui::PopStyleVar(1);
@@ -1664,6 +1745,60 @@ void ForestView::filter_by()
 		ImGui::EndPopup();
 	}
 }
+
+// Largest Files Size Slider popup
+void ForestView::largest_files_slider() 
+{
+	if (ImGui::BeginPopup("LargestFilesSizeMaximumSlider")) 
+	{
+		static float MaxSize = 10.0;
+		ImGui::SliderFloat("Max Size", &MaxSize, 10.0, 1024.0);
+		if (ImGui::Button("Find")) 
+		{
+			// To be able to override the task mid seraching for the Largest files =====================
+			if (m_largestFilesTask != nullptr) 
+			{
+				m_largestFilesTask->cancel_request = true;
+				if (m_largestFilesTask->worker.joinable())
+				{
+					m_largestFilesTask->worker.join();
+				}
+				m_largestFilesTask.reset();
+				m_largestFiles.clear();
+			}
+			// ===========================================================================================
+
+
+			if (tabs[current_tab]->selected_path.empty()) 
+			{
+				m_largestFilesTask = std::make_unique<Task>();
+				m_largestFilesTask->task_type = TaskType::FIND_LARGEST_FILES;
+				m_largestFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->current_path.string(), 32);
+
+				Task* task = m_largestFilesTask.get();
+
+				m_largestFilesTask->worker = std::thread([this, task]()
+					{
+						tabs[current_tab]->fileExplorer->find_largest_files(m_largestFiles, tabs[current_tab]->current_path, task->cancel_request, task->finished, MaxSize);
+					});
+			}
+			else if (!tabs[current_tab]->selected_path.empty()) 
+			{
+				m_largestFilesTask = std::make_unique<Task>();
+				m_largestFilesTask->task_type = TaskType::FIND_LARGEST_FILES;
+				m_largestFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
+				Task* task = m_largestFilesTask.get();
+				m_largestFilesTask->worker = std::thread([this, task]()
+					{
+						tabs[current_tab]->fileExplorer->find_largest_files(m_largestFiles, tabs[current_tab]->selected_path, task->cancel_request, task->finished, MaxSize);
+					});
+			}
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+}
+
 // ######################################################################################################################
 
 // Folders Tree 
@@ -1906,7 +2041,7 @@ void ForestView::render_entries()
 
 	else if (tabs[current_tab]->view_type == ROWS)
 	{
-		if (ImGui::BeginTable("entries", 4, 0))
+		if (ImGui::BeginTable("entries", 4, ImGuiTableFlags_Resizable))
 		{
 			ImGui::TableSetupColumn("Name");
 			ImGui::TableSetupColumn("Last Modified");
@@ -2180,6 +2315,9 @@ void ForestView::handle_right_click_operations()
 	}
 	was_open = is_open;
 }
+
+// TODO: FOLDERS LEFT CLICK (to be able to reuse other that what iam using in the duplicates right click) ##
+// #########################################################################################################
 
 void ForestView::left_double_click(const fs::directory_entry& entry)
 {

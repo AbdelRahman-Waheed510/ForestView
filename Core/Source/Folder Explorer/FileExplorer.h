@@ -991,4 +991,47 @@ public:
 		}
 		return;
 	}
+
+	// Find Largerst files 
+	void find_largest_files(std::vector<fs::directory_entry>& largest_files, const fs::path& target, std::atomic<bool>&cancel_request, std::atomic<bool>& finished, const double& MaxSize = 10.0)
+	{
+		Guard guard(finished);
+	
+		if (!largest_files.empty()) largest_files.clear();
+		std::error_code ec;
+
+		for (fs::recursive_directory_iterator it(target, fs::directory_options::skip_permission_denied, ec), end; it != end && !ec; it.increment(ec))
+		{
+			if (cancel_request) 
+			{
+				return;
+			}
+			const auto& entry = *it;
+			std::error_code entry_ec;
+			if (entry.is_regular_file(entry_ec) && !entry_ec)
+			{
+				auto size = entry.file_size(entry_ec);
+				if (!entry_ec && size >= MaxSize * 1024 * 1024)
+				{
+					largest_files.emplace_back(entry);
+
+					
+					fs::directory_entry key = largest_files.back();
+					int j = largest_files.size() - 1;
+
+					std::error_code err_key, err_prev;
+					
+					while (j > 0 && key.file_size(err_key) > largest_files[j - 1].file_size(err_prev))
+					{
+						if (err_key || err_prev) break;
+						largest_files[j] = largest_files[j - 1];
+						j--;
+					}
+					largest_files[j] = key;
+				}
+			}
+		}
+		return;
+	}
+
 };
