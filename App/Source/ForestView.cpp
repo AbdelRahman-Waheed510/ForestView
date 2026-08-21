@@ -639,7 +639,7 @@ void ForestView::on_update()
 		{
 			if (!m_emptyFoldersTask->cancel_request)
 			{
-				is_serching_for_empty_folders = true;
+				is_searching_for_empty_folders = true;
 				if (ImGui::Begin(std::format("Empty Folders in {}", m_emptyFoldersTask->sourceName).c_str()))
 				{
 					// Tool Bar for the empty folders panel
@@ -1642,7 +1642,7 @@ void ForestView::delete_warning()
 
 		if (ImGui::Button("YES"))
 		{
-			if (is_serching_for_empty_folders && fs::is_directory(tabs[current_tab]->deleted_path))
+			if (is_searching_for_empty_folders && fs::is_directory(tabs[current_tab]->deleted_path))
 			{
 				std::erase(m_emptyFolders, tabs[current_tab]->deleted_path);
 			}
@@ -2137,8 +2137,8 @@ void ForestView::render_debug_panel()
 	ImGui::Text("Deleted Path: "); ImGui::SameLine();
 	ImGui::Text(deleted_path_string_to_show.c_str());
 
-	std::string flag = (is_serching_for_empty_folders) ? "True" : "False";
-	ImGui::Text("is_serching_for_empty_folders Flag: "); ImGui::SameLine();
+	std::string flag = (is_searching_for_empty_folders) ? "True" : "False";
+	ImGui::Text("is_searching_for_empty_folders Flag: "); ImGui::SameLine();
 	ImGui::Text(flag.c_str());
 
 	std::string flag2 = (is_searching_for_duplicates_files) ? "True" : "False";
