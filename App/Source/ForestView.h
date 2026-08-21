@@ -89,7 +89,8 @@ struct State
 
 	bool is_searching = false;
 
-	bool is_right_click_call = false;
+	bool need_folder_right_click_call = false;
+	bool need_file_right_click_call = false;
 
 	fs::path selected_path;
 	fs::path current_path;
@@ -220,7 +221,7 @@ private:
 
 	std::unique_ptr<Task> m_emptyFoldersTask;
 	std::vector<fs::path> m_emptyFolders;
-	bool is_serching_for_empty_folders = false;
+	bool is_searching_for_empty_folders = false;
 
 	std::unique_ptr<Task> m_duplicateFilesTask;
 	std::vector<Duplicate> m_duplicateFiles;
@@ -290,13 +291,15 @@ public:
 
 	void handle_entries_mouse_click(const fs::directory_entry& entry);
 
-	void handle_right_click_operations();
+	void decide_correct_rightClick_popup();
+
+	void folders_right_click_popup(const fs::directory_entry& FolderEntry);
+
+	void files_right_click_popup(const fs::directory_entry& entry);
 
 	void left_double_click(const fs::directory_entry& entry);
 
 	void left_click(const fs::directory_entry& entry);
-
-	void right_click(const fs::directory_entry& entry);
 
 	// Stats Bar
 	void stats_bar();
