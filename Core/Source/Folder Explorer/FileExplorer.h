@@ -835,7 +835,7 @@ public:
 		std::vector<fs::directory_entry> candidets;
 
 		// putting the files in the candidtes vector [First Round]
-		for (const auto& entry : fs::directory_iterator(target,fs::directory_options::skip_permission_denied, ec))
+		for (const auto& entry : fs::recursive_directory_iterator(target,fs::directory_options::skip_permission_denied, ec))
 		{
 			if (cancel_request)
 			{
