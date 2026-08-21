@@ -1642,29 +1642,34 @@ void ForestView::delete_warning()
 
 		if (ImGui::Button("YES"))
 		{
+			// Syncing the Tasks (Duplicates , Empty Folders, Largest Files) =======================
+			// Sync the Empty Folders Deletion
 			if (is_searching_for_empty_folders && fs::is_directory(tabs[current_tab]->deleted_path))
 			{
 				std::erase(m_emptyFolders, tabs[current_tab]->deleted_path);
 			}
 			
-			if (is_searching_for_duplicates_files && fs::is_regular_file(tabs[current_tab]->deleted_path))
+			if (fs::is_regular_file(tabs[current_tab]->deleted_path))
 			{
-				auto targetIt = std::find_if(m_duplicateFiles.begin(), m_duplicateFiles.end(),
-					[this](const Duplicate& duplicateObj) {
-						return tabs[current_tab]->deleted_path == duplicateObj.duplicateEntry.path();
-					});
+				// Sync the Duplicate Files Deletion
+				if (is_searching_for_duplicates_files) 
+				{
+					auto targetIt = std::find_if(m_duplicateFiles.begin(), m_duplicateFiles.end(),
+						[this](const Duplicate& duplicateObj) {
+							return tabs[current_tab]->deleted_path == duplicateObj.duplicateEntry.path();
+						});
 
-				int tempId = 0;
-				size_t count_deleted = std::erase_if(m_duplicateFiles, [this, &tempId](const Duplicate& duplicateObj)
-					{
-						if (tabs[current_tab]->deleted_path == duplicateObj.duplicateEntry.path())
+					int tempId = 0;
+					size_t count_deleted = std::erase_if(m_duplicateFiles, [this, &tempId](const Duplicate& duplicateObj)
 						{
-							tempId = duplicateObj.groupId;
-							return true;
-						}
-						return false;
-					});
-				if (count_deleted != 0)
+							if (tabs[current_tab]->deleted_path == duplicateObj.duplicateEntry.path())
+							{
+								tempId = duplicateObj.groupId;
+								return true;
+							}
+							return false;
+						});
+					if (count_deleted != 0)
 				{
 					size_t remainingInGroup = std::count_if(m_duplicateFiles.begin(), m_duplicateFiles.end(), [&tempId](const Duplicate& duplicateObj)
 						{
@@ -1679,7 +1684,15 @@ void ForestView::delete_warning()
 							});
 					}
 				}
+				}
+				// Sync the Largest Files Deletion 
+				if (is_searching_for_largest_files) 
+				{
+					std::erase(m_largestFiles, tabs[current_tab]->deleted_path);
+				}
 			}
+			// =====================================================================================
+
 
 			if (tabs[current_tab]->fav.is_exist(tabs[current_tab]->deleted_path))
 			{
