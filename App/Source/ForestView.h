@@ -41,6 +41,7 @@ namespace fs = std::filesystem;
 
 #include "FileExplorer.h"
 #include "TasksManager.h"
+#include "Index.h"
 
 static int id = 1;
 
@@ -197,6 +198,7 @@ class ForestView : public App
 {
 private:
 	TexturesManager& M_texturesManager;
+	Index m_index;
 
 	float folder_icons_horizontel_indent = 20.0f;
 	float folder_icons_vertical_indent = 20.0f;
@@ -235,9 +237,12 @@ public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
 	{
-		tabs.push_back(std::make_unique<State>());
+		tabs.push_back(std::make_unique<State>());		
+
 		current_tab = 0;
 		size_count.size = 0.0;
+
+		std::thread([this]() { m_index.index(); }).detach();
 	}
 
 	~ForestView() 
