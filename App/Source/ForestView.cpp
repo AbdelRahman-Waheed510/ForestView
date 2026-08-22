@@ -643,10 +643,14 @@ void ForestView::on_update()
 				if (ImGui::Begin(std::format("Empty Folders in {}", m_emptyFoldersTask->sourceName).c_str()))
 				{
 					// Tool Bar for the empty folders panel
-					if (ImGui::Button("X"))
+					if (ImGui::Button("Cancel"))
 					{
 						m_emptyFoldersTask->cancel_request = true;
 					}
+
+					ImGui::SameLine();
+
+					ImGui::Text(std::format(" | Number of Empty Folders: {}", (int)m_emptyFolders.size()).c_str());
 
 					ImGui::Separator();
 
@@ -656,34 +660,47 @@ void ForestView::on_update()
 						ImGui::Separator();
 					}
 
-					ImGuiListClipper EmptyFoldersClipper;
-
-					EmptyFoldersClipper.Begin((int)m_emptyFolders.size());
-
-					while (EmptyFoldersClipper.Step()) 
+					if (ImGui::BeginTable("EmptyFoldersTable", 1, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
 					{
-						for (size_t j = EmptyFoldersClipper.DisplayStart; j < EmptyFoldersClipper.DisplayEnd; j++)
-						{
-							ImGui::PushID(j);
-							ImGui::Selectable(m_emptyFolders[j].string().c_str());
+						ImGui::TableSetupColumn("Folder Path");
+						ImGui::TableHeadersRow();
 
-							handle_entries_mouse_click(fs::directory_entry(m_emptyFolders[j]));
-							ImGui::PopID();
+						ImGuiListClipper EmptyFoldersClipper;
+
+						EmptyFoldersClipper.Begin((int)m_emptyFolders.size());
+
+						while (EmptyFoldersClipper.Step()) 
+						{
+							for (size_t j = EmptyFoldersClipper.DisplayStart; j < EmptyFoldersClipper.DisplayEnd; j++)
+							{
+								ImGui::PushID(j);
+								
+								ImGui::TableNextRow();
+								
+								ImGui::TableNextColumn();
+
+								ImGui::Selectable(m_emptyFolders[j].string().c_str());
+
+								handle_entries_mouse_click(fs::directory_entry(m_emptyFolders[j]));
+								ImGui::PopID();
+							}
 						}
+
+						ImGui::EndTable();
 					}
 				}
 				ImGui::End();
 			}
-
 			else if (m_emptyFoldersTask->finished)
 			{
-				is_serching_for_empty_folders = false;
+				is_searching_for_empty_folders = false;
 				if (m_emptyFoldersTask->worker.joinable())
 				{
 					m_emptyFoldersTask->worker.join();
 				}
 				m_emptyFoldersTask = nullptr;
 				m_emptyFolders.clear();
+				tabs[current_tab]->selected_path.clear();
 			}
 		}
 
@@ -697,10 +714,15 @@ void ForestView::on_update()
 				if (ImGui::Begin(std::format("Finding Duplicates in {}", m_duplicateFilesTask->sourceName).c_str() )) 
 				{
 					// Duplicates tool bar ==========================================================================
-					if (ImGui::Button("X")) 
+					if (ImGui::Button("Cancel")) 
 					{
 						m_duplicateFilesTask->cancel_request = true;
 					}
+
+					ImGui::SameLine();
+
+					ImGui::Text(std::format(" | Number of Duplicates: {}", (int)m_duplicateFiles.size()).c_str());
+					
 					if (!m_duplicateFilesTask->finished) 
 					{
 						ImGui::Separator();
@@ -709,129 +731,57 @@ void ForestView::on_update()
 					ImGui::Separator();
 				
 					// Rendering the Duplicates =====================================================================
-					ImGuiListClipper DuplicatesClipper;
-					DuplicatesClipper.Begin(m_duplicateFiles.size());
-					while (DuplicatesClipper.Step()) 
+					if (ImGui::BeginTable("DuplicatesTaskTable", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
 					{
-						for (size_t i = DuplicatesClipper.DisplayStart ; i < DuplicatesClipper.DisplayEnd; ++i) 
+						ImGui::TableSetupColumn("File Path");
+						ImGui::TableSetupColumn("File Size");
+						ImGui::TableHeadersRow();
+
+						ImGuiListClipper DuplicatesClipper;
+						DuplicatesClipper.Begin(m_duplicateFiles.size());
+						while (DuplicatesClipper.Step()) 
 						{
-							const fs::directory_entry& duplicate = m_duplicateFiles[i].duplicateEntry;
-							ImGui::PushID(i);
-
-							bool is_duplicate_selected = (duplicate.path() == tabs[current_tab]->selected_path) ? true : false;
-
-							ImGui::Selectable(duplicate.path().string().c_str(), &is_duplicate_selected);
-
-							// The mouse clicks behaviour ================================================================
-							if (ImGui::IsItemHovered())
+							for (size_t i = DuplicatesClipper.DisplayStart ; i < DuplicatesClipper.DisplayEnd; ++i) 
 							{
-								if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
-								{
-									if (tabs[current_tab]->selected_path != duplicate.path())
-									{
-										tabs[current_tab]->selected_path = duplicate.path();
-										tabs[current_tab]->need_file_size_call = true;
-										tabs[current_tab]->need_modified_since_call = true;
-									}
+								ImGui::PushID(i);
+								ImGui::TableNextRow();
 
-									ImGui::OpenPopup("DuplicatesRightClick");
-								}
-								if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+								const fs::directory_entry& duplicate = m_duplicateFiles[i].duplicateEntry;
+
+								bool is_duplicate_selected = (duplicate.path() == tabs[current_tab]->selected_path) ? true : false;
+
+								ImGui::TableNextColumn();
+								std::u8string utf8_path = duplicate.path().u8string();
+#if defined(__cpp_lib_char8_t)
+								std::string display_path(utf8_path.begin(), utf8_path.end());
+#else
+								std::string display_path = utf8_path;
+#endif
+								std::string label = display_path + "##" + std::to_string(i);
+
+								ImGui::Selectable(label.c_str(), &is_duplicate_selected);
+
+								// The mouse clicks behaviour ================================================================
+								handle_entries_mouse_click(duplicate);
+
+								// To add a seprator after the last duplicate in the group ===================================
+								ImGui::TableNextColumn();
+								const fileSize DuplicateSizeInfo = tabs[current_tab]->fileExplorer->decide_file_size_format(duplicate.file_size());
+								ImGui::Text(std::format("{:.2f} {}", DuplicateSizeInfo.size, DuplicateSizeInfo.label).c_str());
+
+								if (i + 1 < m_duplicateFiles.size() && m_duplicateFiles[i + 1].groupId != m_duplicateFiles[i].groupId)
 								{
-									if (duplicate.path() == tabs[current_tab]->selected_path)
-									{
-										tabs[current_tab]->selected_path.clear();
-									}
+							
 								}
+								ImGui::PopID();
 							}
-
-							// To add a seprator after the last duplicate in the group ===================================
-							if (i + 1 < m_duplicateFiles.size() && m_duplicateFiles[i + 1].groupId != m_duplicateFiles[i].groupId)
-							{
-								ImGui::Separator();
-							}
-
-							// The Duplicates right click popup ========================================================== 
-							bool duplicate_is_open = ImGui::BeginPopup("DuplicatesRightClick");
-							if (duplicate_is_open)
-							{
-								if (duplicate.path() != tabs[current_tab]->selected_path) tabs[current_tab]->selected_path = duplicate.path();
-								// Rename 
-								if (tabs[current_tab]->selected_path != tabs[current_tab]->selected_path.root_path())
-								{
-									ImGui::Separator();
-									static std::string newName;
-									ImGui::InputText("New Name##Duplicate", &newName);
-									if (ImGui::Button("Rename##Duplicate"))
-									{
-										RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, newName);
-										if (rename.success)
-										{
-											if (is_searching_for_duplicates_files)
-											{
-												for (Duplicate& DuplicateObject : m_duplicateFiles) 
-												{
-													if (DuplicateObject.duplicateEntry.path() == tabs[current_tab]->selected_path) 
-													{
-														DuplicateObject.duplicateEntry.assign(rename.finalPath);
-														break;
-													}
-												}	
-											}
-											if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
-											{
-												tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
-											}
-											if (tabs[current_tab]->recents.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath))
-											{
-											}
-											tabs[current_tab]->entries_need_update = true;
-											tabs[current_tab]->tree_need_update = true;
-											newName.clear();
-											tabs[current_tab]->selected_path = "";
-										}
-										else
-										{
-											tabs[current_tab]->selected_path = "";
-											tabs[current_tab]->message = "This name already exists";
-										}
-										ImGui::CloseCurrentPopup();
-									}
-									if (!tabs[current_tab]->message.empty()) ImGui::SameLine();
-
-									render_msg();
-
-									ImGui::Separator();
-
-								}
-
-								// Delete
-								if (ImGui::Button("Delete##Duplicate"))
-								{
-									need_delete_confirmation = true;
-									tabs[current_tab]->deleted_path = tabs[current_tab]->selected_path;
-									ImGui::CloseCurrentPopup();
-								}
-
-								// Copy path
-								if (ImGui::Button("Copy Path##Duplicate"))
-								{
-									tabs[current_tab]->show_rename_file = false;
-									ImGui::SetClipboardText(tabs[current_tab]->selected_path.string().c_str());
-
-
-									tabs[current_tab]->selected_path = "";
-									ImGui::CloseCurrentPopup();
-								}
-
-								ImGui::EndPopup();
-							}
-
-							ImGui::PopID();
 						}
+
+						ImGui::EndTable();
 					}
 				}
 				ImGui::End();
+
 			}
 			else if (m_duplicateFilesTask->finished == true) 
 			{
@@ -842,7 +792,7 @@ void ForestView::on_update()
 				}
 				m_duplicateFilesTask = nullptr;
 				m_duplicateFiles.clear();
-
+				tabs[current_tab]->selected_path.clear();
 			}
 		}
 		
@@ -859,6 +809,11 @@ void ForestView::on_update()
 					{
 						m_largestFilesTask->cancel_request = true;
 					}
+					
+					ImGui::SameLine();
+
+					ImGui::Text(std::format(" | Number of Largest Files: {}", (int)m_largestFiles.size()).c_str());
+
 					if (!m_largestFilesTask->finished)
 					{
 						ImGui::Separator();
@@ -879,6 +834,8 @@ void ForestView::on_update()
 						{
 							for (int i = LargestFilesClipper.DisplayStart; i < LargestFilesClipper.DisplayEnd; ++i)
 							{
+								ImGui::PushID(i);
+
 								ImGui::TableNextRow();
 
 								// File path ================================
@@ -892,10 +849,15 @@ void ForestView::on_update()
 								std::string label = display_path + "##" + std::to_string(i);
 								ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
 
+								// The mouse clicks behaviour ================================================================
+								handle_entries_mouse_click(m_largestFiles[i]);
+
 								// File Size =================================
 								ImGui::TableNextColumn();
 								fileSize fileDataInfo = tabs[current_tab]->fileExplorer->decide_file_size_format(m_largestFiles[i].file_size());
 								ImGui::Text(std::format("{:.2f} {}", fileDataInfo.size, fileDataInfo.label).c_str());
+
+								ImGui::PopID();
 							}
 						}
 
@@ -915,8 +877,13 @@ void ForestView::on_update()
 				}
 				m_largestFilesTask.reset();
 				m_largestFiles.clear();
+				tabs[current_tab]->selected_path.clear();
 			}
 		}
+
+
+
+		decide_correct_rightClick_popup();
 	}
 		ImGui::End();
 }
