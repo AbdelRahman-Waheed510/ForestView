@@ -26,16 +26,42 @@ private:
 	std::vector<FileInfo> m_dataBase;
 	std::unordered_map<std::string, std::vector<uint32_t>> m_extentionsIndex;
 	std::unordered_map<std::wstring, std::vector<uint32_t>> m_filenameIndex;
-	bool m_indexingDone = false;
-	uint32_t m_filesCount = 0;
-	uint32_t m_directoriesCount = 0;
+	std::atomic<bool> m_indexingDone{false};
+	std::atomic<uint32_t> m_filesCount{ 0 };
+	std::atomic<uint32_t> m_directoriesCount = { 0 };
 	std::mutex m_lock;
+	std::atomic<bool> m_cancel_request{ false };
+
+	std::thread m_indexingWorker;
 public:
-	
-	void index() 
+	Index() = default;
+
+	~Index() 
 	{
+		if (!m_indexingDone) 
+		{
+			m_cancel_request.store(true, std::memory_order_relaxed);
+		}
+		if (m_indexingWorker.joinable()) 
+		{
+			m_indexingWorker.join();
+		}
+	}
+
+	void startIdexing()
+	{
+		m_indexingWorker = std::thread([this]() {paralaizedIndex();});
+	}
+
+	void paralaizedIndex()
+	{
+		auto start = std::chrono::steady_clock::now();
+
 		wchar_t buffer[256];
 		DWORD buffer_len = GetLogicalDriveStringsW(ARRAYSIZE(buffer), buffer);
+
+		std::vector<std::future<void>> futures;
+
 		if (buffer_len > 0 && buffer_len < ARRAYSIZE(buffer)) {
 			wchar_t* drive = buffer;
 			while (*drive) {
@@ -47,7 +73,105 @@ public:
 					drive += wcslen(drive) + 1;
 					continue;
 				}
+
+				futures.emplace_back(std::async(std::launch::async, [this, partition]() 
+					{
+						indexPartition(partition);
+					}));
 				
+				drive += wcslen(drive) + 1;
+			}
+		}
+
+		for (auto& f : futures) f.get();
+
+		auto end = std::chrono::steady_clock::now();
+		auto seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+		std::cout << "Indexing took: " << seconds << "s\n";
+		m_indexingDone.store(true);
+	}
+
+	void indexPartition(const fs::directory_entry& partition) 
+	{
+		auto start = std::chrono::steady_clock::now();
+		constexpr int bufferSize = 1000;
+		std::array<FileInfo, bufferSize> filesBuffer;
+		size_t localFilesCount = 0;
+
+		auto flush = [&]() {
+			std::lock_guard<std::mutex> lock(m_lock);
+
+			for (size_t i = 0; i < localFilesCount; ++i)
+			{
+				auto& f = filesBuffer[i];
+				if (m_dataBase.size() == m_dataBase.capacity())
+					m_dataBase.reserve(m_dataBase.capacity() + 100000);
+
+				m_dataBase.emplace_back(f);
+				m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
+				m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
+				m_filesCount.fetch_add(1, std::memory_order_relaxed);
+				Id++;
+			}
+
+
+			localFilesCount = 0;
+			};
+
+		std::error_code ec1;
+		for (fs::recursive_directory_iterator it(partition.path(), fs::directory_options::skip_permission_denied, ec1), end; it != end && !ec1; it.increment(ec1))
+		{
+			if (m_cancel_request.load(std::memory_order_relaxed)) 
+			{
+				flush();
+				auto end = std::chrono::steady_clock::now();
+				std::wcout << partition.path().wstring() << L": "
+					<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+					<< L"ms\n";
+				return;
+			}
+			const fs::directory_entry& entry = *it;
+			const fs::path path = entry.path();
+	
+			std::error_code entryEc;
+			std::error_code dirEc;
+
+			if (entry.is_regular_file(entryEc) && !entryEc)
+			{
+				FileInfo info;
+				info.path = path;
+				std::error_code sizeEc;
+				info.size = entry.file_size(sizeEc);
+				if (sizeEc) continue;
+
+				filesBuffer[localFilesCount++] = std::move(info);
+			}
+		}
+		flush();
+
+		auto end = std::chrono::steady_clock::now();
+		std::wcout << partition.path().wstring() << L": "
+			<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+			<< L"ms\n";
+
+		if (ec1)
+		{
+			std::cerr << "Scanning error in "
+				<< partition.path()
+				<< ": "
+				<< ec1.message()
+				<< '\n';
+		}
+	}
+
+	const bool shouldSkip(const fs::path& path) 
+	{
+		DWORD attrs = GetFileAttributesW(path.c_str());
+		if (attrs == INVALID_FILE_ATTRIBUTES)
+			return true;
+
+		return (attrs & FILE_ATTRIBUTE_HIDDEN) || (attrs & FILE_ATTRIBUTE_SYSTEM);
+	}
 				std::error_code ec1;
 				for (fs::recursive_directory_iterator it(partition.path(), fs::directory_options::skip_permission_denied, ec1), end; it != end && !ec1; it.increment(ec1))
 				{

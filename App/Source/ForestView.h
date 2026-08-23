@@ -242,7 +242,7 @@ public:
 		current_tab = 0;
 		size_count.size = 0.0;
 
-		std::thread([this]() { m_index.index(); }).detach();
+		m_index.startIdexing();
 	}
 
 	~ForestView() 
