@@ -302,6 +302,41 @@ public:
 		return std::string(buffer.data(), to_next);
 	}
 
+	void printIndexStats() 
+	{
+		std::lock_guard<std::mutex> guard(m_lock);
+		std::cout << "Files Scanned: " << m_filesCount.load()
+			<< ", Directories Scanned: " << m_directoriesCount.load() << "\n";
+
+		std::cout << "Unique extensions: " << m_extentionsIndex.size() << "\n";
+		std::cout << "Unique filenames: " << m_filenameIndex.size() << "\n";
+		std::cout << "Unique folder names: " << m_foldersIndex.size() << "\n";
+
+		// top 10 most common extensions, e.g., useful sanity check
+		std::vector<std::pair<std::wstring, size_t>> extCounts;
+		for (auto& [key, value] : m_extentionsIndex)
+			extCounts.emplace_back(key, value.size());
+		std::sort(extCounts.begin(), extCounts.end(),
+			[](auto& a, auto& b) { return a.second > b.second; });
+		for (size_t i = 0; i < std::min<size_t>(10, extCounts.size()); ++i)
+			std::wcout << extCounts[i].first << L": " << extCounts[i].second << L"\n";
+	}
+
+	void printExtensionSample(const std::wstring& ext, size_t count = 10)
+	{
+		std::wcout << L"Extention sample for: [" << ext << L"]\n";
+		std::lock_guard<std::mutex> guard(m_lock);
+		auto it = m_extentionsIndex.find(ext);
+		if (it == m_extentionsIndex.end()) { std::cout << "not found\n"; return; }
+
+		size_t shown = 0;
+		for (uint32_t id : it->second)
+		{
+			if (shown++ >= count) break;
+			std::wcout << m_dataBase[id].path.wstring() << L"\n";
+		}
+	}
+
 	void printIndex() 
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
