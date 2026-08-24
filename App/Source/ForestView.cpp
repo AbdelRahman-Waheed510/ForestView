@@ -1457,6 +1457,31 @@ void ForestView::tool_bar()
 		}
 		ImGui::EndDisabled();
 
+		ImGui::SameLine();
+
+		// ##########################################################################
+		// For Debug TODO: Delete this button or remove it from the release mode
+		// ##########################################################################
+		ImGui::BeginDisabled(!m_index.isDone());
+		if (ImGui::Button("Print Index Stats")) 
+		{
+			m_index.printIndexStats();
+			m_index.printExtensionSample(L".exe");
+		}
+		ImGui::EndDisabled();
+		if (ImGui::BeginItemTooltip()) 
+		{
+			std::string isIndexingDone = (m_index.isDone()) ? "True" : "False";
+			ImGui::Text(isIndexingDone.c_str());
+			
+			ImGui::Text(std::format("Number of Files Scanned: {}", m_index.getFilesCount()).c_str());
+			ImGui::Text(std::format("Number of Directories Scanned: {}", m_index.getDirectoriesCount()).c_str());
+			ImGui::Text(std::format("Number of Total Entries Scanned: {}", m_index.getFilesCount() + m_index.getDirectoriesCount()).c_str());
+
+			ImGui::EndTooltip();
+		}
+		// ##########################################################################
+
 		float spacing = ImGui::GetStyle().ItemSpacing.x;
 		float padding = ImGui::GetStyle().FramePadding.x;
 		float target_pos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - (15.0f + padding * 1.7);
