@@ -348,6 +348,28 @@ public:
 		m_indexingDone = true;
 	}
 
+	void searchForExtention(std::vector<fs::path>& founds, const std::wstring& ext) 
+	{
+		if (!founds.empty()) founds.clear();
+		if (!ext.empty()) 
+		{
+			std::wstring extentionToSearchFor = ext;
+			if (ext[0] != L'.')
+			{
+				extentionToSearchFor = L"." + extentionToSearchFor;
+			}
+			if (m_extentionsIndex.contains(extentionToSearchFor))
+			{
+				founds.reserve(m_extentionsIndex[extentionToSearchFor].size());
+
+				for (const int& idx : m_extentionsIndex[extentionToSearchFor])
+				{
+					founds.emplace_back(m_dataBase[idx].path);
+				}
+			}
+		}
+	}
+
 	std::string to_utf8(const std::wstring& wstr) {
 		if (wstr.empty()) return {};
 
