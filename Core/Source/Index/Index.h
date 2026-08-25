@@ -93,9 +93,80 @@ public:
 		m_indexingDone.store(true);
 	}
 
-	void indexPartition(const fs::directory_entry& partition) 
+	void indexPartition(const fs::directory_entry& Partition)
 	{
 		auto start = std::chrono::steady_clock::now();
+
+		std::vector<std::future<void>> FoldersFuture;
+		std::error_code ec;
+		for (auto it = fs::directory_iterator(Partition.path(), fs::directory_options::skip_permission_denied, ec);
+			it != fs::directory_iterator() && !ec; it.increment(ec))
+		{
+			if (m_cancel_request.load(std::memory_order_relaxed))
+			{
+				auto end = std::chrono::steady_clock::now();
+				std::wcout << Partition.path().wstring() << L": "
+					<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+					<< L"ms\n";
+				break;
+			}
+			const fs::directory_entry entry = *it;
+			const fs::path path = entry.path();
+			std::error_code dirEc, fileEc;
+
+			if (entry.is_directory(dirEc) && !dirEc)
+			{
+				if (shouldSkip(path)) continue;
+
+				FoldersFuture.emplace_back(std::async(std::launch::async, [this, entry]() {
+					indexFolder(entry);
+					}));
+			}
+			else if (entry.is_regular_file(fileEc) && !fileEc)
+			{
+				FileInfo info;
+				info.path = path;
+				std::error_code sizeEc;
+				info.size = entry.file_size(sizeEc);
+				if (sizeEc) continue;
+
+				std::lock_guard<std::mutex> lock(m_lock);
+				if (m_dataBase.size() == m_dataBase.capacity())
+					m_dataBase.reserve(m_dataBase.capacity() + 100000);
+				m_dataBase.emplace_back(info);
+				m_extentionsIndex[path.extension().wstring()].emplace_back(Id);
+				m_filenameIndex[path.filename().wstring()].emplace_back(Id);
+				m_filesCount.fetch_add(1, std::memory_order_relaxed);
+				Id++;
+			}
+		}
+		for (auto& f : FoldersFuture) f.get();
+
+		auto end = std::chrono::steady_clock::now();
+		std::wcout << Partition.path().wstring() << L": "
+			<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+			<< L"ms\n";
+		if (ec)
+			std::cerr << "Error listing top-level of " << Partition.path() << ": " << ec.message() << '\n';
+	}
+
+	void indexFolder(const fs::directory_entry& Folder) 
+	{
+		auto start = std::chrono::steady_clock::now();
+
+		{
+		FileInfo info;
+		info.path = Folder.path();
+		std::lock_guard<std::mutex> lock(m_lock);
+
+		if (m_dataBase.size() == m_dataBase.capacity())
+			m_dataBase.reserve(m_dataBase.capacity() + 100000);
+
+		m_dataBase.emplace_back(info);
+		m_foldersIndex[Folder.path().filename().wstring()].emplace_back(Id);
+		m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
+		Id++;
+		}
 		constexpr int bufferSize = 1000;
 		std::array<FileInfo, bufferSize> filesBuffer;
 		std::array<FileInfo, bufferSize> foldersBuffer;
@@ -135,15 +206,11 @@ public:
 			};
 
 		std::error_code ec1;
-		for (fs::recursive_directory_iterator it(partition.path(), fs::directory_options::skip_permission_denied, ec1), end; it != end && !ec1; it.increment(ec1))
+		for (fs::recursive_directory_iterator it(Folder.path(), fs::directory_options::skip_permission_denied, ec1), end; it != end && !ec1; it.increment(ec1))
 		{
 			if (m_cancel_request.load(std::memory_order_relaxed)) 
 			{
 				flush();
-				auto end = std::chrono::steady_clock::now();
-				std::wcout << partition.path().wstring() << L": "
-					<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-					<< L"ms\n";
 				return;
 			}
 			const fs::directory_entry& entry = *it;
@@ -180,20 +247,19 @@ public:
 			}
 		}
 		flush();
-
-		auto end = std::chrono::steady_clock::now();
-		std::wcout << partition.path().wstring() << L": "
-			<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-			<< L"ms\n";
-
 		if (ec1)
 		{
 			std::cerr << "Scanning error in "
-				<< partition.path()
+				<< Folder.path()
 				<< ": "
 				<< ec1.message()
 				<< '\n';
 		}
+
+		auto end = std::chrono::steady_clock::now();
+		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		if (ms > 100) 
+			std::wcout << Folder.path().wstring() << L": " << ms << L"ms\n";
 	}
 
 	const bool shouldSkip(const fs::path& path) 
