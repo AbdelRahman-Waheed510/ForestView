@@ -881,7 +881,48 @@ void ForestView::on_update()
 			}
 		}
 
-
+		// Founds UI
+//		if (!m_founds.empty()) 
+//		{
+//			if (ImGui::Begin("Founds Entries Window"))
+//			{
+//				if (ImGui::Button("Cancel")) 
+//				{
+//					m_founds.clear();
+//				}
+//
+//				ImGui::SeparatorText("##a");
+//
+//				if (ImGui::BeginTable("FoundsTable", 1, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+//				{
+//					ImGui::TableSetupColumn("Path");
+//					ImGui::TableHeadersRow();
+//						
+//					ImGuiListClipper FoundsClipper;
+//					FoundsClipper.Begin((int)m_founds.size());
+//
+//					while (FoundsClipper.Step()) 
+//					{
+//						for (size_t i = FoundsClipper.DisplayStart; i < FoundsClipper.DisplayEnd; i++)
+//						{
+//							ImGui::TableNextRow();
+//
+//							ImGui::TableNextColumn();
+//							std::u8string utf8_path = m_founds[i].u8string();
+//#if defined(__cpp_lib_char8_t)
+//							std::string display_path(utf8_path.begin(), utf8_path.end());
+//#else
+//							std::string display_path = utf8_path;
+//#endif
+//							std::string label = display_path + "##" + std::to_string(i);
+//							ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+//						}
+//					}
+//					ImGui::EndTable();
+//				}
+//			}
+//			ImGui::End();
+//		}
 
 		decide_correct_rightClick_popup();
 	}
@@ -1211,6 +1252,7 @@ void ForestView::tool_bar()
 			}
 		}
 
+
 		ImGui::SameLine();
 
 		ImGui::BeginDisabled(!tabs[current_tab]->fileExplorer->can_go_forward());
@@ -1459,6 +1501,12 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
+		if (ImGui::Button("Advanced Search")) 
+		{
+			m_showSearchWindow = !m_showSearchWindow;
+		}
+
+		ImGui::SameLine();
 		// ##########################################################################
 		// For Debug TODO: Delete this button or remove it from the release mode
 		// ##########################################################################
@@ -1511,6 +1559,8 @@ void ForestView::tool_bar()
 		filter_by();
 
 		largest_files_slider();
+
+		advanced_search();
 	}
 	ImGui::EndChild();
 	ImGui::PopStyleVar(1);
@@ -1804,6 +1854,123 @@ void ForestView::largest_files_slider()
 	}
 }
 
+void ForestView::advanced_search()
+{
+	//ImGui::SetNextWindowSize(ImVec2(500.0f, 200.0f));
+
+	if (m_showSearchWindow) 
+	{
+		if (ImGui::Begin("AdvancedSearchWindow")) 
+		{
+			// Search Window Tool Bar
+			if (ImGui::Button("Close")) 
+			{
+				m_showSearchWindow = false;
+			}
+			ImGui::Separator();
+
+			static constexpr std::array<const char*, 2> searchByFilter = { "Name", "Extention" };
+
+			static SearchBy current_searchBy_filter = SearchBy::NAME;
+			int choice = static_cast<int>(current_searchBy_filter);
+
+			ImGui::SetNextItemWidth(150.0f);
+			if (ImGui::Combo("Search By: ", &choice, searchByFilter.data(), static_cast<int>(searchByFilter.size())))
+			{
+				current_searchBy_filter = static_cast<SearchBy>(choice);
+			}
+
+			ImGui::SeparatorText("Search inputs");
+			switch (current_searchBy_filter)
+			{
+			// Search By Name =====================================================
+			case SearchBy::NAME: 
+			{
+				static std::wstring FileNameSearch = L"";
+
+				if (InputTextWString("File/Folder Name", FileNameSearch))
+				{
+					if (FileNameSearch.size() >= 2)
+					{
+						m_index.fastNameLookUp(m_founds, FileNameSearch);
+					}
+					else
+					{
+						m_founds.clear();
+					}
+				}
+
+				break;
+			}
+			// Search By Extention ================================================
+			case SearchBy::EXTENTION:
+			{
+				static std::wstring ExtentionNameSearch = L"";
+				if (InputTextWString("Extention Name", ExtentionNameSearch))
+				{
+
+				}
+
+				if (ImGui::Button("Search"))
+				{
+					m_index.searchForExtention(m_founds, ExtentionNameSearch);
+				}
+
+				break;
+			}
+
+			default:
+				break;
+			}
+			ImGui::SeparatorText("Founds ");
+
+			if (!m_founds.empty())
+			{
+				if (ImGui::Button("Cancel"))
+				{
+					m_founds.clear();
+				}
+
+				ImGui::SeparatorText("##a");
+
+				if (ImGui::BeginTable("FoundsTable", 1, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+				{
+					ImGui::TableSetupColumn("Path");
+					ImGui::TableHeadersRow();
+
+					ImGuiListClipper FoundsClipper;
+					FoundsClipper.Begin((int)m_founds.size());
+
+					while (FoundsClipper.Step())
+					{
+						for (size_t i = FoundsClipper.DisplayStart; i < FoundsClipper.DisplayEnd; i++)
+						{
+							ImGui::TableNextRow();
+
+							ImGui::TableNextColumn();
+							std::u8string utf8_path = m_founds[i].u8string();
+	#if defined(__cpp_lib_char8_t)
+							std::string display_path(utf8_path.begin(), utf8_path.end());
+	#else
+							std::string display_path = utf8_path;
+	#endif
+							std::string label = display_path + "##" + std::to_string(i);
+							ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+
+							handle_entries_mouse_click(fs::directory_entry(m_founds[i]));
+						}
+					}
+					ImGui::EndTable();
+				}
+			}
+			else 
+			{
+				ImGui::Text("Nothing Found");
+			}
+		}
+			ImGui::End();
+	}
+}
 // FOLDERS RIGHT CLICK 
 void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntry)
 {

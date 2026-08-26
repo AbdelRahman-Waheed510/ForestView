@@ -109,6 +109,7 @@ namespace Utils
 	std::string reform_string(const std::string& str, const int& count);
 	
 	const std::string file_type_to_string(const fs::file_type& type);
+
 };
 
 struct RenameReturn 
@@ -135,6 +136,18 @@ struct Duplicate
 {
 	fs::directory_entry duplicateEntry;
 	int groupId = 0;
+};
+
+enum class SearchBy 
+{
+NAME,
+EXTENTION,
+};
+
+enum class SearchFor
+{
+FILE,
+FOLDER,
 };
 
 class Explorer 

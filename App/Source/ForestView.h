@@ -4,6 +4,8 @@
 #include <fstream>
 #include <algorithm>
 #include <string>
+#include <codecvt>
+#include <locale>
 #include <vector>
 #include <limits>
 #include <cmath>
@@ -233,6 +235,8 @@ private:
 	std::vector<fs::directory_entry> m_largestFiles;
 	bool is_searching_for_largest_files = false;
 
+	std::vector<fs::path> m_founds;
+	bool m_showSearchWindow = false;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
@@ -282,6 +286,7 @@ public:
 
 	void largest_files_slider();
 
+	void advanced_search();
 	// Folders Tree 
 	void folders_tree(const float& remainingHeight);
 
@@ -322,4 +327,29 @@ public:
 	std::unique_ptr<State> open_new_tab(std::unique_ptr<State>& newTab);
 
 	std::unique_ptr<State> open_copy_tab(std::unique_ptr<State>& newTab);
+
+	std::string WStringToUTF8(const std::wstring& wstr) {
+		if (wstr.empty()) return "";
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		return converter.to_bytes(wstr);
+	}
+
+	// Convert UTF-8 std::string to std::wstring
+	std::wstring UTF8ToWString(const std::string& str) {
+		if (str.empty()) return L"";
+		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
+		return converter.from_bytes(str);
+	}
+
+	bool InputTextWString(const char* label, std::wstring& wstr, ImGuiInputTextFlags flags = 0) {
+		std::string utf8_str = WStringToUTF8(wstr);
+
+		// 2. Pass the UTF-8 string to ImGui
+		if (ImGui::InputText(label, &utf8_str, flags)) {
+			// 3. If modified, translate the output back to the original wstring
+			wstr = UTF8ToWString(utf8_str);
+			return true; // Returns true exactly when text changes
+		}
+		return false;
+	}
 };
