@@ -9,6 +9,7 @@
 #include <ostream>
 #include <istream>
 #include <future>
+#include <array>
 
 namespace fs = std::filesystem;
 
@@ -18,12 +19,158 @@ struct FileInfo
 	uintmax_t size;
 };
 
+class Trie
+{
+private:
+	struct Node
+	{
+		wchar_t val;
+		std::unordered_map<wchar_t, Node*> children;
+		bool isLeaf;
+		std::vector<uint32_t> Paths;
+
+		Node() 
+		{
+			isLeaf = false;
+		}
+
+		Node(const wchar_t& value)
+		{
+			val = value;
+			isLeaf = false;
+		}
+
+		~Node()
+		{
+			for (const auto& [key, value] : children)
+			{
+				delete value;
+			}
+		}
+	};
+
+	Node* m_root;
+
+private:
+
+	bool RemoveHelper(Node* curr, const std::wstring& word, size_t depth)
+	{
+		if (curr == nullptr) return false;
+
+		if (depth == word.length())
+		{
+			if (!curr->isLeaf) return false;
+			curr->isLeaf = false;
+
+			return curr->children.empty();
+		}
+
+		wchar_t ch = word[depth];
+		auto it = curr->children.find(ch);
+		if (it == curr->children.end()) return false;
+
+		bool shouldDeleteChild = RemoveHelper(it->second, word, depth + 1);
+
+		if (shouldDeleteChild)
+		{
+			Node* childToDelete = it->second;
+			curr->children.erase(it);
+			delete childToDelete; 
+
+			return !curr->isLeaf && curr->children.empty();
+		}
+
+		return false;
+	}
+
+	void CollectPaths(Node* node, std::vector<uint32_t>& results) const
+	{
+		if (node == nullptr) return;
+
+		// If this node represents a complete filename, append its stored path IDs
+		if (node->isLeaf)
+		{
+			results.insert(results.end(), node->Paths.begin(), node->Paths.end());
+		}
+
+		// Traverse all child branches
+		for (const auto& [ch, childNode] : node->children)
+		{
+			CollectPaths(childNode, results);
+		}
+	}
+
+public:
+
+	Trie()
+	{
+		m_root = new Node();
+	}
+
+	~Trie() 
+	{
+		delete m_root;
+	}
+
+	static std::wstring ToLowerW(std::wstring s)
+	{
+		if (!s.empty())
+			CharLowerBuffW(s.data(), static_cast<DWORD>(s.size()));
+		return s;
+	}
+
+	bool Insert(const std::wstring& word, uint32_t path)
+	{
+		std::wstring key = ToLowerW(word);
+		bool createdNewNode = false;
+		Node* curr = m_root;
+		for (const wchar_t& x : key)
+		{
+			if (curr->children.find(x) == curr->children.end())
+			{
+				curr->children[x] = new Node(x);
+				createdNewNode = true;
+			}
+			curr = curr->children[x];
+		}
+		curr->Paths.emplace_back(path);
+		curr->isLeaf = true;
+		return createdNewNode;
+	}
+
+	bool Remove(const std::wstring& word)
+	{
+		if (m_root == nullptr || word.empty()) return false;
+		return RemoveHelper(m_root, word, 0);
+	}
+
+	std::vector<uint32_t> SearchPrefix(const std::wstring& prefix) const
+	{
+		std::wstring key = ToLowerW(prefix);
+		Node* curr = m_root;
+		for (const wchar_t& x : key)
+		{
+			auto it = curr->children.find(x);
+			if (it == curr->children.end())
+			{
+				return {};
+			}
+			curr = it->second;
+		}
+
+		std::vector<uint32_t> result;
+		CollectPaths(curr, result);
+		return result;
+	}
+};
+
 class Index 
 {
 private:
 
 	uint32_t Id = 0;
 
+	Trie trie;
 	std::vector<FileInfo> m_dataBase;
 	std::unordered_map<std::wstring, std::vector<uint32_t>> m_extentionsIndex;
 	std::unordered_map<std::wstring, std::vector<uint32_t>> m_filenameIndex;
@@ -136,6 +283,7 @@ public:
 				m_dataBase.emplace_back(info);
 				m_extentionsIndex[path.extension().wstring()].emplace_back(Id);
 				m_filenameIndex[path.filename().wstring()].emplace_back(Id);
+				trie.Insert(path.filename().wstring(), Id);
 				m_filesCount.fetch_add(1, std::memory_order_relaxed);
 				Id++;
 			}
@@ -164,6 +312,7 @@ public:
 
 		m_dataBase.emplace_back(info);
 		m_foldersIndex[Folder.path().filename().wstring()].emplace_back(Id);
+		trie.Insert(Folder.path().filename().wstring(), Id);
 		m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
 		Id++;
 		}
@@ -186,6 +335,7 @@ public:
 				m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
 				m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
 				m_filesCount.fetch_add(1, std::memory_order_relaxed);
+				trie.Insert(f.path.filename().wstring(), Id);
 				Id++;
 			}
 
@@ -198,6 +348,7 @@ public:
 				m_dataBase.emplace_back(d);
 				m_foldersIndex[d.path.filename().wstring()].emplace_back(Id);
 				m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
+				trie.Insert(d.path.filename().wstring(), Id);
 				Id++;
 			}
 
@@ -492,4 +643,16 @@ public:
 	{
 		return m_directoriesCount.load();
 	}
+
+	void fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& filename) 
+	{
+		if (!founds.empty()) founds.clear();
+		std::vector<uint32_t> indexes = trie.SearchPrefix(filename);
+
+		for (const auto& idx : indexes)
+		{
+			founds.emplace_back(m_dataBase[idx].path);
+		}
+	}
 };
+
