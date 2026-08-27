@@ -182,6 +182,8 @@ private:
 	std::atomic<bool> m_cancel_request{ false };
 
 	std::thread m_indexingWorker;
+
+	std::atomic<uint64_t> m_lockWaitNs{ 0 };
 public:
 	Index() = default;
 
@@ -237,6 +239,9 @@ public:
 		auto end = std::chrono::steady_clock::now();
 		auto seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
 		std::cout << "Indexing took: " << seconds << "s\n";
+
+		std::cout << "Time Taken by look [m_lockWaitNs.load() / 1000000]" << m_lockWaitNs.load() / 1000000 << std::endl;
+
 		m_indexingDone.store(true);
 	}
 
@@ -277,7 +282,13 @@ public:
 				info.size = entry.file_size(sizeEc);
 				if (sizeEc) continue;
 
+				auto t0 = std::chrono::steady_clock::now();
 				std::lock_guard<std::mutex> lock(m_lock);
+				auto t1 = std::chrono::steady_clock::now();
+				m_lockWaitNs.fetch_add(
+					std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
+					std::memory_order_relaxed);
+
 				if (m_dataBase.size() == m_dataBase.capacity())
 					m_dataBase.reserve(m_dataBase.capacity() + 100000);
 				m_dataBase.emplace_back(info);
@@ -305,7 +316,12 @@ public:
 		{
 		FileInfo info;
 		info.path = Folder.path();
+		auto t0 = std::chrono::steady_clock::now();
 		std::lock_guard<std::mutex> lock(m_lock);
+		auto t1 = std::chrono::steady_clock::now();
+		m_lockWaitNs.fetch_add(
+			std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
+			std::memory_order_relaxed);
 
 		if (m_dataBase.size() == m_dataBase.capacity())
 			m_dataBase.reserve(m_dataBase.capacity() + 100000);
@@ -316,14 +332,19 @@ public:
 		m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
 		Id++;
 		}
-		constexpr int bufferSize = 1000;
+		constexpr int bufferSize = 10000;
 		std::array<FileInfo, bufferSize> filesBuffer;
 		std::array<FileInfo, bufferSize> foldersBuffer;
 		size_t localFilesCount = 0;
 		size_t localFoldersCount = 0;
 
 		auto flush = [&]() {
+			auto t0 = std::chrono::steady_clock::now();
 			std::lock_guard<std::mutex> lock(m_lock);
+			auto t1 = std::chrono::steady_clock::now();
+			m_lockWaitNs.fetch_add(
+				std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
+				std::memory_order_relaxed);
 
 			for (size_t i = 0; i < localFilesCount; ++i)
 			{
@@ -462,7 +483,12 @@ public:
 							continue;
 						}
 
+						auto t0 = std::chrono::steady_clock::now();
 						std::lock_guard<std::mutex> m_UpadtingTheIndexGuard(m_lock);
+						auto t1 = std::chrono::steady_clock::now();
+						m_lockWaitNs.fetch_add(
+							std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
+							std::memory_order_relaxed);
 
 						m_dataBase.emplace_back(info);
 						m_filesCount++;
@@ -476,7 +502,13 @@ public:
 						FileInfo info;
 						info.path = path;
 
+
+						auto t0 = std::chrono::steady_clock::now();
 						std::lock_guard<std::mutex> m_UpadtingTheIndexGuard(m_lock);
+						auto t1 = std::chrono::steady_clock::now();
+						m_lockWaitNs.fetch_add(
+							std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
+							std::memory_order_relaxed);
 
 						m_dataBase.emplace_back(info);
 						m_directoriesCount++;
