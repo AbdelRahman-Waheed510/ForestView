@@ -1230,22 +1230,25 @@ void ForestView::tool_bar()
 	if (ImGui::BeginChild("ToolBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 	{
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
-		if (ImGui::ImageButton("##<--", M_texturesManager.get_backwards_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
+		if (ImGui::ImageButton("##<--", M_texturesManager.get_backwards_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 		{
 			tabs[current_tab]->show_selected_folder_options = false;
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
 			tabs[current_tab]->globalKeyWord = "";
 			tabs[current_tab]->selected_path = "";
-			if (ImGui::IsKeyPressed(ImGuiKey_Backspace)) {
+			tabs[current_tab]->fileExplorer->back(tabs[current_tab]->current_path);
+			tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
+			tabs[current_tab]->entries_need_update = true;
 
-				if (!ImGui::GetIO().WantCaptureKeyboard) {
-					tabs[current_tab]->fileExplorer->back(tabs[current_tab]->current_path);
-					tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
-					tabs[current_tab]->entries_need_update = true;
-				}
-			}
-			else
+		}
+		if (!ImGui::GetIO().WantCaptureKeyboard) 
+		{
+			if (ImGui::IsKeyPressed(ImGuiKey_Backspace, false)) 
 			{
+				tabs[current_tab]->show_selected_folder_options = false;
+				tabs[current_tab]->ThisDirectoryKeyWord = "";
+				tabs[current_tab]->globalKeyWord = "";
+				tabs[current_tab]->selected_path = "";
 				tabs[current_tab]->fileExplorer->back(tabs[current_tab]->current_path);
 				tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
 				tabs[current_tab]->entries_need_update = true;
