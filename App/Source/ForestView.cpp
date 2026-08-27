@@ -1870,6 +1870,11 @@ void ForestView::advanced_search()
 			{
 				m_showSearchWindow = false;
 			}
+
+			ImGui::SameLine();
+
+			ImGui::Text(std::format(" | Number of Founds: {}", (int)m_founds.size()).c_str());
+
 			ImGui::Separator();
 
 			static constexpr std::array<const char*, 2> searchByFilter = { "Name", "Extention" };
@@ -1911,11 +1916,6 @@ void ForestView::advanced_search()
 				static std::wstring ExtentionNameSearch = L"";
 				if (InputTextWString("Extention Name", ExtentionNameSearch))
 				{
-
-				}
-
-				if (ImGui::Button("Search"))
-				{
 					m_index.searchForExtention(m_founds, ExtentionNameSearch);
 				}
 
@@ -1927,6 +1927,7 @@ void ForestView::advanced_search()
 			}
 			ImGui::SeparatorText("Founds ");
 
+			// Founds Table =========================================================
 			if (!m_founds.empty())
 			{
 				if (ImGui::Button("Cancel"))
@@ -1936,9 +1937,11 @@ void ForestView::advanced_search()
 
 				ImGui::SeparatorText("##a");
 
-				if (ImGui::BeginTable("FoundsTable", 1, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
+				if (ImGui::BeginTable("FoundsTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
 				{
 					ImGui::TableSetupColumn("Path");
+					ImGui::TableSetupColumn("Type");
+					ImGui::TableSetupColumn("Size");
 					ImGui::TableHeadersRow();
 
 					ImGuiListClipper FoundsClipper;
@@ -1950,17 +1953,48 @@ void ForestView::advanced_search()
 						{
 							ImGui::TableNextRow();
 
-							ImGui::TableNextColumn();
-							std::u8string utf8_path = m_founds[i].u8string();
-	#if defined(__cpp_lib_char8_t)
-							std::string display_path(utf8_path.begin(), utf8_path.end());
-	#else
-							std::string display_path = utf8_path;
-	#endif
-							std::string label = display_path + "##" + std::to_string(i);
-							ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
 
-							handle_entries_mouse_click(fs::directory_entry(m_founds[i]));
+							// ========================================== Path ================================================
+							ImGui::TableNextColumn();
+							std::u8string utf8_filename= m_founds[i].filename().u8string();
+	#if defined(__cpp_lib_char8_t)
+							std::string display_filename(utf8_filename.begin(), utf8_filename.end());
+	#else
+							std::string display_path = utf8_filename;
+	#endif
+							std::string label = display_filename + "##" + std::to_string(i);
+
+
+							ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+							if (ImGui::BeginItemTooltip()) 
+							{
+								std::u8string utf8_path = m_founds[i].u8string();
+#if defined(__cpp_lib_char8_t)
+								std::string display_path(utf8_path.begin(), utf8_path.end());
+#else
+								std::string display_path = utf8_path;
+#endif
+								ImGui::Text(display_path.c_str());
+								ImGui::EndTooltip();
+							}
+							fs::directory_entry foundsEntry = fs::directory_entry(m_founds[i]);
+							handle_entries_mouse_click(foundsEntry);
+
+							// ========================================== Type ================================================
+							ImGui::TableNextColumn();
+							fs::file_type type = foundsEntry.status().type();
+
+							ImGui::Selectable(Utils::file_type_to_string(type).c_str());
+
+							// ========================================== Size ================================================
+							ImGui::TableNextColumn();
+
+							if (!foundsEntry.is_directory())
+							{
+								fileSize size = tabs[current_tab]->fileExplorer->decide_file_size_format(foundsEntry.file_size());
+								ImGui::Selectable(std::format("{:.2f} {}", size.size, size.label).c_str());
+							}
+
 						}
 					}
 					ImGui::EndTable();
@@ -1974,6 +2008,7 @@ void ForestView::advanced_search()
 			ImGui::End();
 	}
 }
+
 // FOLDERS RIGHT CLICK 
 void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntry)
 {
