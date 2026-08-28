@@ -2591,6 +2591,15 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			{
 				left_double_click(entry);
 			}
+			else if (entry.is_regular_file()) 
+			{
+				const fs::path& path = entry.path().parent_path();
+				if (tabs[current_tab]->current_path != path)
+				{
+					const fs::directory_entry parent = fs::directory_entry(path);
+					left_double_click(parent);
+				}
+			}
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))	
 		{
