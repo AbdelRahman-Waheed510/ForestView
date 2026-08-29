@@ -678,6 +678,37 @@ public:
 		}
 	}
 
+	void fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& filename) 
+	{
+		if (!founds.empty()) founds.clear();
+		std::vector<uint32_t> indexes = trie.SearchPrefix(filename);
+
+		for (const auto& idx : indexes)
+		{
+			founds.emplace_back(m_dataBase[idx].path);
+		}
+	}
+
+	void fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& filename, const fs::path& root_path)
+	{
+		if (!founds.empty()) founds.clear();
+		std::vector<uint32_t> indexes = trie.SearchPrefix(filename);
+
+		for (const auto& idx : indexes)
+		{
+			const fs::path& candidate = m_dataBase[idx].path;
+
+			const auto x = std::mismatch(
+				candidate.begin(), candidate.end(),
+				root_path.begin(), root_path.end()
+			);
+
+			if (x.second ==  root_path.end())
+			{
+				founds.emplace_back(m_dataBase[idx].path);
+			}
+		}
+	}
 
 	// Utils
 	constexpr bool shouldSkip(DWORD attrs) 
@@ -722,17 +753,6 @@ public:
 	const uint32_t getDirectoriesCount() 
 	{
 		return m_directoriesCount.load();
-	}
-
-	void fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& filename) 
-	{
-		if (!founds.empty()) founds.clear();
-		std::vector<uint32_t> indexes = trie.SearchPrefix(filename);
-
-		for (const auto& idx : indexes)
-		{
-			founds.emplace_back(m_dataBase[idx].path);
-		}
 	}
 };
 
