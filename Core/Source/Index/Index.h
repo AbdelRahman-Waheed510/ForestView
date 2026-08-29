@@ -13,6 +13,22 @@
 
 namespace fs = std::filesystem;
 
+constexpr static int s_bufferSize = 10000;
+
+inline fs::path ToLongPath(const fs::path& p)
+{
+	std::wstring s = p.wstring();
+	if (s.rfind(LR"(\\?\)", 0) == 0)
+		return p;
+
+	std::error_code ec;
+	fs::path abs = fs::absolute(p, ec);
+	if (ec) return p;
+
+	abs = abs.lexically_normal();
+	return fs::path(LR"(\\?\)" + abs.wstring());
+}
+
 struct FileInfo 
 {
 	fs::path path;
@@ -248,12 +264,25 @@ public:
 	void indexPartition(const fs::directory_entry& Partition)
 	{
 		auto start = std::chrono::steady_clock::now();
-
 		std::vector<std::future<void>> FoldersFuture;
-		std::error_code ec;
-		for (auto it = fs::directory_iterator(Partition.path(), fs::directory_options::skip_permission_denied, ec);
-			it != fs::directory_iterator() && !ec; it.increment(ec))
+		// ###########################################################################################################
+		//                                              Windows APIs Way
+		// ###########################################################################################################
+		WIN32_FIND_DATAW Entry;
+
+		fs::path par = ToLongPath(Partition.path()) / L"*";
+
+		HANDLE searchToken = FindFirstFileExW(par.c_str(), FindExInfoBasic, &Entry, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
+
+		if (searchToken == INVALID_HANDLE_VALUE) return;
+		
+		do
 		{
+			if (wcscmp(Entry.cFileName, L".") == 0 || wcscmp(Entry.cFileName, L"..") == 0)
+			{
+				continue;
+			}
+
 			if (m_cancel_request.load(std::memory_order_relaxed))
 			{
 				auto end = std::chrono::steady_clock::now();
@@ -262,25 +291,22 @@ public:
 					<< L"ms\n";
 				break;
 			}
-			const fs::directory_entry entry = *it;
-			const fs::path path = entry.path();
-			std::error_code dirEc, fileEc;
+			const fs::path path = Partition.path() / Entry.cFileName;
 
-			if (entry.is_directory(dirEc) && !dirEc)
+			if (Entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
 			{
-				if (shouldSkip(path)) continue;
+				if (shouldSkip(Entry.dwFileAttributes)) continue;
+				if (Entry.dwFileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) continue;
 
-				FoldersFuture.emplace_back(std::async(std::launch::async, [this, entry]() {
-					indexFolder(entry);
+				FoldersFuture.emplace_back(std::async(std::launch::async, [this, path]() {
+					indexFolder(path);
 					}));
 			}
-			else if (entry.is_regular_file(fileEc) && !fileEc)
+			else if (!(Entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && !(Entry.dwFileAttributes & FILE_ATTRIBUTE_DEVICE))
 			{
 				FileInfo info;
 				info.path = path;
-				std::error_code sizeEc;
-				info.size = entry.file_size(sizeEc);
-				if (sizeEc) continue;
+				info.size = (static_cast<uint64_t>(Entry.nFileSizeHigh) << 32) | Entry.nFileSizeLow;
 
 				auto t0 = std::chrono::steady_clock::now();
 				std::lock_guard<std::mutex> lock(m_lock);
@@ -299,42 +325,47 @@ public:
 				Id++;
 			}
 		}
+		while (FindNextFileW(searchToken, &Entry));
+		
+		FindClose(searchToken);
+
+		// ###########################################################################################################
+
 		for (auto& f : FoldersFuture) f.get();
 
 		auto end = std::chrono::steady_clock::now();
 		std::wcout << Partition.path().wstring() << L": "
 			<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
 			<< L"ms\n";
-		if (ec)
-			std::cerr << "Error listing top-level of " << Partition.path() << ": " << ec.message() << '\n';
 	}
 
-	void indexFolder(const fs::directory_entry& Folder) 
+	void indexFolder(const fs::path& Folder)
 	{
 		auto start = std::chrono::steady_clock::now();
 
+		// 1. Index the current root folder entry
 		{
-		FileInfo info;
-		info.path = Folder.path();
-		auto t0 = std::chrono::steady_clock::now();
-		std::lock_guard<std::mutex> lock(m_lock);
-		auto t1 = std::chrono::steady_clock::now();
-		m_lockWaitNs.fetch_add(
-			std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
-			std::memory_order_relaxed);
+			FileInfo info;
+			info.path = Folder;
+			auto t0 = std::chrono::steady_clock::now();
+			std::lock_guard<std::mutex> lock(m_lock);
+			auto t1 = std::chrono::steady_clock::now();
+			m_lockWaitNs.fetch_add(
+				std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
+				std::memory_order_relaxed);
 
-		if (m_dataBase.size() == m_dataBase.capacity())
-			m_dataBase.reserve(m_dataBase.capacity() + 100000);
+			if (m_dataBase.size() == m_dataBase.capacity())
+				m_dataBase.reserve(m_dataBase.capacity() + 100000);
 
-		m_dataBase.emplace_back(info);
-		m_foldersIndex[Folder.path().filename().wstring()].emplace_back(Id);
-		trie.Insert(Folder.path().filename().wstring(), Id);
-		m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
-		Id++;
+			m_dataBase.emplace_back(info);
+			m_foldersIndex[Folder.filename().wstring()].emplace_back(Id);
+			trie.Insert(Folder.filename().wstring(), Id);
+			m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
+			Id++;
 		}
-		constexpr int bufferSize = 10000;
-		std::array<FileInfo, bufferSize> filesBuffer;
-		std::array<FileInfo, bufferSize> foldersBuffer;
+
+		std::array<FileInfo, s_bufferSize> filesBuffer;
+		std::array<FileInfo, s_bufferSize> foldersBuffer;
 		size_t localFilesCount = 0;
 		size_t localFoldersCount = 0;
 
@@ -377,70 +408,76 @@ public:
 			localFoldersCount = 0;
 			};
 
-		std::error_code ec1;
-		for (fs::recursive_directory_iterator it(Folder.path(), fs::directory_options::skip_permission_denied, ec1), end; it != end && !ec1; it.increment(ec1))
-		{
-			if (m_cancel_request.load(std::memory_order_relaxed)) 
+		// 2. Recursive Win32 directory scanner
+		auto scanDirectoryRecursive = [&](auto& self, const fs::path& currentDir) -> void
 			{
-				flush();
-				return;
-			}
-			const fs::directory_entry& entry = *it;
-			const fs::path path = entry.path();
-	
-			std::error_code entryEc;
-			std::error_code dirEc;
+				if (m_cancel_request.load(std::memory_order_relaxed)) return;
 
-			if (entry.is_regular_file(entryEc) && !entryEc)
-			{
-				FileInfo info;
-				info.path = path;
-				std::error_code sizeEc;
-				info.size = entry.file_size(sizeEc);
-				if (sizeEc) continue;
+				fs::path searchPath = ToLongPath(currentDir) / L"*";
+				WIN32_FIND_DATAW entry;
+				HANDLE searchToken = FindFirstFileExW(searchPath.c_str(), FindExInfoBasic, &entry, FindExSearchNameMatch, nullptr, FIND_FIRST_EX_LARGE_FETCH);
 
-				filesBuffer[localFilesCount++] = std::move(info);
-			}
-			else if (entry.is_directory(dirEc) && !dirEc)
-			{
-				if (shouldSkip(path))
+				if (searchToken == INVALID_HANDLE_VALUE) return;
+
+				do
 				{
-					it.disable_recursion_pending();
-					continue;
-				}
-				FileInfo info;
-				info.path = path;
-				foldersBuffer[localFoldersCount++] = std::move(info);
-			}
+					if (m_cancel_request.load(std::memory_order_relaxed)) break;
 
-			if (localFoldersCount >= bufferSize || localFilesCount >= bufferSize) 
-			{
-				flush();
-			}
-		}
+					if (wcscmp(entry.cFileName, L".") == 0 || wcscmp(entry.cFileName, L"..") == 0)
+					{
+						continue;
+					}
+
+					fs::path childPath = currentDir / entry.cFileName;
+					const DWORD attr = entry.dwFileAttributes;
+
+					if (attr & FILE_ATTRIBUTE_DIRECTORY)
+					{
+						if (shouldSkip(attr)) continue;
+
+						FileInfo info;
+						info.path = childPath;
+						foldersBuffer[localFoldersCount++] = std::move(info);
+
+						if (localFoldersCount >= s_bufferSize || localFilesCount >= s_bufferSize)
+						{
+							flush();
+						}
+
+						// Recurse into directory if not a reparse point (symlink/junction)
+						if (!(attr & FILE_ATTRIBUTE_REPARSE_POINT))
+						{
+							self(self, childPath);
+						}
+					}
+
+					else if (!(attr & FILE_ATTRIBUTE_DEVICE))
+					{
+						FileInfo info;
+						info.path = childPath;
+						info.size = (static_cast<uint64_t>(entry.nFileSizeHigh) << 32) | entry.nFileSizeLow;
+
+						filesBuffer[localFilesCount++] = std::move(info);
+
+						if (localFoldersCount >= s_bufferSize || localFilesCount >= s_bufferSize)
+						{
+							flush();
+						}
+					}
+				} while (FindNextFileW(searchToken, &entry));
+
+				FindClose(searchToken);
+			};
+
+		// Run the Win32 scan start from target folder
+		scanDirectoryRecursive(scanDirectoryRecursive, Folder);
+
 		flush();
-		if (ec1)
-		{
-			std::cerr << "Scanning error in "
-				<< Folder.path()
-				<< ": "
-				<< ec1.message()
-				<< '\n';
-		}
 
 		auto end = std::chrono::steady_clock::now();
 		auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		if (ms > 100) 
-			std::wcout << Folder.path().wstring() << L": " << ms << L"ms\n";
-	}
-
-	const bool shouldSkip(const fs::path& path) 
-	{
-		DWORD attrs = GetFileAttributesW(path.c_str());
-		if (attrs == INVALID_FILE_ATTRIBUTES)
-			return true;
-
-		return (attrs & FILE_ATTRIBUTE_HIDDEN) || (attrs & FILE_ATTRIBUTE_SYSTEM);
+		if (ms > 100)
+			std::wcout << Folder.wstring() << L": " << ms << L"ms\n";
 	}
 
 	void index()
@@ -553,26 +590,6 @@ public:
 		}
 	}
 
-	std::string to_utf8(const std::wstring& wstr) {
-		if (wstr.empty()) return {};
-
-		// Set up the conversion facet for UTF-8
-		std::locale loc("en_US.UTF-8"); // Use "" for system default or explicit UTF-8
-		auto& facet = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(loc);
-
-		std::mbstate_t state = std::mbstate_t();
-		std::vector<char> buffer(wstr.size() * facet.max_length());
-
-		const wchar_t* from_next;
-		char* to_next;
-
-		facet.out(state,
-			wstr.data(), wstr.data() + wstr.size(), from_next,
-			buffer.data(), buffer.data() + buffer.size(), to_next);
-
-		return std::string(buffer.data(), to_next);
-	}
-
 	void printIndexStats() 
 	{
 		std::lock_guard<std::mutex> guard(m_lock);
@@ -661,6 +678,37 @@ public:
 		}
 	}
 
+
+	// Utils
+	constexpr bool shouldSkip(DWORD attrs) 
+	{
+		if (attrs == INVALID_FILE_ATTRIBUTES)
+			return true;
+
+		return (attrs & FILE_ATTRIBUTE_HIDDEN) || (attrs & FILE_ATTRIBUTE_SYSTEM);
+	}
+
+	std::string to_utf8(const std::wstring& wstr) {
+		if (wstr.empty()) return {};
+
+		// Set up the conversion facet for UTF-8
+		std::locale loc("en_US.UTF-8"); // Use "" for system default or explicit UTF-8
+		auto& facet = std::use_facet<std::codecvt<wchar_t, char, std::mbstate_t>>(loc);
+
+		std::mbstate_t state = std::mbstate_t();
+		std::vector<char> buffer(wstr.size() * facet.max_length());
+
+		const wchar_t* from_next;
+		char* to_next;
+
+		facet.out(state,
+			wstr.data(), wstr.data() + wstr.size(), from_next,
+			buffer.data(), buffer.data() + buffer.size(), to_next);
+
+		return std::string(buffer.data(), to_next);
+	}
+
+	// Getters
 	const bool isDone() 
 	{
 		return m_indexingDone.load();
