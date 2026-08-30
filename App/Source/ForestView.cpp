@@ -1865,10 +1865,13 @@ void ForestView::advanced_search()
 	{
 		if (ImGui::Begin("AdvancedSearchWindow")) 
 		{
+			static std::wstring FileNameSearch = L"";
+
 			// Search Window Tool Bar
 			if (ImGui::Button("Close")) 
 			{
 				m_showSearchWindow = false;
+				FileNameSearch.clear();
 			}
 
 			ImGui::SameLine();
@@ -1886,21 +1889,48 @@ void ForestView::advanced_search()
 			if (ImGui::Combo("Search By: ", &choice, searchByFilter.data(), static_cast<int>(searchByFilter.size())))
 			{
 				current_searchBy_filter = static_cast<SearchBy>(choice);
+				FileNameSearch.clear();
+				m_founds.clear();
 			}
 
-			ImGui::SeparatorText("Search inputs");
+			static bool is_limitedSearch_enabled = false;
+			if (ImGui::Checkbox("Limit search to current path", &is_limitedSearch_enabled)) 
+			{
+				if (FileNameSearch.size() >= 2) 
+				{
+					if (is_limitedSearch_enabled)
+					{
+						m_index.fastNameLookUp(m_founds, FileNameSearch, tabs[current_tab]->current_path);
+					}
+					else
+					{
+						m_index.fastNameLookUp(m_founds, FileNameSearch);
+					}
+				}
+			}
+			if (ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip("Only show files located inside the current root folder and its subdirectories.");
+			}
+
+			ImGui::Separator();
 			switch (current_searchBy_filter)
 			{
 			// Search By Name =====================================================
 			case SearchBy::NAME: 
 			{
-				static std::wstring FileNameSearch = L"";
-
 				if (InputTextWString("File/Folder Name", FileNameSearch))
 				{
 					if (FileNameSearch.size() >= 2)
 					{
-						m_index.fastNameLookUp(m_founds, FileNameSearch);
+						if (is_limitedSearch_enabled)
+						{
+							m_index.fastNameLookUp(m_founds, FileNameSearch, tabs[current_tab]->current_path);
+						}
+						else 
+						{
+							m_index.fastNameLookUp(m_founds, FileNameSearch);
+						}
 					}
 					else
 					{
@@ -1913,10 +1943,9 @@ void ForestView::advanced_search()
 			// Search By Extention ================================================
 			case SearchBy::EXTENTION:
 			{
-				static std::wstring ExtentionNameSearch = L"";
-				if (InputTextWString("Extention Name", ExtentionNameSearch))
+				if (InputTextWString("Extention Name", FileNameSearch))
 				{
-					m_index.searchForExtention(m_founds, ExtentionNameSearch);
+					m_index.searchForExtention(m_founds, FileNameSearch);
 				}
 
 				break;
@@ -1930,13 +1959,6 @@ void ForestView::advanced_search()
 			// Founds Table =========================================================
 			if (!m_founds.empty())
 			{
-				if (ImGui::Button("Cancel"))
-				{
-					m_founds.clear();
-				}
-
-				ImGui::SeparatorText("##a");
-
 				if (ImGui::BeginTable("FoundsTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
 				{
 					ImGui::TableSetupColumn("Path");
