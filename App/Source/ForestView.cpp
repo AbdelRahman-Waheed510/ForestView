@@ -881,49 +881,6 @@ void ForestView::on_update()
 			}
 		}
 
-		// Founds UI
-//		if (!m_founds.empty()) 
-//		{
-//			if (ImGui::Begin("Founds Entries Window"))
-//			{
-//				if (ImGui::Button("Cancel")) 
-//				{
-//					m_founds.clear();
-//				}
-//
-//				ImGui::SeparatorText("##a");
-//
-//				if (ImGui::BeginTable("FoundsTable", 1, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
-//				{
-//					ImGui::TableSetupColumn("Path");
-//					ImGui::TableHeadersRow();
-//						
-//					ImGuiListClipper FoundsClipper;
-//					FoundsClipper.Begin((int)m_founds.size());
-//
-//					while (FoundsClipper.Step()) 
-//					{
-//						for (size_t i = FoundsClipper.DisplayStart; i < FoundsClipper.DisplayEnd; i++)
-//						{
-//							ImGui::TableNextRow();
-//
-//							ImGui::TableNextColumn();
-//							std::u8string utf8_path = m_founds[i].u8string();
-//#if defined(__cpp_lib_char8_t)
-//							std::string display_path(utf8_path.begin(), utf8_path.end());
-//#else
-//							std::string display_path = utf8_path;
-//#endif
-//							std::string label = display_path + "##" + std::to_string(i);
-//							ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
-//						}
-//					}
-//					ImGui::EndTable();
-//				}
-//			}
-//			ImGui::End();
-//		}
-
 		decide_correct_rightClick_popup();
 	}
 		ImGui::End();
