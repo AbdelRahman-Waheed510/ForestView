@@ -216,6 +216,8 @@ private:
 	int drop_source = -1;
 	int drop_target = -1;
 
+	bool need_access_denied_popup = false;
+
 	fileSize size_count;
 
 	bool need_delete_confirmation = false;
@@ -287,6 +289,8 @@ public:
 	void largest_files_slider();
 
 	void advanced_search();
+
+	void access_denied();
 	// Folders Tree 
 	void folders_tree(const float& remainingHeight);
 

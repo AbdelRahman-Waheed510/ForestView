@@ -882,6 +882,8 @@ void ForestView::on_update()
 		}
 
 		decide_correct_rightClick_popup();
+
+		access_denied();
 	}
 		ImGui::End();
 }
@@ -1733,6 +1735,26 @@ void ForestView::delete_warning()
 	}
 }
 
+// Access denied Popup
+void ForestView::access_denied() 
+{
+	if (need_access_denied_popup) 
+	{
+		ImGui::OpenPopup("Access Denied");
+		need_access_denied_popup = false;
+	}
+
+	if (ImGui::BeginPopupModal("Access Denied", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+	{
+		ImGui::Text("You don't currently have permission to access this folder.");
+		if (ImGui::Button("Ok"))
+		{
+			ImGui::CloseCurrentPopup();
+		}
+		ImGui::EndPopup();
+	}
+}
+
 // Filter By popup
 void ForestView::filter_by()
 {
@@ -2563,49 +2585,61 @@ void ForestView::render_debug_panel()
 void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 {
 	if (ImGui::IsItemHovered())
-	{
-		if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
-			if (entry.is_directory()) 
+			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 			{
-				left_double_click(entry);
-			}
-			else if (entry.is_regular_file()) 
-			{
-				const fs::path& path = entry.path().parent_path();
-				if (tabs[current_tab]->current_path != path)
+				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
+				if (checkAccess == DirAccessResult::ACCESS_DENIED)
 				{
-					const fs::directory_entry parent = fs::directory_entry(path);
-					left_double_click(parent);
+					need_access_denied_popup = true;
+					return;
+				}
+
+				if (entry.is_directory()) 
+				{
+					left_double_click(entry);
+				}
+				else if (entry.is_regular_file()) 
+				{
+					const fs::path& path = entry.path().parent_path();
+					if (tabs[current_tab]->current_path != path)
+					{
+						const fs::directory_entry parent = fs::directory_entry(path);
+						left_double_click(parent);
+					}
 				}
 			}
-		}
-		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))	
-		{
-			tabs[current_tab]->selected_path = entry.path();
-			if (entry.is_directory())
+			else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))	
 			{
-				tabs[current_tab]->need_folder_right_click_call = true;
+				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
+				if (checkAccess == DirAccessResult::ACCESS_DENIED)
+				{
+					need_access_denied_popup = true;
+					return;
+				}
+
+				tabs[current_tab]->selected_path = entry.path();
+				if (entry.is_directory())
+				{
+					tabs[current_tab]->need_folder_right_click_call = true;
+				}
+				else
+				{
+					tabs[current_tab]->need_file_right_click_call = true;
+				}
 			}
-			else
+			else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 			{
-				tabs[current_tab]->need_file_right_click_call = true;
+				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
+				if (checkAccess == DirAccessResult::ACCESS_DENIED)
+				{
+					need_access_denied_popup = true;
+					return;
+				}
+
+				left_click(entry);
 			}
 		}
-		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
-		{
-			left_click(entry);
-		}
-	}
-	if (ImGui::BeginPopupModal("Access Denied", NULL, ImGuiWindowFlags_AlwaysAutoResize)) 
-	{
-		ImGui::Text("You don't currently have permission to access this folder.");
-		if (ImGui::Button("Ok")) 
-		{
-			ImGui::CloseCurrentPopup();
-		}
-		ImGui::EndPopup();
-	}
 }
 
 // PARENT HANDLER TO CHOOSE WHICH POPUP TRIGGER
