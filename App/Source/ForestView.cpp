@@ -1110,7 +1110,6 @@ void ForestView::search_bar()
 {
 	if (ImGui::BeginChild("SearchBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 	{
-
 		// Navigation
 		static int ids = 0;
 		if (tabs[current_tab]->global_key_need_update)
@@ -1121,6 +1120,7 @@ void ForestView::search_bar()
 			ImGui::SetKeyboardFocusHere();
 		}
 		ImGui::SetNextItemWidth(550.0f);
+
 		ImGui::PushID(ids);
 		if (ImGui::InputTextWithHint("##Global Search Bar", tabs[current_tab]->fileExplorer->form_breadcrumb_navigation_string(tabs[current_tab]->current_path).c_str(), &tabs[current_tab]->globalKeyWord) || !tabs[current_tab]->globalKeyWord.empty())
 		{
@@ -1131,10 +1131,20 @@ void ForestView::search_bar()
 				fs::path path_(tabs[current_tab]->globalKeyWord);
 				if (fs::is_directory(path_) && fs::exists(path_))
 				{
-					tabs[current_tab]->fileExplorer->navigate_to(path_, tabs[current_tab]->current_path);
-					tabs[current_tab]->entries_need_update = true;
-					tabs[current_tab]->current_path = path_;
-					tabs[current_tab]->globalKeyWord = "";
+					DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(path_);
+					if (checkAccess == DirAccessResult::ACCESS_DENIED) 
+					{
+						need_access_denied_popup = true;
+						tabs[current_tab]->entries_need_update = true;
+						tabs[current_tab]->globalKeyWord = "";
+					}
+					else 
+					{
+						tabs[current_tab]->fileExplorer->navigate_to(path_, tabs[current_tab]->current_path);
+						tabs[current_tab]->entries_need_update = true;
+						tabs[current_tab]->current_path = path_;
+						tabs[current_tab]->globalKeyWord = "";
+					}
 
 				}
 				else
@@ -1144,6 +1154,7 @@ void ForestView::search_bar()
 			}
 		}
 		ImGui::PopID();
+
 		if (ImGui::IsItemActivated() && tabs[current_tab]->globalKeyWord.empty())
 		{
 			if (!tabs[current_tab]->current_path.empty())
@@ -1842,7 +1853,7 @@ void ForestView::advanced_search()
 
 	if (m_showSearchWindow) 
 	{
-		if (ImGui::Begin("AdvancedSearchWindow")) 
+		if (ImGui::Begin("Advanced Search Window")) 
 		{
 			static std::wstring FileNameSearch = L"";
 
