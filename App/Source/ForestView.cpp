@@ -1886,15 +1886,29 @@ void ForestView::advanced_search()
 			static bool is_limitedSearch_enabled = false;
 			if (ImGui::Checkbox("Limit search to current path", &is_limitedSearch_enabled)) 
 			{
-				if (FileNameSearch.size() >= 2) 
+				if (current_searchBy_filter == SearchBy::NAME) 
+				{
+					if (FileNameSearch.size() >= 2) 
+					{
+						if (is_limitedSearch_enabled)
+						{
+							m_index.fastNameLookUp(m_founds, FileNameSearch, tabs[current_tab]->current_path);
+						}
+						else
+						{
+							m_index.fastNameLookUp(m_founds, FileNameSearch);
+						}
+					}
+				}
+				else if (current_searchBy_filter == SearchBy::EXTENTION) 
 				{
 					if (is_limitedSearch_enabled)
 					{
-						m_index.fastNameLookUp(m_founds, FileNameSearch, tabs[current_tab]->current_path);
+						m_index.searchForExtention(m_founds, FileNameSearch, tabs[current_tab]->current_path);
 					}
 					else
 					{
-						m_index.fastNameLookUp(m_founds, FileNameSearch);
+						m_index.searchForExtention(m_founds, FileNameSearch);
 					}
 				}
 			}
@@ -1935,7 +1949,14 @@ void ForestView::advanced_search()
 			{
 				if (InputTextWString("Extention Name", FileNameSearch))
 				{
-					m_index.searchForExtention(m_founds, FileNameSearch);
+					if (is_limitedSearch_enabled) 
+					{
+						m_index.searchForExtention(m_founds, FileNameSearch, tabs[current_tab]->current_path);
+					}
+					else 
+					{
+						m_index.searchForExtention(m_founds, FileNameSearch);
+					}
 				}
 
 				break;
@@ -2034,6 +2055,7 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 	if (folder_popup_is_open)
 	{
 		if (FolderEntry.path() != tabs[current_tab]->selected_path) tabs[current_tab]->selected_path = FolderEntry.path();
+		
 		// Rename 
 		if (tabs[current_tab]->selected_path != tabs[current_tab]->selected_path.root_path())
 		{
@@ -2054,7 +2076,7 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 							}
 						}
 					}
-					
+						
 					if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 					{
 						tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
