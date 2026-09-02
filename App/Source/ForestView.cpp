@@ -2752,7 +2752,14 @@ void ForestView::stats_bar()
 			{
 				if (tabs[current_tab]->file_size_future.back().wait_for(std::chrono::seconds(0)) == std::future_status::ready)
 				{
-					tabs[current_tab]->file_size = tabs[current_tab]->file_size_future.back().get();
+					try 
+					{
+						tabs[current_tab]->file_size = tabs[current_tab]->file_size_future.back().get();
+					}
+					catch (const fs::filesystem_error& e)
+					{
+						tabs[current_tab]->file_size.size = 0;
+					}
 					tabs[current_tab]->file_size_future.pop_back();
 					tabs[current_tab]->is_calulating_size = false;
 				}

@@ -97,7 +97,9 @@ enum class DirAccessResult {
 	ACCESS_DENIED,
 	NOT_FOUND,
 	NOT_A_DIRECTORY,
-	OTHER
+	OTHER,
+	NOT_READY,
+	SYMLINK_LOOP,
 };
 
 namespace Utils 
@@ -270,11 +272,16 @@ public:
 		std::error_code ec;
 		if (fs::is_directory(path, ec))
 		{
-			for (const auto& entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec))
+			for (const auto& entry : fs::recursive_directory_iterator(path, fs::directory_options::skip_permission_denied, ec))	
 			{
-				if (fs::is_regular_file(entry.status()))
+				std::error_code statEc;
+				if (fs::is_regular_file(entry.status(statEc)) && !statEc)
 				{
-					data.directorySize += entry.file_size();
+					std::error_code ec2;
+					data.directorySize += entry.file_size(ec2);
+					if (ec2) 
+					{
+					}
 					data.filesCount++;
 				}
 			}
@@ -288,8 +295,9 @@ public:
 		}
 		else if (fs::is_regular_file(path, ec))	
 		{
-			data.directorySize += fs::file_size(path);
-			data.filesCount++;
+			std::error_code sizeEc;
+			auto sz = fs::file_size(path, sizeEc);
+			if (!sizeEc) { data.directorySize += sz; data.filesCount++; }
 			if (ec)
 			{
 				std::cerr << "Error while calulating the size" << std::endl;
@@ -321,15 +329,18 @@ public:
 		std::error_code ec;
 		auto it = fs::directory_iterator(path, ec);
 
-
 		if (!ec) return DirAccessResult::OK;
 
-		if (ec == std::errc::permission_denied)
+		if (ec.value() == ERROR_ACCESS_DENIED || ec == std::errc::permission_denied)
 			return DirAccessResult::ACCESS_DENIED;
-		if (ec == std::errc::no_such_file_or_directory)
+		if (ec.value() == ERROR_FILE_NOT_FOUND || ec.value() == ERROR_PATH_NOT_FOUND|| ec == std::errc::no_such_file_or_directory)
 			return DirAccessResult::NOT_FOUND;
 		if (ec == std::errc::not_a_directory)
 			return DirAccessResult::NOT_A_DIRECTORY;
+		if (ec.value() == ERROR_NOT_READY)
+			return DirAccessResult::NOT_READY;
+		if (ec == std::errc::too_many_symbolic_link_levels)
+			return DirAccessResult::SYMLINK_LOOP;
 
 		return DirAccessResult::OTHER;
 	}
