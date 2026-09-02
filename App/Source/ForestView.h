@@ -259,7 +259,7 @@ public:
 
 	void on_start() override;
 
-	// Main update function (each frame gets called)W
+	// Main update function (each frame gets called)
 
 	void on_update();
 

@@ -2540,7 +2540,6 @@ void ForestView::render_entries()
 					ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, icon_height));
 
 					handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
-
 					// ========================================== Last Modified ================================================
 					ImGui::TableNextColumn();
 
@@ -2569,6 +2568,11 @@ void ForestView::render_entries()
 						ImGui::Selectable(std::format("{:.2f} {}", size.size, size.label).c_str(), false, 0, ImVec2(0.0f, icon_height));
 					}
 					ImGui::PopStyleVar(1);
+
+#ifdef _DEBUG
+					ImGui::SameLine();
+					ImGui::Text(std::format("  [ {} ]", std::to_string(tabs[current_tab]->entries[i].id)).c_str());
+#endif
 					ImGui::PopID();
 				}
 

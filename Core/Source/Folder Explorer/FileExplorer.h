@@ -78,6 +78,7 @@ struct Entry
 	fs::directory_entry entry;
 	GLuint textureId;
 	std::string name;
+	uint32_t id;
 };
 
 struct fileSize
@@ -167,7 +168,7 @@ private:
 			m_finished = true;
 		}
 	};
-
+	uint32_t ID = 0;
 	TexturesManager& M_texturesManager;	
 	tree* t;
 	std::vector<Entry> entries;
@@ -411,6 +412,7 @@ public:
 		Entry e;
 		e.entry = entry;
 		e.textureId = M_texturesManager.decide_icon(entry);
+		e.id = ID++;
 		auto u8_str = (entry.path() == entry.path().root_path()) ? entry.path().u8string() : entry.path().filename().u8string();
 		std::string utf8_path(u8_str.begin(), u8_str.end());
 		e.name = utf8_path;
