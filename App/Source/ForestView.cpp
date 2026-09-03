@@ -497,6 +497,23 @@ void ForestView::on_update()
 
 		if (show_icons_slider) icons_size_slider();
 
+		if (!m_queuedTasks.empty()) 
+		{
+			while ((int)tasks.size() <= 3 && !m_queuedTasks.empty()) 
+			{
+				Task* task = m_queuedTasks.front().get();
+
+				m_queuedTasks.front()->start = std::chrono::steady_clock::now();
+
+				m_queuedTasks.front()->worker = std::thread([this, task]()
+					{
+						tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+					});
+
+				tasks.emplace_back(std::move(m_queuedTasks.front()));
+				m_queuedTasks.pop();
+			}
+		}
 		if (!tasks.empty())
 		{
 			for (size_t i = 0; i < tasks.size(); i++)
@@ -636,7 +653,6 @@ void ForestView::on_update()
 				}
 
 			}
-
 		}
 
 		// Empty Folders task UI
@@ -1308,17 +1324,8 @@ void ForestView::tool_bar()
 			copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
 			copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
 
-			Task* task = copyTask.get();
-
-			copyTask->start = std::chrono::steady_clock::now();
-
-			copyTask->worker = std::thread([this,src, dest, task]()
-				{
-					tabs[current_tab]->fileExplorer->copy_paste(src, dest, task->sizeProgress, task->filesCountProgress,task->cancel_request ,task->finished);
-				});
-
-			tasks.emplace_back(std::move(copyTask));
-
+			m_queuedTasks.push(std::move(copyTask));
+			
 			tabs[current_tab]->copied_path.clear();
 		}
 		ImGui::EndDisabled();

@@ -227,6 +227,7 @@ private:
 	bool show_icons_slider = false;
 
 	std::vector<std::unique_ptr<Task>> tasks;
+	std::queue<std::unique_ptr<Task>> m_queuedTasks;
 
 	std::unique_ptr<Task> m_emptyFoldersTask;
 	std::vector<fs::path> m_emptyFolders;
