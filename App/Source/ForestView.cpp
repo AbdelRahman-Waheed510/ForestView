@@ -369,6 +369,11 @@ void App::test_mode()
 
 }
 
+void App::Shut_Down()
+{
+	m_isRunning = false;
+}
+
 void App::change_theme(const Theme& theme)
 {
 	if (theme == m_activeTheme) return;
@@ -422,7 +427,7 @@ void App::run_loop()
 
 	on_start();
 
-	while (!glfwWindowShouldClose(window))
+	while (m_isRunning)
 	{
 		glfwPollEvents();
 		ImGui_ImplOpenGL3_NewFrame();
@@ -985,6 +990,7 @@ void ForestView::tab_bar()
 				}
 				if ((int)tabs.size() == 1)
 				{
+					Shut_Down();
 					continue;
 				}
 				tabs.erase(tabs.begin() + i);

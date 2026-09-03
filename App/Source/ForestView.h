@@ -174,10 +174,13 @@ private:
 	void spacing_and_padding_and_stuff(ImGuiStyle& style);
 
 	void test_mode();
+
+	bool m_isRunning = true;
 protected:
 	ImFont* default_font = nullptr;
 	ImFont* arabic_font = nullptr;
 
+	void Shut_Down();
 public:
 
 	App() = default;
