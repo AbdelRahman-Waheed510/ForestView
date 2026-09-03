@@ -1224,6 +1224,12 @@ void ForestView::tool_bar()
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 		if (ImGui::ImageButton("##<--", M_texturesManager.get_backwards_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 		{
+			// Clear the selected Items
+			if (tabs[current_tab]->isSelecting)
+			{
+				tabs[current_tab]->selectedEntries.clear();
+				tabs[current_tab]->isSelecting = false;
+			}
 			tabs[current_tab]->show_selected_folder_options = false;
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
 			tabs[current_tab]->globalKeyWord = "";
@@ -1237,6 +1243,12 @@ void ForestView::tool_bar()
 		{
 			if (ImGui::IsKeyPressed(ImGuiKey_Backspace, false)) 
 			{
+				// Clear the selected Items
+				if (tabs[current_tab]->isSelecting)
+				{
+					tabs[current_tab]->selectedEntries.clear();
+					tabs[current_tab]->isSelecting = false;
+				}
 				tabs[current_tab]->show_selected_folder_options = false;
 				tabs[current_tab]->ThisDirectoryKeyWord = "";
 				tabs[current_tab]->globalKeyWord = "";
@@ -1254,6 +1266,12 @@ void ForestView::tool_bar()
 
 		if (ImGui::ImageButton("##-->", M_texturesManager.get_forward_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
 		{
+			// Clear the selected Items
+			if (tabs[current_tab]->isSelecting)
+			{
+				tabs[current_tab]->selectedEntries.clear();
+				tabs[current_tab]->isSelecting = false;
+			}
 			tabs[current_tab]->show_selected_folder_options = false;
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
 			tabs[current_tab]->globalKeyWord = "";
@@ -2456,6 +2474,13 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 			{
 				tabs[current_tab]->selected_path = "";
+
+				// Clear the selcted entries
+				if (tabs[current_tab]->isSelecting) 
+				{
+					tabs[current_tab]->selectedEntries.clear();
+					tabs[current_tab]->isSelecting = false;
+				}
 			}
 		}
 
@@ -2542,7 +2567,21 @@ void ForestView::render_entries()
 					// ======================================== Name ==============================================
 					ImGui::TableNextColumn();
 
-					bool is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
+
+					bool is_selected; 
+					if (!tabs[current_tab]->isSelecting) 
+					{
+						is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
+					}
+					else 
+					{
+						const std::vector<fs::path>& Temp = tabs[current_tab]->selectedEntries;
+
+						auto it = std::find(Temp.begin(), Temp.end(), tabs[current_tab]->entries[i].entry.path());
+						if (it != Temp.end()) is_selected = true;
+						else is_selected = false;
+					}
+
 
 					ImGui::Image(tabs[current_tab]->entries[i].textureId, ImVec2(tabs[current_tab]->icons_width, icon_height));
 
@@ -2635,62 +2674,101 @@ void ForestView::render_debug_panel()
 void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 {
 	if (ImGui::IsItemHovered())
+	{
+		if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
-			if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+			DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
+			if (checkAccess == DirAccessResult::ACCESS_DENIED)
 			{
-				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
-				if (checkAccess == DirAccessResult::ACCESS_DENIED)
-				{
-					need_access_denied_popup = true;
-					return;
-				}
+				need_access_denied_popup = true;
+				return;
+			}
+			
+			// Clear the selected Items
+			if (tabs[current_tab]->isSelecting)
+			{
+				tabs[current_tab]->selectedEntries.clear();
+				tabs[current_tab]->isSelecting = false;
+			}
 
-				if (entry.is_directory()) 
+			if (entry.is_directory())
+			{
+				left_double_click(entry);
+			}
+			else if (entry.is_regular_file())
+			{
+				const fs::path& parent_path = entry.path().parent_path();
+				if (tabs[current_tab]->current_path != parent_path) // If i double click on a file that is not in the current path (curret directory)
 				{
-					left_double_click(entry);
+					const fs::directory_entry parent = fs::directory_entry(parent_path);
+					left_double_click(parent);
 				}
-				else if (entry.is_regular_file()) 
+				else // if i double click on a file that is in the current path (current directory)
 				{
-					const fs::path& path = entry.path().parent_path();
-					if (tabs[current_tab]->current_path != path)
-					{
-						const fs::directory_entry parent = fs::directory_entry(path);
-						left_double_click(parent);
-					}
+					std::wstring parameters = L"/c start \"\" \"" + entry.path().wstring() + L"\"";
+					HINSTANCE result = ShellExecuteW(nullptr, L"open", L"cmd.exe", parameters.c_str(), nullptr, SW_HIDE);
 				}
 			}
-			else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))	
+		}
+		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+		{
+			DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
+			if (checkAccess == DirAccessResult::ACCESS_DENIED)
 			{
-				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
-				if (checkAccess == DirAccessResult::ACCESS_DENIED)
+				need_access_denied_popup = true;
+				return;
+			}
+
+			tabs[current_tab]->selected_path = entry.path();
+			if (entry.is_directory())
+			{
+				tabs[current_tab]->need_folder_right_click_call = true;
+			}
+			else
+			{
+				tabs[current_tab]->need_file_right_click_call = true;
+			}
+		}
+		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+		{
+			DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
+			if (checkAccess == DirAccessResult::ACCESS_DENIED)
+			{
+				need_access_denied_popup = true;
+				return;
+			}
+			ImGuiIO io = ImGui::GetIO();
+			bool ctrlPressed = io.KeyCtrl;
+			if (ctrlPressed)
+			{
+				std::vector<fs::path>& x = tabs[current_tab]->selectedEntries;
+				if (std::erase(x, entry.path()) <= 0)
 				{
-					need_access_denied_popup = true;
-					return;
+					tabs[current_tab]->selectedEntries.emplace_back(entry.path());
 				}
 
-				tabs[current_tab]->selected_path = entry.path();
-				if (entry.is_directory())
+				tabs[current_tab]->selected_path.clear();
+				if (!tabs[current_tab]->selectedEntries.empty())
 				{
-					tabs[current_tab]->need_folder_right_click_call = true;
+					tabs[current_tab]->isSelecting = true;
 				}
-				else
-				{
-					tabs[current_tab]->need_file_right_click_call = true;
-				}
+				else tabs[current_tab]->isSelecting = false;
 			}
-			else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			else
 			{
-				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
-				if (checkAccess == DirAccessResult::ACCESS_DENIED)
+				// Clear the selected Items
+				if (tabs[current_tab]->isSelecting) 
 				{
-					need_access_denied_popup = true;
-					return;
+					tabs[current_tab]->selectedEntries.clear();
+					tabs[current_tab]->isSelecting = false;
 				}
 
 				left_click(entry);
 			}
 		}
+	}
 }
+
 
 // PARENT HANDLER TO CHOOSE WHICH POPUP TRIGGER
 void ForestView::decide_correct_rightClick_popup()

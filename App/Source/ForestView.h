@@ -122,6 +122,9 @@ struct State
 
 	std::atomic<double> copying_progress;
 
+	std::vector<fs::path> selectedEntries;
+	bool isSelecting = false;
+
 	State() 
 	{
 		tabID = id;
