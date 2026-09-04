@@ -499,19 +499,90 @@ void ForestView::on_update()
 
 		if (!m_queuedTasks.empty()) 
 		{
-			while ((int)tasks.size() <= 3 && !m_queuedTasks.empty()) 
+			for (size_t i = 0; i < m_queuedTasks.size(); i++) 
 			{
-				Task* task = m_queuedTasks.front().get();
-
-				m_queuedTasks.front()->start = std::chrono::steady_clock::now();
-
-				m_queuedTasks.front()->worker = std::thread([this, task]()
+				switch (m_queuedTasks[i]->task_type)	
+				{
+				case TaskType::COPY_PASTE: 
+				{
+					if (m_activeCopyingTasks.load() < 3) 
 					{
-						tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
-					});
+						Task* task = m_queuedTasks[i].get();
 
-				tasks.emplace_back(std::move(m_queuedTasks.front()));
-				m_queuedTasks.pop();
+						m_queuedTasks[i]->start = std::chrono::steady_clock::now();
+
+						m_activeCopyingTasks++;
+						m_queuedTasks[i]->worker = std::thread([this, task]()
+							{
+								tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+								m_activeCopyingTasks--;
+							});
+
+						tasks.emplace_back(std::move(m_queuedTasks[i]));
+						m_queuedTasks.erase(m_queuedTasks.begin() + i);
+						i--;
+					}
+					break;
+				}
+				case TaskType::_DELETE:
+				{
+					if (m_activeDeleteTasks.load() < 3)
+					{
+						Task* task = m_queuedTasks[i].get();
+
+						m_activeDeleteTasks++;
+						m_queuedTasks[i]->worker = std::thread([this, task]()
+							{
+								tabs[current_tab]->fileExplorer->remove(task->source);
+								task->finished = true;
+								m_activeDeleteTasks--;
+							});
+						tasks.emplace_back(std::move(m_queuedTasks[i]));
+						m_queuedTasks.erase(m_queuedTasks.begin() + i);
+						i--;
+						break;
+					}
+					break;
+				}
+				default:
+					break;
+				}
+			}
+			/*while ((int)tasks.size() <= 2 && !m_queuedTasks.empty()) 
+			{
+				switch (m_queuedTasks.front()->task_type)
+				{
+				case TaskType::COPY_PASTE: 
+				{
+					Task* task = m_queuedTasks.front().get();
+
+					m_queuedTasks.front()->start = std::chrono::steady_clock::now();
+
+					m_queuedTasks.front()->worker = std::thread([this, task]()
+						{
+							tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+						});
+
+					tasks.emplace_back(std::move(m_queuedTasks.front()));
+					m_queuedTasks.pop_front();
+					break;
+				}
+				case TaskType::_DELETE: 
+				{
+					Task* task = m_queuedTasks.front().get();
+					m_queuedTasks.front()->worker = std::thread([this, task]()
+						{
+							tabs[current_tab]->fileExplorer->remove(task->source);
+							task->finished = true;
+						});
+					tasks.emplace_back(std::move(m_queuedTasks.front()));
+					m_queuedTasks.pop_front();
+					break;
+				}
+				default:
+					break;
+				}
+			}*/
 			}
 		}
 		if (!tasks.empty())

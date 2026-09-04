@@ -230,7 +230,7 @@ private:
 	bool show_icons_slider = false;
 
 	std::vector<std::unique_ptr<Task>> tasks;
-	std::queue<std::unique_ptr<Task>> m_queuedTasks;
+	std::deque<std::unique_ptr<Task>> m_queuedTasks;
 
 	std::unique_ptr<Task> m_emptyFoldersTask;
 	std::vector<fs::path> m_emptyFolders;
@@ -246,6 +246,9 @@ private:
 
 	std::vector<fs::path> m_founds;
 	bool m_showSearchWindow = false;
+
+	std::atomic<int> m_activeCopyingTasks{ 0 };
+	std::atomic<int> m_activeDeleteTasks{ 0 };
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
