@@ -2788,6 +2788,21 @@ void ForestView::render_debug_panel()
 	ImGui::Text("is_searching_for_duplicates_files Flag: "); ImGui::SameLine();
 	ImGui::Text(flag2.c_str());
 
+	ImGui::SeparatorText("Tasks Stuff");
+	ImGui::Text(std::format("Number of Copy Tasks: {}", get_copy_paste_Tasks_count()).c_str());
+	ImGui::Text(std::format("Number of Delete Tasks: {}", get_delete_Tasks_count()).c_str());
+	ImGui::Text(std::format("Number of Active Copy Tasks: {}", m_activeCopyingTasks.load()).c_str());
+	ImGui::Text(std::format("Number of Active Delete Tasks: {}", m_activeDeleteTasks.load()).c_str());
+
+	ImGui::SeparatorText("Selected Entries");
+	std::string flag3 = (tabs[current_tab]->isSelecting) ? "True" : "False";
+	ImGui::Text("isSelecting Flag: "); ImGui::SameLine();
+	ImGui::Text(flag3.c_str());
+
+	for (const fs::path& path : tabs[current_tab]->selectedEntries) 
+	{
+		ImGui::Text(path.string().c_str());
+	}
 	ImGui::Separator();
 }
 
