@@ -583,6 +583,63 @@ void ForestView::on_update()
 					break;
 				}
 			}*/
+			if (!m_queuedTasks.empty()) 
+			{ 
+				if (ImGui::Begin("scheduled Tasks")) 
+				{
+					for (size_t i = 0; i < m_queuedTasks.size(); i++) 
+					{
+						ImGui::PushID(i);
+
+						const std::unique_ptr<Task>& task = m_queuedTasks[i];
+
+						switch (task->task_type)
+						{
+						case TaskType::NONE:
+							break;
+						case TaskType::COPY_PASTE: 
+						{
+							ImGui::SeparatorText("Copy/Paste Task");
+							ImGui::Text(std::format("Copy From: {}", task->sourceName).c_str());
+							ImGui::Text(std::format("Paste To: {}", task->destinationName).c_str());
+							break;
+						}
+						case TaskType::_DELETE: 
+						{
+							ImGui::SeparatorText("Delete Task");
+							ImGui::Text(std::format("Delete: {}", task->source.string()).c_str());
+							break;
+						}
+						case TaskType::FIND_EMPTY_DIRECTORIES:
+						{
+						
+							break;
+						}
+						case TaskType::FIND_DUPLICATE_FILES:
+						{
+						
+							break;
+						}
+						case TaskType::FIND_LARGEST_FILES:
+						{
+						
+							break;
+						}
+						default:
+							break;
+						}
+
+						ImGui::SameLine();
+
+						if (ImGui::Button("Remove")) 
+						{
+							m_queuedTasks.erase(m_queuedTasks.begin() + i);
+							i--;
+						}
+						ImGui::PopID();
+					}
+				}
+				ImGui::End();
 			}
 		}
 		if (!tasks.empty())
