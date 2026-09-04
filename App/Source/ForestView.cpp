@@ -1403,13 +1403,12 @@ void ForestView::tool_bar()
 			fs::path dest = tabs[current_tab]->current_path;
 
 			EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
+					std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
 
-			std::unique_ptr<Task> copyTask = std::make_unique<Task>();
 			copyTask->totalSize = data.directorySize;
 			copyTask->totalfilesCount = data.filesCount;
 			copyTask->source = src;
 			copyTask->destination = dest;
-			copyTask->task_type = TaskType::COPY_PASTE;
 			copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
 			copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
 
@@ -1488,9 +1487,8 @@ void ForestView::tool_bar()
 
 			if (tabs[current_tab]->selected_path.empty()) 
 			{
-				m_emptyFoldersTask = std::make_unique<Task>();
+				m_emptyFoldersTask = std::make_unique<Task>(TaskType::FIND_EMPTY_DIRECTORIES);
 				m_emptyFoldersTask->sourceName = Utils::reform_string(tabs[current_tab]->current_path.string(), 32);
-				m_emptyFoldersTask->task_type = TaskType::FIND_EMPTY_DIRECTORIES;
 
 				Task* task = m_emptyFoldersTask.get();
 
@@ -1501,9 +1499,8 @@ void ForestView::tool_bar()
 			}
 			else if (!tabs[current_tab]->selected_path.empty()) 
 			{
-				m_emptyFoldersTask = std::make_unique<Task>();
+				m_emptyFoldersTask = std::make_unique<Task>(TaskType::FIND_EMPTY_DIRECTORIES);
 				m_emptyFoldersTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
-				m_emptyFoldersTask->task_type = TaskType::FIND_EMPTY_DIRECTORIES;
 
 				Task* task = m_emptyFoldersTask.get();
 
@@ -1537,9 +1534,8 @@ void ForestView::tool_bar()
 
 			if (tabs[current_tab]->selected_path.empty()) 
 			{
-				m_duplicateFilesTask = std::make_unique<Task>();
+				m_duplicateFilesTask = std::make_unique<Task>(TaskType::FIND_DUPLICATE_FILES);
 				m_duplicateFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->current_path.string(), 32);
-				m_duplicateFilesTask->task_type = TaskType::FIND_DUPLICATE_FILES;
 
 				Task* task = m_duplicateFilesTask.get();
 
@@ -1550,9 +1546,8 @@ void ForestView::tool_bar()
 			}
 			else if (!tabs[current_tab]->selected_path.empty()) 
 			{
-				m_duplicateFilesTask = std::make_unique<Task>();
+				m_duplicateFilesTask = std::make_unique<Task>(TaskType::FIND_DUPLICATE_FILES);
 				m_duplicateFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
-				m_duplicateFilesTask->task_type = TaskType::FIND_DUPLICATE_FILES;
 
 				Task* task = m_duplicateFilesTask.get();
 
@@ -1819,12 +1814,11 @@ void ForestView::delete_warning()
 
 			fs::path src = tabs[current_tab]->deleted_path;
 
-			std::unique_ptr<Task> deleteTask = std::make_unique<Task>();
-			deleteTask->task_type = TaskType::_DELETE;
 			deleteTask->source = tabs[current_tab]->deleted_path;
 			deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->deleted_path.filename().string(), 10);
 
 			Task* task = deleteTask.get();
+				std::unique_ptr<Task> deleteTask = std::make_unique<Task>(TaskType::_DELETE);
 
 			deleteTask->worker = std::thread([this, src, task]()
 				{
@@ -1921,8 +1915,7 @@ void ForestView::largest_files_slider()
 
 			if (tabs[current_tab]->selected_path.empty()) 
 			{
-				m_largestFilesTask = std::make_unique<Task>();
-				m_largestFilesTask->task_type = TaskType::FIND_LARGEST_FILES;
+				m_largestFilesTask = std::make_unique<Task>(TaskType::FIND_LARGEST_FILES);
 				m_largestFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->current_path.string(), 32);
 
 				Task* task = m_largestFilesTask.get();
@@ -1934,8 +1927,7 @@ void ForestView::largest_files_slider()
 			}
 			else if (!tabs[current_tab]->selected_path.empty()) 
 			{
-				m_largestFilesTask = std::make_unique<Task>();
-				m_largestFilesTask->task_type = TaskType::FIND_LARGEST_FILES;
+				m_largestFilesTask = std::make_unique<Task>(TaskType::FIND_LARGEST_FILES);
 				m_largestFilesTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
 				Task* task = m_largestFilesTask.get();
 				m_largestFilesTask->worker = std::thread([this, task]()

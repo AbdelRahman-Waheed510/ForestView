@@ -21,6 +21,18 @@ FIND_DUPLICATE_FILES,
 FIND_LARGEST_FILES
 };
 
+static std::atomic<int> s_CopyPasteTasksCount{ 0 };
+static std::atomic<int> s_DeleteTasksCount{ 0 };
+
+static int get_copy_paste_Tasks_count() 
+{
+	return s_CopyPasteTasksCount.load();
+}
+static int get_delete_Tasks_count()
+{
+	return s_DeleteTasksCount.load();
+}
+
 struct Task 
 {
 	std::string sourceName;
@@ -45,4 +57,14 @@ struct Task
 
 	std::thread worker;
 
+	Task(TaskType type) : task_type(type)
+	{
+		if (task_type == TaskType::COPY_PASTE) ++s_CopyPasteTasksCount;
+		else if (task_type == TaskType::_DELETE) ++s_DeleteTasksCount;
+	}
+	~Task() 
+	{
+		if (task_type == TaskType::COPY_PASTE) --s_CopyPasteTasksCount;
+		else if (task_type == TaskType::_DELETE) --s_DeleteTasksCount;
+	}
 };
