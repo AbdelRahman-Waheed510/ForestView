@@ -2063,6 +2063,7 @@ void ForestView::advanced_search()
 			{
 				m_showSearchWindow = false;
 				FileNameSearch.clear();
+				m_founds.clear();
 			}
 
 			ImGui::SameLine();
