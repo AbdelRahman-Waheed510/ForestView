@@ -1434,7 +1434,7 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(tabs[current_tab]->selected_path.empty() || tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path());
+		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectedEntries.empty()) || (!tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path()));
 		if (ImGui::Button("Delete"))
 		{
 			need_delete_confirmation = true;
@@ -1444,34 +1444,66 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(tabs[current_tab]->selected_path.empty() || tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path());
+		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectedEntries.empty()) || (!tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path()));
 		if (ImGui::Button("Copy"))
 		{
-			tabs[current_tab]->copied_path = tabs[current_tab]->selected_path;
+			if (tabs[current_tab]->isSelecting) 
+			{
+				tabs[current_tab]->copied_paths.reserve(tabs[current_tab]->selectedEntries.size());
+				tabs[current_tab]->copied_paths = tabs[current_tab]->selectedEntries;
+			}
+			else 
+			{
+				tabs[current_tab]->copied_path = tabs[current_tab]->selected_path;
+			}
 		}
 		ImGui::EndDisabled();
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(tabs[current_tab]->copied_path.empty());
+		ImGui::BeginDisabled(tabs[current_tab]->copied_path.empty() && tabs[current_tab]->copied_paths.empty());
 		if (ImGui::Button("Paste"))
 		{
-			fs::path src = tabs[current_tab]->copied_path;
-			fs::path dest = tabs[current_tab]->current_path;
+			if (!tabs[current_tab]->copied_paths.empty()) 
+			{
+				for (const fs::path& path : tabs[current_tab]->copied_paths) 
+				{
+					fs::path src = path;
+					fs::path dest = tabs[current_tab]->current_path;
 
-			EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
+					EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(path);
+
 					std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
+					copyTask->totalSize = data.directorySize;
+					copyTask->totalfilesCount = data.filesCount;
+					copyTask->source = src;
+					copyTask->destination = dest;
+					copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
+					copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
 
-			copyTask->totalSize = data.directorySize;
-			copyTask->totalfilesCount = data.filesCount;
-			copyTask->source = src;
-			copyTask->destination = dest;
-			copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
-			copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
+					m_queuedTasks.emplace_back(std::move(copyTask));
+				}
+				tabs[current_tab]->copied_paths.clear();
+			}
+			else 
+			{
+				fs::path src = tabs[current_tab]->copied_path;
+				fs::path dest = tabs[current_tab]->current_path;
 
-			m_queuedTasks.push(std::move(copyTask));
+				EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
+
+				std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
+				copyTask->totalSize = data.directorySize;
+				copyTask->totalfilesCount = data.filesCount;
+				copyTask->source = src;
+				copyTask->destination = dest;
+				copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
+				copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
+
+				m_queuedTasks.emplace_back(std::move(copyTask));
 			
-			tabs[current_tab]->copied_path.clear();
+				tabs[current_tab]->copied_path.clear();
+			}
 		}
 		ImGui::EndDisabled();
 
@@ -1869,22 +1901,40 @@ void ForestView::delete_warning()
 			}
 			tabs[current_tab]->recents.remove(fs::directory_entry(tabs[current_tab]->deleted_path));
 
-			fs::path src = tabs[current_tab]->deleted_path;
+			if (!tabs[current_tab]->selectedEntries.empty()) 
+			{
+				for (const fs::path& path : tabs[current_tab]->selectedEntries) 
+				{
+					std::unique_ptr<Task> deleteTask = std::make_unique<Task>(TaskType::_DELETE);
+					deleteTask->source = path;
+					deleteTask->sourceName = Utils::reform_string(path.filename().string(), 10);
 
-			deleteTask->source = tabs[current_tab]->deleted_path;
-			deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->deleted_path.filename().string(), 10);
+					m_queuedTasks.emplace_back(std::move(deleteTask));
+				}
+			}
+			else 
+			{
+				fs::path src = tabs[current_tab]->deleted_path;
 
-			Task* task = deleteTask.get();
 				std::unique_ptr<Task> deleteTask = std::make_unique<Task>(TaskType::_DELETE);
+				deleteTask->source = tabs[current_tab]->deleted_path;
+				deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->deleted_path.filename().string(), 10);
 
-			deleteTask->worker = std::thread([this, src, task]()
+				Task* task = deleteTask.get();
+				deleteTask->worker = std::thread([this, src, task]()
 				{
 					tabs[current_tab]->fileExplorer->remove(src);
 					task->finished = true;
 				});
-
-			tasks.emplace_back(std::move(deleteTask));
+				tasks.emplace_back(std::move(deleteTask));
+			}
+			tabs[current_tab]->selectedEntries.clear();
+			if (tabs[current_tab]->isSelecting) 
+			{
+				tabs[current_tab]->isSelecting = false;
+			}
 			tabs[current_tab]->deleted_path = "";
+			tabs[current_tab]->selected_path.clear();
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SetItemDefaultFocus();
@@ -2189,7 +2239,8 @@ void ForestView::advanced_search()
 				ImGui::Text("Nothing Found");
 			}
 		}
-			ImGui::End();
+		ImGui::End();
+
 	}
 }
 

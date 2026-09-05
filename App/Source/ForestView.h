@@ -97,6 +97,7 @@ struct State
 
 	fs::path selected_path;
 	fs::path current_path;
+	std::vector<fs::path> copied_paths;
 	fs::path copied_path;
 	std::string copied_structure = "";
 	fs::path deleted_path;
@@ -124,6 +125,8 @@ struct State
 
 	std::vector<fs::path> selectedEntries;
 	bool isSelecting = false;
+
+
 
 	State() 
 	{
