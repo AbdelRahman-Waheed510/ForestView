@@ -254,6 +254,9 @@ private:
 
 	std::atomic<int> m_activeCopyingTasks{ 0 };
 	std::atomic<int> m_activeDeleteTasks{ 0 };
+
+	ImVec2 m_SelectionRecStartingPos;
+	bool m_isDraggingSelection = false;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)

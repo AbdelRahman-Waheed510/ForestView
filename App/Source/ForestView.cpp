@@ -1663,6 +1663,7 @@ void ForestView::tool_bar()
 		}
 
 		ImGui::SameLine();
+
 		// ##########################################################################
 		// For Debug TODO: Delete this button or remove it from the release mode
 		// ##########################################################################
@@ -1720,6 +1721,7 @@ void ForestView::tool_bar()
 	}
 	ImGui::EndChild();
 	ImGui::PopStyleVar(1);
+
 }
 
 // ####################################################### POPUPS ######################################################
@@ -2650,9 +2652,11 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 					tabs[current_tab]->selectedEntries.clear();
 					tabs[current_tab]->isSelecting = false;
 				}
+
+				m_SelectionRecStartingPos = ImGui::GetMousePos();
+				m_isDraggingSelection = true;
 			}
 		}
-
 		// the current and selceted path debug panel ==============================================
 		render_debug_panel();
 
@@ -2664,6 +2668,26 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			tabs[current_tab]->is_coping_structure = false;
 			tabs[current_tab]->copied_structure = "";
 		}
+
+		// Drawing the selection rectagle
+		if (m_isDraggingSelection) 
+		{
+			ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+			ImVec2 p_min = ImVec2(ImMin(m_SelectionRecStartingPos, ImGui::GetMousePos()));
+			ImVec2 p_max = ImVec2(ImMax(m_SelectionRecStartingPos, ImGui::GetMousePos()));
+
+			ImU32 SelectionColor = IM_COL32(unique_color.x * 255, unique_color.y * 255, unique_color.z * 255, (unique_color.w * 255) / 2);  // Transparent green fill
+			ImU32 SelectionOutlineColor = IM_COL32(unique_color.x * 255, unique_color.y * 255, unique_color.z * 255, unique_color.w * 255); // Solid green border outline
+
+			draw_list->AddRectFilled(p_min, p_max, SelectionColor);
+			draw_list->AddRect(p_min, p_max, SelectionOutlineColor, 3.0f, 0, 1.0f);
+			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			{
+				m_isDraggingSelection = false;
+			}
+		}
+
 
 	}
 	ImGui::EndChild();
@@ -2759,7 +2783,22 @@ void ForestView::render_entries()
 					ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.005f, 0.5f));
 
 					ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, icon_height));
+					if (m_isDraggingSelection) 
+					{
+						ImVec2 item_min = ImGui::GetItemRectMin(); 
+						ImVec2 item_max = ImGui::GetItemRectMax();
+						ImVec2 selection_min = ImMin(ImGui::GetMousePos(), m_SelectionRecStartingPos);
+						ImVec2 selection_max = ImMax(ImGui::GetMousePos(), m_SelectionRecStartingPos);
+						bool overlaps = (item_min.x < selection_max.x && item_max.x > selection_min.x) &&
+							(item_min.y < selection_max.y && item_max.y > selection_min.y);
 
+						if (overlaps)
+						{
+							tabs[current_tab]->isSelecting = true;
+							tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
+						}
+
+					}
 					handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
 					// ========================================== Last Modified ================================================
 					ImGui::TableNextColumn();
