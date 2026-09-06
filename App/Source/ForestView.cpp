@@ -124,9 +124,6 @@ void App::dark_mode()
 
 	spacing_and_padding_and_stuff(style);
 
-	// Steel Blue Accent
-	const ImVec4 Accent = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
-
 	style.Colors[ImGuiCol_Text] = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.48f, 0.52f, 0.60f, 1.00f);
 
@@ -152,8 +149,8 @@ void App::dark_mode()
 	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.15686275f, 0.16862746f, 0.19215687f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.17647059f, 0.19215687f, 0.22352941f, 1.00f);
 
-	style.Colors[ImGuiCol_CheckMark] = Accent;
-	style.Colors[ImGuiCol_SliderGrab] = Accent;
+	style.Colors[ImGuiCol_CheckMark] = unique_color;
+	style.Colors[ImGuiCol_SliderGrab] = unique_color;
 	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.48f, 0.70f, 1.00f, 1.00f);
 
 	style.Colors[ImGuiCol_Button] = ImVec4(0.11764706f, 0.13333334f, 0.14901961f, 1.00f);
@@ -165,11 +162,11 @@ void App::dark_mode()
 	style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.20000000f, 0.22745098f, 0.27450982f, 1.00f);
 
 	style.Colors[ImGuiCol_Separator] = ImVec4(0.12941177f, 0.14901961f, 0.19215687f, 1.00f);
-	style.Colors[ImGuiCol_SeparatorHovered] = Accent;
+	style.Colors[ImGuiCol_SeparatorHovered] = unique_color;
 	style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.48f, 0.70f, 1.00f, 1.00f);
 
 	style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.18f, 0.20f, 0.24f, 0.70f);
-	style.Colors[ImGuiCol_ResizeGripHovered] = Accent;
+	style.Colors[ImGuiCol_ResizeGripHovered] = unique_color;
 	style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.48f, 0.70f, 1.00f, 1.00f);
 
 	style.Colors[ImGuiCol_Tab] = ImVec4(0.07843138f, 0.08627451f, 0.10196079f, 1.00f);
@@ -179,8 +176,8 @@ void App::dark_mode()
 	style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.12000000f, 0.14000000f, 0.17000000f, 1.00f);
 
 	style.Colors[ImGuiCol_PlotLines] = ImVec4(0.55f, 0.60f, 0.70f, 1.00f);
-	style.Colors[ImGuiCol_PlotLinesHovered] = Accent;
-	style.Colors[ImGuiCol_PlotHistogram] = Accent;
+	style.Colors[ImGuiCol_PlotLinesHovered] = unique_color;
+	style.Colors[ImGuiCol_PlotHistogram] = unique_color;
 	style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.48f, 0.70f, 1.00f, 1.00f);
 
 	style.Colors[ImGuiCol_TableHeaderBg] = ImVec4(0.04705882f, 0.05490196f, 0.07058824f, 1.00f);
@@ -192,8 +189,8 @@ void App::dark_mode()
 
 	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.38f, 0.60f, 0.95f, 0.30f);
 
-	style.Colors[ImGuiCol_DragDropTarget] = Accent;
-	style.Colors[ImGuiCol_NavHighlight] = Accent;
+	style.Colors[ImGuiCol_DragDropTarget] = unique_color;
+	style.Colors[ImGuiCol_NavHighlight] = unique_color;
 	style.Colors[ImGuiCol_NavWindowingHighlight] = ImVec4(0.75f, 0.82f, 1.00f, 0.80f);
 	style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.35f);
 	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.55f);
@@ -286,8 +283,8 @@ void App::light_mode()
 
 	spacing_and_padding_and_stuff(style);
 
-	// Steel Blue Accent
-	const ImVec4 Accent = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
+	// Steel Blue unique_color
+	const ImVec4 unique_color = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
 
 	style.Colors[ImGuiCol_Text] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.54f, 0.60f, 1.00f);
@@ -314,8 +311,8 @@ void App::light_mode()
 	style.Colors[ImGuiCol_ScrollbarGrabHovered] = ImVec4(0.62f, 0.66f, 0.72f, 1.00f);
 	style.Colors[ImGuiCol_ScrollbarGrabActive] = ImVec4(0.52f, 0.57f, 0.64f, 1.00f);
 
-	style.Colors[ImGuiCol_CheckMark] = Accent;
-	style.Colors[ImGuiCol_SliderGrab] = Accent;
+	style.Colors[ImGuiCol_CheckMark] = unique_color;
+	style.Colors[ImGuiCol_SliderGrab] = unique_color;
 	style.Colors[ImGuiCol_SliderGrabActive] = ImVec4(0.28f, 0.52f, 0.90f, 1.00f);
 
 	style.Colors[ImGuiCol_Button] = ImVec4(0.89f, 0.91f, 0.94f, 1.00f);
@@ -327,11 +324,11 @@ void App::light_mode()
 	style.Colors[ImGuiCol_HeaderActive] = ImVec4(0.74f, 0.81f, 0.92f, 1.00f);
 
 	style.Colors[ImGuiCol_Separator] = ImVec4(0.78f, 0.80f, 0.84f, 1.00f);
-	style.Colors[ImGuiCol_SeparatorHovered] = Accent;
+	style.Colors[ImGuiCol_SeparatorHovered] = unique_color;
 	style.Colors[ImGuiCol_SeparatorActive] = ImVec4(0.28f, 0.52f, 0.90f, 1.00f);
 
 	style.Colors[ImGuiCol_ResizeGrip] = ImVec4(0.72f, 0.75f, 0.80f, 0.70f);
-	style.Colors[ImGuiCol_ResizeGripHovered] = Accent;
+	style.Colors[ImGuiCol_ResizeGripHovered] = unique_color;
 	style.Colors[ImGuiCol_ResizeGripActive] = ImVec4(0.28f, 0.52f, 0.90f, 1.00f);
 
 	style.Colors[ImGuiCol_Tab] = ImVec4(0.90f, 0.92f, 0.95f, 1.00f);
@@ -341,8 +338,8 @@ void App::light_mode()
 	style.Colors[ImGuiCol_TabUnfocusedActive] = ImVec4(0.86f, 0.89f, 0.95f, 1.00f);
 
 	style.Colors[ImGuiCol_PlotLines] = ImVec4(0.45f, 0.50f, 0.60f, 1.00f);
-	style.Colors[ImGuiCol_PlotLinesHovered] = Accent;
-	style.Colors[ImGuiCol_PlotHistogram] = Accent;
+	style.Colors[ImGuiCol_PlotLinesHovered] = unique_color;
+	style.Colors[ImGuiCol_PlotHistogram] = unique_color;
 	style.Colors[ImGuiCol_PlotHistogramHovered] = ImVec4(0.28f, 0.52f, 0.90f, 1.00f);
 
 	style.Colors[ImGuiCol_TableHeaderBg] = ImVec4(0.90f, 0.92f, 0.95f, 1.00f);
@@ -354,9 +351,9 @@ void App::light_mode()
 
 	style.Colors[ImGuiCol_TextSelectedBg] = ImVec4(0.38f, 0.60f, 0.95f, 0.30f);
 
-	style.Colors[ImGuiCol_DragDropTarget] = Accent;
-	style.Colors[ImGuiCol_NavHighlight] = Accent;
-	style.Colors[ImGuiCol_NavWindowingHighlight] = Accent;
+	style.Colors[ImGuiCol_DragDropTarget] = unique_color;
+	style.Colors[ImGuiCol_NavHighlight] = unique_color;
+	style.Colors[ImGuiCol_NavWindowingHighlight] = unique_color;
 	style.Colors[ImGuiCol_NavWindowingDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.12f);
 	style.Colors[ImGuiCol_ModalWindowDimBg] = ImVec4(0.00f, 0.00f, 0.00f, 0.20f);
 }

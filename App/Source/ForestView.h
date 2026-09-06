@@ -186,6 +186,8 @@ protected:
 	ImFont* default_font = nullptr;
 	ImFont* arabic_font = nullptr;
 
+	const ImVec4 unique_color = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
+
 	void Shut_Down();
 public:
 
