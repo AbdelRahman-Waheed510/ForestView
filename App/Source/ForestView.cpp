@@ -2646,8 +2646,11 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			{
 				tabs[current_tab]->selected_path = "";
 
+				ImGuiIO io = ImGui::GetIO();
+				bool ctrlPressed = io.KeyCtrl;
+
 				// Clear the selcted entries
-				if (tabs[current_tab]->isSelecting) 
+				if (tabs[current_tab]->isSelecting && !ctrlPressed) 
 				{
 					tabs[current_tab]->selectedEntries.clear();
 					tabs[current_tab]->isSelecting = false;
@@ -2695,6 +2698,15 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 void ForestView::render_entries()
 {
+	if (tabs[current_tab]->selectedEntries.empty()) 
+	{
+		tabs[current_tab]->isSelecting = false;
+	}
+	else 
+	{
+		tabs[current_tab]->isSelecting = true;
+	}
+
 	if (tabs[current_tab]->view_type == LARGE_THUMBNAILS)
 	{
 		float avalWidth = ImGui::GetContentRegionAvail().x;
@@ -2746,6 +2758,11 @@ void ForestView::render_entries()
 			ImGui::TableSetupColumn("Size");
 			ImGui::TableHeadersRow();
 
+			if (m_isDraggingSelection) 
+			{
+				tabs[current_tab]->selectedEntries.clear();
+			}
+
 			ImGuiListClipper Clipper;
 			Clipper.Begin(tabs[current_tab]->entries.size());
 			while (Clipper.Step()) 
@@ -2760,8 +2777,41 @@ void ForestView::render_entries()
 					// ======================================== Name ==============================================
 					ImGui::TableNextColumn();
 
+					bool overlaps = false;
+					if (m_isDraggingSelection) 
+					{
+						ImVec2 row_min = ImGui::GetCursorScreenPos();
+						ImVec2 row_max = ImVec2(row_min.x + ImGui::GetContentRegionAvail().x, row_min.y + icon_height);
+
+						ImVec2 selection_min = ImMin(ImGui::GetMousePos(), m_SelectionRecStartingPos);
+						ImVec2 selection_max = ImMax(ImGui::GetMousePos(), m_SelectionRecStartingPos);
+
+						overlaps = (row_min.y < selection_max.y && row_max.y > selection_min.y);
+
+					}
 
 					bool is_selected; 
+					if (overlaps) 
+					{
+						DirAccessResult test = tabs[current_tab]->fileExplorer->check_directory_access(tabs[current_tab]->entries[i].entry.path());
+						if (test == DirAccessResult::ACCESS_DENIED)
+						{
+							need_access_denied_popup = true;
+							is_selected = false;
+						}
+						else
+						{
+							if (std::erase(tabs[current_tab]->selectedEntries, tabs[current_tab]->entries[i].entry.path()) <= 0)
+							{
+								tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
+								is_selected = true;
+							}
+							else
+							{
+								is_selected = false;
+							}
+						}
+					}
 					if (!tabs[current_tab]->isSelecting) 
 					{
 						is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
@@ -2783,22 +2833,6 @@ void ForestView::render_entries()
 					ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.005f, 0.5f));
 
 					ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, icon_height));
-					if (m_isDraggingSelection) 
-					{
-						ImVec2 item_min = ImGui::GetItemRectMin(); 
-						ImVec2 item_max = ImGui::GetItemRectMax();
-						ImVec2 selection_min = ImMin(ImGui::GetMousePos(), m_SelectionRecStartingPos);
-						ImVec2 selection_max = ImMax(ImGui::GetMousePos(), m_SelectionRecStartingPos);
-						bool overlaps = (item_min.x < selection_max.x && item_max.x > selection_min.x) &&
-							(item_min.y < selection_max.y && item_max.y > selection_min.y);
-
-						if (overlaps)
-						{
-							tabs[current_tab]->isSelecting = true;
-							tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
-						}
-
-					}
 					handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
 					// ========================================== Last Modified ================================================
 					ImGui::TableNextColumn();
@@ -2843,6 +2877,7 @@ void ForestView::render_entries()
 		
 	}
 
+
 }
 
 void ForestView::render_debug_panel()
@@ -2883,6 +2918,11 @@ void ForestView::render_debug_panel()
 	ImGui::Text(std::format("Number of Active Delete Tasks: {}", m_activeDeleteTasks.load()).c_str());
 
 	ImGui::SeparatorText("Selected Entries");
+
+	std::string flag4 = (m_isDraggingSelection) ? "True" : "False";
+	ImGui::Text("m_isDraggingSelection Flag: "); ImGui::SameLine();
+	ImGui::Text(flag4.c_str());
+
 	std::string flag3 = (tabs[current_tab]->isSelecting) ? "True" : "False";
 	ImGui::Text("isSelecting Flag: "); ImGui::SameLine();
 	ImGui::Text(flag3.c_str());
@@ -2971,22 +3011,19 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 				}
 
 				tabs[current_tab]->selected_path.clear();
-				if (!tabs[current_tab]->selectedEntries.empty())
-				{
-					tabs[current_tab]->isSelecting = true;
-				}
-				else tabs[current_tab]->isSelecting = false;
 			}
 			else
 			{
-				// Clear the selected Items
-				if (tabs[current_tab]->isSelecting) 
+				if (!m_isDraggingSelection)
 				{
-					tabs[current_tab]->selectedEntries.clear();
-					tabs[current_tab]->isSelecting = false;
+					// Clear the selected Items
+					if (tabs[current_tab]->isSelecting) 
+					{
+						tabs[current_tab]->selectedEntries.clear();
+						tabs[current_tab]->isSelecting = false;
+					}
+					left_click(entry);
 				}
-
-				left_click(entry);
 			}
 		}
 	}
