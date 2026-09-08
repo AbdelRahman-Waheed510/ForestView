@@ -2370,7 +2370,7 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 	folder_popup_was_open = folder_popup_is_open;
 }
 
-// Files LEFT CLICK
+// Files RIGHT CLICK
 void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry) 
 {
 	if (tabs[current_tab]->need_file_right_click_call)
@@ -2649,13 +2649,18 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				ImGuiIO io = ImGui::GetIO();
 				bool ctrlPressed = io.KeyCtrl;
 
-				// Clear the selcted entries
-				if (tabs[current_tab]->isSelecting && !ctrlPressed) 
+				if (ctrlPressed) 
 				{
+					tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectedEntries;
+				}
+				else
+				{
+					tabs[current_tab]->selectedEntriesSnapShot.clear();
 					tabs[current_tab]->selectedEntries.clear();
 					tabs[current_tab]->isSelecting = false;
 				}
 
+				tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectedEntries;
 				m_SelectionRecStartingPos = ImGui::GetMousePos();
 				m_isDraggingSelection = true;
 			}
@@ -2707,6 +2712,11 @@ void ForestView::render_entries()
 		tabs[current_tab]->isSelecting = true;
 	}
 
+	if (m_isDraggingSelection) 
+	{
+		tabs[current_tab]->selectedEntries = tabs[current_tab]->selectedEntriesSnapShot;
+	}
+
 	if (tabs[current_tab]->view_type == LARGE_THUMBNAILS)
 	{
 		float avalWidth = ImGui::GetContentRegionAvail().x;
@@ -2718,7 +2728,55 @@ void ForestView::render_entries()
 		{
 			ImGui::PushID(i);
 
-			bool is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
+			bool overlaps = false;
+			if (m_isDraggingSelection)
+			{
+				ImVec2 square_min = ImGui::GetCursorScreenPos();
+				ImVec2 square_max = ImVec2(square_min.x + tabs[current_tab]->icons_width, square_min.y + tabs[current_tab]->icons_height);
+
+				ImVec2 selection_min = ImMin(ImGui::GetMousePos(), m_SelectionRecStartingPos);
+				ImVec2 selection_max = ImMax(ImGui::GetMousePos(), m_SelectionRecStartingPos);
+
+				overlaps = (square_min.x < selection_max.x && square_max.x > selection_min.x) && (square_min.y < selection_max.y && square_max.y > selection_min.y);
+
+			}
+
+			bool is_selected;
+			if (overlaps)
+			{
+				DirAccessResult test = tabs[current_tab]->fileExplorer->check_directory_access(tabs[current_tab]->entries[i].entry.path());
+				if (test == DirAccessResult::ACCESS_DENIED)
+				{
+					need_access_denied_popup = true;
+					is_selected = false;
+				}
+				else
+				{
+					if (std::erase(tabs[current_tab]->selectedEntries, tabs[current_tab]->entries[i].entry.path()) <= 0)
+					{
+						tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
+						is_selected = true;
+					}
+					else
+					{
+						is_selected = false;
+					}
+				}
+			}
+			if (!tabs[current_tab]->isSelecting)
+			{
+				is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
+			}
+			else
+			{
+				const std::vector<fs::path>& Temp = tabs[current_tab]->selectedEntries;
+
+				auto it = std::find(Temp.begin(), Temp.end(), tabs[current_tab]->entries[i].entry.path());
+				if (it != Temp.end()) is_selected = true;
+				else is_selected = false;
+			}
+
+
 
 			if (is_selected) 
 			{
@@ -2750,7 +2808,7 @@ void ForestView::render_entries()
 
 	else if (tabs[current_tab]->view_type == ROWS)
 	{
-		if (ImGui::BeginTable("entries", 4, ImGuiTableFlags_Resizable))
+		if (ImGui::BeginTable("entries", 4, ImGuiTableFlags_Resizable, ImVec2(1000.0f, 0.0f)))
 		{
 			ImGui::TableSetupColumn("Name");
 			ImGui::TableSetupColumn("Last Modified");
@@ -2758,10 +2816,6 @@ void ForestView::render_entries()
 			ImGui::TableSetupColumn("Size");
 			ImGui::TableHeadersRow();
 
-			if (m_isDraggingSelection) 
-			{
-				tabs[current_tab]->selectedEntries.clear();
-			}
 
 			ImGuiListClipper Clipper;
 			Clipper.Begin(tabs[current_tab]->entries.size());
@@ -3002,14 +3056,17 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			}
 			ImGuiIO io = ImGui::GetIO();
 			bool ctrlPressed = io.KeyCtrl;
-			if (ctrlPressed)
+			if (ctrlPressed && !m_isDraggingSelection)
 			{
 				std::vector<fs::path>& x = tabs[current_tab]->selectedEntries;
+				if (!tabs[current_tab]->selected_path.empty()) 
+				{
+					x.emplace_back(tabs[current_tab]->selected_path);
+				}
 				if (std::erase(x, entry.path()) <= 0)
 				{
-					tabs[current_tab]->selectedEntries.emplace_back(entry.path());
+					x.emplace_back(entry.path());
 				}
-
 				tabs[current_tab]->selected_path.clear();
 			}
 			else
