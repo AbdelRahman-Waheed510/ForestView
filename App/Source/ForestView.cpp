@@ -530,7 +530,7 @@ void ForestView::on_update()
 						m_activeDeleteTasks++;
 						m_queuedTasks[i]->worker = std::thread([this, task]()
 							{
-								tabs[current_tab]->fileExplorer->remove(task->source);
+								tabs[current_tab]->fileExplorer->recycleBin_delete(task->source);
 								task->finished = true;
 								m_activeDeleteTasks--;
 							});
@@ -1981,7 +1981,7 @@ void ForestView::delete_warning()
 				Task* task = deleteTask.get();
 				deleteTask->worker = std::thread([this, src, task]()
 				{
-					tabs[current_tab]->fileExplorer->remove(src);
+					tabs[current_tab]->fileExplorer->recycleBin_delete(src);
 					task->finished = true;
 				});
 				tasks.emplace_back(std::move(deleteTask));
