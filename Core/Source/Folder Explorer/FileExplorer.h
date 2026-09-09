@@ -4,7 +4,10 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+
 #include <windows.h>
+#include <shobjidl.h>
+
 #include <format>
 #include <stack>
 #include <stdexcept>
@@ -756,9 +759,9 @@ public:
 		filesCountProgress++;
 	}
 
-	void remove(const fs::path& path_to_delete) 
+	void permanent_delete(const fs::path& path_to_delete) 
 	{
-		if (!fs::exists(path_to_delete)) 
+		if (!fs::exists(path_to_delete))
 		{
 			std::cerr << "Error: source path doesnot exist.....! " << std::endl;
 			return;
@@ -766,12 +769,81 @@ public:
 		std::error_code ec;
 
 		int deleted_files = fs::remove_all(path_to_delete, ec);
-		if (ec) 
+		if (ec)
 		{
 			std::cerr << "Failed to wipe directory: " << ec.message() << '\n';
 		}
 #ifdef _DEBUG
 		std::cout << "Number of files deleted: " << deleted_files << std::endl;
+#endif
+		return;
+	}
+
+	void recycleBin_delete(const fs::path& path_to_delete)
+	{
+		if (!fs::exists(path_to_delete))
+		{
+			std::cerr << "Error: source path doesnot exist.....! " << std::endl;
+			return;
+		}
+		// Initialize COM library for the current thread
+		HRESULT hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+		if (FAILED(hr))
+		{
+			std::cerr << "Failed to initialize COM library. HRESULT: " << hr << std::endl;
+			return;
+		}
+
+		IFileOperation* pfo = nullptr;
+		bool success = false;
+
+		// Create instance of IFileOperation
+		hr = CoCreateInstance(CLSID_FileOperation, NULL, CLSCTX_ALL, IID_PPV_ARGS(&pfo));
+		if (SUCCEEDED(hr))
+		{
+			hr = pfo->SetOperationFlags(FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_NOERRORUI);
+
+			if (SUCCEEDED(hr))
+			{
+				IShellItem* psiTarget = nullptr;
+				// Create a Shell Item from the absolute path string
+				std::wstring wPath = path_to_delete.wstring();
+				hr = SHCreateItemFromParsingName(wPath.c_str(), NULL, IID_PPV_ARGS(&psiTarget));
+
+				if (SUCCEEDED(hr))
+				{
+					// Queue the item for deletion
+					hr = pfo->DeleteItem(psiTarget, nullptr);
+					psiTarget->Release();
+
+					if (SUCCEEDED(hr))
+					{
+						// Execute the actual move to Recycle Bin
+						hr = pfo->PerformOperations();
+						if (SUCCEEDED(hr))
+						{
+							success = true;
+						}
+					}
+				}
+			}
+			pfo->Release();
+		}
+
+		// Clean up COM initialization
+		CoUninitialize();
+
+		// Error reporting matching your design
+		if (!success)
+		{
+			std::cerr << "Failed to wipe directory using IFileOperation. HRESULT: " << hr << '\n';
+		}
+
+#ifdef _DEBUG
+		if (success)
+		{
+			std::cout << "Directory successfully sent to Recycle Bin." << std::endl;
+		}
 #endif
 		return;
 	}
