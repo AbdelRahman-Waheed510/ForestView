@@ -1431,7 +1431,27 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectedEntries.empty()) || (!tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path()));
+		bool isRootFolder = false;
+		if (tabs[current_tab]->isSelecting) 
+		{
+			for (const fs::path& path : tabs[current_tab]->selectedEntries) 
+			{
+				if (path == path.root_path()) 
+				{
+					isRootFolder = true;
+					break;
+				}
+			}
+		}
+		else 
+		{
+			if (!tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path()) 
+			{
+				isRootFolder = true;
+			}
+		}
+
+		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectedEntries.empty()) || isRootFolder);
 		if (ImGui::Button("Delete"))
 		{
 			need_delete_confirmation = true;
@@ -1441,7 +1461,7 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectedEntries.empty()) || (!tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selected_path == tabs[current_tab]->selected_path.root_path()));
+		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectedEntries.empty()) || isRootFolder);
 		if (ImGui::Button("Copy"))
 		{
 			if (tabs[current_tab]->isSelecting) 
@@ -2699,14 +2719,13 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		render_entries();
 
 		// clearing the selected_Path if i press anywhere that not an entry =======================
+		ImGuiIO io = ImGui::GetIO();
+		bool ctrlPressed = io.KeyCtrl;
 		if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered())
 		{
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 			{
 				tabs[current_tab]->selected_path = "";
-
-				ImGuiIO io = ImGui::GetIO();
-				bool ctrlPressed = io.KeyCtrl;
 
 				if (ctrlPressed) 
 				{
@@ -2755,7 +2774,33 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			}
 		}
 
+		// Ctrl+A selcetion 
+		if (!io.WantCaptureKeyboard) 
+		{
+			if (ctrlPressed && ImGui::IsKeyPressed(ImGuiKey_A)) 
+			{
+				// To Stop the the spam ctrl+A to readd the entries in the current Path #################
+				if (tabs[current_tab]->isSelecting) 
+				{
+					tabs[current_tab]->selectedEntries = tabs[current_tab]->selectedEntriesSnapShot;
+				}
+				// #######################################################################################
 
+				tabs[current_tab]->selected_path = "";
+				for (const Entry& entry : tabs[current_tab]->entries) 
+				{
+					DirAccessResult check = tabs[current_tab]->fileExplorer->check_directory_access(entry.entry.path());
+					if (check == DirAccessResult::ACCESS_DENIED) 
+					{
+						need_access_denied_popup = true;
+					}
+					else 
+					{
+						tabs[current_tab]->selectedEntries.emplace_back(entry.entry.path());
+					}
+				}
+			}
+		}
 	}
 	ImGui::EndChild();
 }
