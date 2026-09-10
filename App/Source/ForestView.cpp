@@ -3071,10 +3071,135 @@ void ForestView::render_entries()
 			}
 			ImGui::EndTable();
 		}
-			
-		
 	}
 
+	if (!ImGui::GetIO().WantCaptureKeyboard) 
+	{
+		for (size_t i = 0; i < 26; i++) 
+		{
+			if (ImGui::IsKeyPressed(s_alphabetMappings[i].key)) 
+			{
+				WORD activeLangId = LOWORD(GetKeyboardLayout(0));	
+				const std::wstring& selectedPathWstring = tabs[current_tab]->selected_path.filename().wstring();
+				const std::vector<Entry>& entriesRef = tabs[current_tab]->entries;
+
+				switch (activeLangId)
+				{
+				case 0x0409: // ENGLISH  
+				{	
+
+					if (!tabs[current_tab]->selected_path.empty() && (selectedPathWstring[0] == s_alphabetMappings[i].englishLower || selectedPathWstring[0] == s_alphabetMappings[i].englishUpper))
+					{
+						int selected_pathIdx = -1;
+						for (size_t idx = 0 ; idx < entriesRef.size(); ++idx)
+						{
+							const fs::path& entryPath = entriesRef[idx].entry.path();
+							if (entryPath == tabs[current_tab]->selected_path)
+							{
+								selected_pathIdx = idx;
+								break;
+							}
+						}
+						if (selected_pathIdx == -1) 
+						{
+							break;
+						}
+						int selected_PathIdxTemp = selected_pathIdx + 1;
+						while (selected_PathIdxTemp != selected_pathIdx) 
+						{
+							if (entriesRef[selected_PathIdxTemp].entry.path().empty()) 
+							{
+								selected_PathIdxTemp = (selected_PathIdxTemp + 1) % (int)entriesRef.size();
+								continue;
+							}
+							if (entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishLower ||
+								entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishUpper)
+							{
+								tabs[current_tab]->selectedEntries.clear();
+								tabs[current_tab]->selected_path = entriesRef[selected_PathIdxTemp].entry.path();
+								break;
+							}
+							selected_PathIdxTemp = (selected_PathIdxTemp + 1) % (int)entriesRef.size();
+						}
+					
+					}
+					else 
+					{
+						for (const Entry& entry : entriesRef)
+						{
+							if (entry.entry.path().empty()) continue;
+							if (entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishLower ||
+								entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishUpper)
+							{
+								tabs[current_tab]->selectedEntries.clear();
+								tabs[current_tab]->selected_path = entry.entry.path();
+								break;
+							}
+						}
+					}
+
+					break;
+				}
+				case 0x0c01: // ARABIC
+				{
+				
+					if (!tabs[current_tab]->selected_path.empty() && selectedPathWstring[0] == s_alphabetMappings[i].arabicChar)
+					{
+						int selected_pathIdx = -1;
+						for (size_t idx = 0; idx < entriesRef.size(); ++idx)
+						{
+							const fs::path& entryPath = entriesRef[idx].entry.path();
+							if (entryPath == tabs[current_tab]->selected_path)
+							{
+								selected_pathIdx = idx;
+								break;
+							}
+						}
+						if (selected_pathIdx == -1)
+						{
+							break;
+						}
+						int selected_PathIdxTemp = selected_pathIdx + 1;
+						while (selected_PathIdxTemp != selected_pathIdx)
+						{
+							if (entriesRef[selected_PathIdxTemp].entry.path().empty())
+							{
+								selected_PathIdxTemp = (selected_PathIdxTemp + 1) % (int)entriesRef.size();
+								continue;
+							}
+							if (entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].arabicChar)
+							{
+								tabs[current_tab]->selectedEntries.clear();
+								tabs[current_tab]->selected_path = entriesRef[selected_PathIdxTemp].entry.path();
+								break;
+							}
+							selected_PathIdxTemp = (selected_PathIdxTemp + 1) % (int)entriesRef.size();
+						}
+
+					}
+					else
+					{
+						for (const Entry& entry : entriesRef)
+						{
+							if (entry.entry.path().empty()) continue;
+							if (entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].arabicChar)
+							{
+								tabs[current_tab]->selectedEntries.clear();
+								tabs[current_tab]->selected_path = entry.entry.path();
+								break;
+							}
+						}
+					}
+					break;
+				}
+				default:
+					break;
+				}
+
+				break;
+			}
+		}
+	}
 
 }
 

@@ -47,6 +47,42 @@ namespace fs = std::filesystem;
 
 static int id = 1;
 
+struct KeyPressedData {
+	ImGuiKey key;
+	wchar_t englishUpper;
+	wchar_t englishLower;
+	wchar_t arabicChar;
+};
+
+static constexpr KeyPressedData s_alphabetMappings[] = {
+	{ ImGuiKey_A, L'A', L'a', L'\u0634' }, // SHEEN
+	{ ImGuiKey_B, L'B', L'b', L'\u0644' }, // LAM 
+	{ ImGuiKey_C, L'C', L'c', L'\u0624' }, // WAW WITH HAMZA ABOVE
+	{ ImGuiKey_D, L'D', L'd', L'\u064A' }, // YEH
+	{ ImGuiKey_E, L'E', L'e', L'\u062B' }, // THEH
+	{ ImGuiKey_F, L'F', L'f', L'\u0628' }, // BEH
+	{ ImGuiKey_G, L'G', L'g', L'\u0644' }, // LAM
+	{ ImGuiKey_H, L'H', L'h', L'\u0627' }, // ALEF
+	{ ImGuiKey_I, L'I', L'i', L'\u0647' }, // HEH
+	{ ImGuiKey_J, L'J', L'j', L'\u062A' }, // TEH
+	{ ImGuiKey_K, L'K', L'k', L'\u0646' }, // NOON
+	{ ImGuiKey_L, L'L', L'l', L'\u0645' }, // MEEM
+	{ ImGuiKey_M, L'M', L'm', L'\u0629' }, // TEH MARBUTA
+	{ ImGuiKey_N, L'N', L'n', L'\u0649' }, // ALEF MAKSURA
+	{ ImGuiKey_O, L'O', L'o', L'\u062E' }, // KHAH
+	{ ImGuiKey_P, L'P', L'p', L'\u062D' }, // HAH
+	{ ImGuiKey_Q, L'Q', L'q', L'\u0636' }, // DAD
+	{ ImGuiKey_R, L'R', L'r', L'\u0642' }, // QAF
+	{ ImGuiKey_S, L'S', L's', L'\u0633' }, // SEEN
+	{ ImGuiKey_T, L'T', L't', L'\u0641' }, // FEH
+	{ ImGuiKey_U, L'U', L'u', L'\u0639' }, // AIN
+	{ ImGuiKey_V, L'V', L'v', L'\u0631' }, // REH
+	{ ImGuiKey_W, L'W', L'w', L'\u0635' }, // SAD
+	{ ImGuiKey_X, L'X', L'x', L'\u0621' }, // HAMZA
+	{ ImGuiKey_Y, L'Y', L'y', L'\u063A' }, // GHAIN
+	{ ImGuiKey_Z, L'Z', L'z', L'\u0626' }, // YEH WITH HAMZA ABOVE
+};
+
 enum viewType
 {
 	LARGE_THUMBNAILS,
