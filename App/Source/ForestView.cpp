@@ -2774,7 +2774,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			ImU32 SelectionColor = IM_COL32(unique_color.x * 255, unique_color.y * 255, unique_color.z * 255, (unique_color.w * 255) / 2);  // Transparent green fill
 			ImU32 SelectionOutlineColor = IM_COL32(unique_color.x * 255, unique_color.y * 255, unique_color.z * 255, unique_color.w * 255); // Solid green border outline
 
-			draw_list->AddRectFilled(p_min, p_max, SelectionColor);
+			draw_list->AddRectFilled(p_min, p_max, SelectionColor, 3.0f);
 			draw_list->AddRect(p_min, p_max, SelectionOutlineColor, 3.0f, 0, 1.0f);
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 			{
@@ -2785,7 +2785,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		// Ctrl+A selcetion 
 		if (!io.WantCaptureKeyboard) 
 		{
-			if (ctrlPressed && ImGui::IsKeyPressed(ImGuiKey_A)) 
+			if (ctrlPressed && ImGui::IsKeyPressed(ImGuiKey_A, false)) 
 			{
 				// To Stop the the spam ctrl+A to readd the entries in the current Path #################
 				if (tabs[current_tab]->isSelecting) 
