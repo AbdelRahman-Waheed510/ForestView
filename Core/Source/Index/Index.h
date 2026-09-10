@@ -85,7 +85,7 @@ public:
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 
-		delete m_root;
+		//delete m_root;
 
 		auto end = std::chrono::high_resolution_clock::now();
 

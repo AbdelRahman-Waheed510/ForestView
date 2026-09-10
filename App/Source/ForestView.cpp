@@ -3141,6 +3141,10 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 		{
+			if (tabs[current_tab]->isSelecting) 
+			{
+				tabs[current_tab]->selectedEntries.clear();
+			}
 			DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
 			if (checkAccess == DirAccessResult::ACCESS_DENIED)
 			{
