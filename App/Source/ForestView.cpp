@@ -2824,7 +2824,7 @@ void ForestView::render_entries()
 		tabs[current_tab]->isSelecting = true;
 	}
 
-	if (m_isDraggingSelection) 
+	if (m_isDraggingSelection )
 	{
 		tabs[current_tab]->selectedEntries = tabs[current_tab]->selectedEntriesSnapShot;
 	}
@@ -2947,12 +2947,12 @@ void ForestView::render_entries()
 					if (m_isDraggingSelection) 
 					{
 						ImVec2 row_min = ImGui::GetCursorScreenPos();
-						ImVec2 row_max = ImVec2(row_min.x + ImGui::GetContentRegionAvail().x, row_min.y + icon_height);
+						ImVec2 row_max = ImVec2(row_min.x + 1000.0f, row_min.y + icon_height);
 
 						ImVec2 selection_min = ImMin(ImGui::GetMousePos(), m_SelectionRecStartingPos);
 						ImVec2 selection_max = ImMax(ImGui::GetMousePos(), m_SelectionRecStartingPos);
 
-						overlaps = (row_min.y < selection_max.y && row_max.y > selection_min.y);
+						overlaps = (row_min.y < selection_max.y && row_max.y > selection_min.y) && (row_min.x < selection_max.x && row_max.x > selection_min.x);
 
 					}
 
