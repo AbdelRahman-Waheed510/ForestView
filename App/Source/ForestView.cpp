@@ -1926,6 +1926,10 @@ void ForestView::delete_warning()
 							std::erase(m_largestFiles, path);
 						}
 					}
+					if (m_isSearcing)
+					{
+						std::erase(m_founds, path);
+					}
 				}
 			}
 			else 
@@ -1975,6 +1979,10 @@ void ForestView::delete_warning()
 					{
 						std::erase(m_largestFiles, tabs[current_tab]->deleted_path);
 					}
+				}
+				if (m_isSearcing) 
+				{
+					std::erase(m_founds, tabs[current_tab]->deleted_path);
 				}
 			}
 
@@ -2148,6 +2156,7 @@ void ForestView::advanced_search()
 			if (ImGui::Button("Close")) 
 			{
 				m_showSearchWindow = false;
+				m_isSearcing = false;
 				FileNameSearch.clear();
 				m_founds.clear();
 			}
@@ -2258,6 +2267,7 @@ void ForestView::advanced_search()
 			// Founds Table =========================================================
 			if (!m_founds.empty())
 			{
+				m_isSearcing = true;
 				if (ImGui::BeginTable("FoundsTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
 				{
 					ImGui::TableSetupColumn("Path");
@@ -2323,6 +2333,7 @@ void ForestView::advanced_search()
 			}
 			else 
 			{
+				m_isSearcing = false;
 				ImGui::Text("Nothing Found");
 			}
 		}
@@ -2365,7 +2376,17 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 							}
 						}
 					}
-						
+					if (m_isSearcing) 
+					{
+						for (auto& path : m_founds)
+						{
+							if (path == tabs[current_tab]->selected_path)
+							{
+								path = rename.finalPath;
+							}
+						}
+					}
+
 					if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 					{
 						tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
@@ -2499,6 +2520,16 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 							{
 								largeEntry.assign(rename.finalPath);
 								break;
+							}
+						}
+					}
+					if (m_isSearcing) 
+					{
+						for (auto& path : m_emptyFolders)
+						{
+							if (path == tabs[current_tab]->selected_path)
+							{
+								path = rename.finalPath;
 							}
 						}
 					}
