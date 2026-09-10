@@ -427,6 +427,14 @@ void App::run_loop()
 	while (m_isRunning)
 	{
 		glfwPollEvents();
+
+		if (glfwWindowShouldClose(window)) 
+		{
+			//std::quick_exit(0);
+			m_isRunning = false;
+			break;
+		}
+
 		ImGui_ImplOpenGL3_NewFrame();
 		ImGui_ImplGlfw_NewFrame();
 		ImGui::NewFrame();
