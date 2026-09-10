@@ -2322,7 +2322,8 @@ void ForestView::advanced_search()
 
 							if (!foundsEntry.is_directory())
 							{
-								fileSize size = tabs[current_tab]->fileExplorer->decide_file_size_format(foundsEntry.file_size());
+								std::error_code ec;
+								fileSize size = tabs[current_tab]->fileExplorer->decide_file_size_format(foundsEntry.file_size(ec));
 								ImGui::Selectable(std::format("{:.2f} {}", size.size, size.label).c_str());
 							}
 
