@@ -2836,7 +2836,9 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			ImU32 SelectionColor = IM_COL32(unique_color.x * 255, unique_color.y * 255, unique_color.z * 255, (unique_color.w * 255) / 2);  // Transparent green fill
 			ImU32 SelectionOutlineColor = IM_COL32(unique_color.x * 255, unique_color.y * 255, unique_color.z * 255, unique_color.w * 255); // Solid green border outline
 
-			if (p_max.y > childMax.y && ImGui::GetScrollY() != 1.0f) // Going Down
+			float currentScrollOffset = ImGui::GetScrollY();
+			float MaxScrollOffset = ImGui::GetScrollMaxY();
+			if (p_max.y > childMax.y && currentScrollOffset != MaxScrollOffset) // Going Down
 			{
 				const float goDown = (ImGui::GetMousePos().y - childMax.y);
 				m_SelectionRecStartingPos.y -= goDown;
@@ -2844,9 +2846,9 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				{
 					m_SelectionRecStartingPos.y = childPos.y;
 				}
-				ImGui::SetScrollY(ImGui::GetScrollY() + goDown);
+				ImGui::SetScrollY(currentScrollOffset + goDown);
 			}
-			else if (p_min.y < childPos.y && ImGui::GetScrollY() != 0.0f) // Going Up
+			else if (p_min.y < childPos.y && currentScrollOffset != 0.0f) // Going Up
 			{
 				const float goUp = (childPos.y - ImGui::GetMousePos().y);
 				m_SelectionRecStartingPos.y += goUp;
@@ -2854,7 +2856,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				{
 					m_SelectionRecStartingPos.y = childMax.y;
 				}
-				ImGui::SetScrollY(ImGui::GetScrollY() - goUp);
+				ImGui::SetScrollY(currentScrollOffset - goUp);
 
 			}
 			draw_list->AddRectFilled(p_min, p_max, SelectionColor, 3.0f);
