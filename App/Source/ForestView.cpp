@@ -1424,6 +1424,7 @@ void ForestView::tool_bar()
 		if (ImGui::Button("Refresh"))
 		{
 			tabs[current_tab]->selected_path = "";
+			tabs[current_tab]->selectedEntries.clear();
 			tabs[current_tab]->entries_need_update = true;
 			tabs[current_tab]->globalKeyWord = "";
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
@@ -3256,6 +3257,7 @@ void ForestView::render_entries()
 
 }
 
+
 void ForestView::render_debug_panel()
 {
 	auto u8 = tabs[current_tab]->current_path.u8string();
@@ -3470,13 +3472,19 @@ void ForestView::stats_bar()
 		ImGui::Text(std::to_string(tabs[current_tab]->fileExplorer->get_size()).c_str());
 		ImGui::SameLine();
 		ImGui::Text(" Items ");
+		
+		ImGui::SameLine();
 
+		if (tabs[current_tab]->isSelecting) 
+		{
+			ImGui::Text(std::format(" |  {} Selected Items ", tabs[current_tab]->selectedEntries.size()).c_str());
+		}
 		ImGui::SameLine();
 
 		// Size of selected entry (the if condition is = we calculate the size only and only if the selected path is NOT empty and NOT a root path like (D:\, C;\))
 		if (tabs[current_tab]->selected_path != tabs[current_tab]->selected_path.root_path() && !tabs[current_tab]->selected_path.empty())
 		{
-			ImGui::Text("| File Size: ");
+			ImGui::Text("|  File Size: ");
 			ImGui::SameLine();
 
 			if (tabs[current_tab]->need_file_size_call)
@@ -3517,7 +3525,7 @@ void ForestView::stats_bar()
 			if (!tabs[current_tab]->last_modified.empty())
 			{
 				ImGui::SameLine();
-				ImGui::Text(" | Modified Since: ");
+				ImGui::Text(" |  Modified Since: ");
 				ImGui::SameLine();
 				ImGui::Text(tabs[current_tab]->last_modified.c_str());
 			}
@@ -3528,7 +3536,7 @@ void ForestView::stats_bar()
 		{
 			ImGui::SameLine();
 
-			ImGui::Text(" | Coping Structure....");
+			ImGui::Text(" |  Coping Structure....");
 		}
 
 		ImGui::SameLine();
