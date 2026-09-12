@@ -2550,7 +2550,7 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 					}
 					if (m_isSearcing) 
 					{
-						for (auto& path : m_emptyFolders)
+						for (auto& path : m_founds)
 						{
 							if (path == tabs[current_tab]->selected_path)
 							{
