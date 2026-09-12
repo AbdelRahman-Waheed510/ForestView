@@ -3289,6 +3289,18 @@ void ForestView::render_debug_panel()
 	ImGui::Text("is_searching_for_duplicates_files Flag: "); ImGui::SameLine();
 	ImGui::Text(flag2.c_str());
 
+	WORD langId = LOWORD(GetKeyboardLayout(0));
+
+	WORD CurrentLanguage = PRIMARYLANGID(langId);
+	if (CurrentLanguage == LANG_ENGLISH) 
+	{
+		ImGui::Text("Current Language is: English");
+	}
+	else if (CurrentLanguage == LANG_ARABIC)
+	{
+		ImGui::Text("Current Language is: Arabic");
+	}
+
 	ImGui::SeparatorText("Tasks Stuff");
 	ImGui::Text(std::format("Number of Copy Tasks: {}", get_copy_paste_Tasks_count()).c_str());
 	ImGui::Text(std::format("Number of Delete Tasks: {}", get_delete_Tasks_count()).c_str());
