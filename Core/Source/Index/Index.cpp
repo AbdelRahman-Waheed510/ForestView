@@ -34,20 +34,27 @@
 		return false;
 	}
 
-	void Trie::CollectPaths(Node* node, std::vector<uint32_t>& results) const
+	void Trie::CollectPaths(Node* node, std::vector<uint32_t>& results, const std::vector<FileInfo>& m_database) const
 	{
 		if (node == nullptr) return;
 
 		// If this node represents a complete filename, append its stored path IDs
 		if (node->isLeaf)
 		{
-			results.insert(results.end(), node->Paths.begin(), node->Paths.end());
+			for (const uint32_t& id : node->Paths) 
+			{
+				if (!m_database[id].path.empty()) 
+				{
+					results.emplace_back(id);
+				}
+			}
+			//results.insert(results.end(), node->Paths.begin(), node->Paths.end());
 		}
 
 		// Traverse all child branches
 		for (const auto& [ch, childNode] : node->children)
 		{
-			CollectPaths(childNode, results);
+			CollectPaths(childNode, results, m_database);
 		}
 	}
 
@@ -83,7 +90,7 @@
 		return RemoveHelper(m_root, word, 0);
 	}
 
-	std::vector<uint32_t> Trie::SearchPrefix(const std::wstring& prefix) const
+	std::vector<uint32_t> Trie::SearchPrefix(const std::wstring& prefix, const std::vector<FileInfo>& m_database) const
 	{
 		std::wstring key = ToLowerW(prefix);
 		Node* curr = m_root;
@@ -98,7 +105,7 @@
 		}
 
 		std::vector<uint32_t> result;
-		CollectPaths(curr, result);
+		CollectPaths(curr, result, m_database);
 		return result;
 	}
 
@@ -604,7 +611,7 @@ void Index::searchForExtention(std::vector<fs::path>& founds, const std::wstring
 void Index::fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& filename)
 {
 	if (!founds.empty()) founds.clear();
-	std::vector<uint32_t> indexes = trie.SearchPrefix(filename);
+	std::vector<uint32_t> indexes = trie.SearchPrefix(filename, m_dataBase);
 
 	for (const auto& idx : indexes)
 	{
@@ -615,7 +622,7 @@ void Index::fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& fi
 void Index::fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& filename, const fs::path& root_path)
 {
 	if (!founds.empty()) founds.clear();
-	std::vector<uint32_t> indexes = trie.SearchPrefix(filename);
+	std::vector<uint32_t> indexes = trie.SearchPrefix(filename, m_dataBase);
 
 	for (const auto& idx : indexes)
 	{

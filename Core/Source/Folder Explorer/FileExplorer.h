@@ -514,25 +514,27 @@ public:
 		return entries;
 	}
 
-	void create_folder(fs::path& to_create, const std::string& name, const NewType& type) 
+	const fs::path create_folder(fs::path& to_create, const std::string& name, const NewType& type) 
 	{
 		if (type == FOLDER) 
 		{
 			std::error_code ec;
 			fs::path newFolder = to_create / name;
-			if (fs::create_directory(newFolder, ec)) return;
+			if (fs::create_directory(newFolder, ec)) return newFolder;
 			if (ec) 
 			{
 				std::cerr << "Error when creating " << name << std::endl;
+				return "";
 			}
 		}
 		else if (type == REG_FILE) 
 		{
 			fs::path newFilePath = to_create / name;
 			std::ofstream newfile(newFilePath);
+			return newFilePath;
 		}
 
-		return;
+		return "";
 	}
 
 	RenameReturn rename_file(fs::path& to_rename, fs::path new_name)

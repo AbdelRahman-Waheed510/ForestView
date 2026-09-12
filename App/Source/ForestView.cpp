@@ -539,6 +539,8 @@ void ForestView::on_update()
 						m_queuedTasks[i]->worker = std::thread([this, task]()
 							{
 								tabs[current_tab]->fileExplorer->recycleBin_delete(task->source);
+								// Remove from the index
+								m_index.removeFromDataBase(task->source);
 								task->finished = true;
 								m_activeDeleteTasks--;
 							});
@@ -1819,7 +1821,17 @@ void ForestView::new_whatever()
 		{
 
 			std::string name_of_the_folder = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New folder", FOLDER);
-			tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_folder, FOLDER);
+			fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_folder, FOLDER);
+			
+			if (!finalNewPath.empty()) 
+			{
+				m_index.addToDataBase(finalNewPath);
+				if (m_isSearcing) 
+				{
+					m_founds.emplace_back(finalNewPath);
+				}
+			}
+
 			tabs[current_tab]->entries_need_update = true;
 			tabs[current_tab]->tree_need_update = true;
 			ImGui::CloseCurrentPopup();
@@ -1827,7 +1839,17 @@ void ForestView::new_whatever()
 		if (ImGui::Selectable("Text Document"))
 		{
 			std::string name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Text Document.txt", REG_FILE);
-			tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, REG_FILE);
+			fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, REG_FILE);
+			
+			if (!finalNewPath.empty())
+			{
+				m_index.addToDataBase(finalNewPath);
+				if (m_isSearcing)
+				{
+					m_founds.emplace_back(finalNewPath);
+				}
+			}
+			
 			tabs[current_tab]->entries_need_update = true;
 			tabs[current_tab]->tree_need_update = true;
 			ImGui::CloseCurrentPopup();
@@ -2388,6 +2410,8 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 						}
 					}
 
+					m_index.renameFromDataBase(tabs[current_tab]->selected_path, rename.finalPath);
+
 					if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 					{
 						tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
@@ -2534,6 +2558,7 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 							}
 						}
 					}
+					m_index.renameFromDataBase(tabs[current_tab]->selected_path, rename.finalPath);
 
 					if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 					{

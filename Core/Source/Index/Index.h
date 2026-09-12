@@ -72,7 +72,7 @@ private:
 
 	bool RemoveHelper(Node* curr, const std::wstring& word, size_t depth);
 
-	void CollectPaths(Node* node, std::vector<uint32_t>& results) const;
+	void CollectPaths(Node* node, std::vector<uint32_t>& results, const std::vector<FileInfo>& m_database) const;
 
 public:
 
@@ -103,7 +103,7 @@ public:
 
 	bool Remove(const std::wstring& word);
 
-	std::vector<uint32_t> SearchPrefix(const std::wstring& prefix) const;
+	std::vector<uint32_t> SearchPrefix(const std::wstring& prefix, const std::vector<FileInfo>& m_database) const;
 };
 
 class Index
@@ -186,5 +186,85 @@ public:
 	const uint32_t getFilesCount();
 
 	const uint32_t getDirectoriesCount();
+
+	void removeFromDataBase(const fs::path& path_to_delete) 
+	{
+		for (FileInfo& file : m_dataBase) 
+		{
+			if (file.path == path_to_delete) 
+			{
+				file.path.clear();
+				file.size = 0;
+				break;
+			}
+		}
+	}
+
+	void renameFromDataBase(const fs::path& current_name, const fs::path& new_name) 
+	{
+		for (FileInfo& file : m_dataBase)
+		{
+			if (file.path == current_name)
+			{
+				file.path = new_name;
+				break;
+			}
+		}
+	}
+
+	void addToDataBase(const fs::path& newItem) 
+	{
+		FileInfo f;
+		f.path = newItem;
+		f.size = fs::file_size(newItem);
+		if (!m_indexingDone) 
+		{
+			std::lock_guard<std::mutex> lock(m_lock);
+
+			m_dataBase.emplace_back(f);
+			if (fs::is_directory(newItem))
+			{
+				if (m_dataBase.size() == m_dataBase.capacity())
+					m_dataBase.reserve(m_dataBase.capacity() + 50);
+				m_foldersIndex[f.path.filename().wstring()].emplace_back(Id);
+				m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
+				trie.Insert(f.path.filename().wstring(), Id);
+			}
+			else
+			{
+				if (m_dataBase.size() == m_dataBase.capacity())
+					m_dataBase.reserve(m_dataBase.capacity() + 50);
+				m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
+				m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
+				m_filesCount.fetch_add(1, std::memory_order_relaxed);
+				trie.Insert(f.path.filename().wstring(), Id);
+			}
+
+			Id++;
+		}
+		else 
+		{
+			m_dataBase.emplace_back(f);
+			if (fs::is_directory(newItem))
+			{
+				if (m_dataBase.size() == m_dataBase.capacity())
+					m_dataBase.reserve(m_dataBase.capacity() + 50);
+				m_foldersIndex[f.path.filename().wstring()].emplace_back(Id);
+				m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
+				trie.Insert(f.path.filename().wstring(), Id);
+			}
+			else
+			{
+				if (m_dataBase.size() == m_dataBase.capacity())
+					m_dataBase.reserve(m_dataBase.capacity() + 50);
+				m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
+				m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
+				m_filesCount.fetch_add(1, std::memory_order_relaxed);
+				trie.Insert(f.path.filename().wstring(), Id);
+			}
+
+			Id++;
+		}
+	}
 };
 
