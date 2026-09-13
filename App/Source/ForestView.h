@@ -163,8 +163,7 @@ struct State
 	std::vector<fs::path> selectedEntriesSnapShot;
 	bool isSelecting = false;
 
-
-
+	int lastPress = -1;
 	State() 
 	{
 		tabID = id;

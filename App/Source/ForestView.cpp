@@ -2904,6 +2904,7 @@ void ForestView::render_entries()
 	if (tabs[current_tab]->selectedEntries.empty()) 
 	{
 		tabs[current_tab]->isSelecting = false;
+		tabs[current_tab]->lastPress = -1;
 	}
 	else 
 	{
@@ -3446,6 +3447,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 			}
 			ImGuiIO io = ImGui::GetIO();
 			bool ctrlPressed = io.KeyCtrl;
+			bool rightShiftPressed = io.KeyShift;
 			if (ctrlPressed && !m_isDraggingSelection)
 			{
 				std::vector<fs::path>& x = tabs[current_tab]->selectedEntries;
@@ -3458,6 +3460,145 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 					x.emplace_back(entry.path());
 				}
 				tabs[current_tab]->selected_path.clear();
+			}
+			else if (rightShiftPressed && !m_isDraggingSelection) 
+			{
+				if (tabs[current_tab]->selected_path.empty() && !tabs[current_tab]->isSelecting)
+				{
+					left_click(entry);
+				}
+				else 
+				{
+
+					auto findIndex = [this](const fs::path& path) -> int
+						{
+							const auto& entries = tabs[current_tab]->entries;
+							for (int i = 0; i < (int)entries.size(); ++i)
+								if (entries[i].entry.path() == path)
+									return i;
+							return -1;
+						};
+
+					int pivot = -1;
+					int pressed_pathIdx = -1;
+					pressed_pathIdx = findIndex(entry.path());
+					if (pressed_pathIdx == -1) 
+					{
+						return;
+					}
+					if (tabs[current_tab]->isSelecting) 
+					{
+						int head = findIndex(tabs[current_tab]->selectedEntries[0]);
+						int tail = findIndex(tabs[current_tab]->selectedEntries.back());
+						if (head > tail) 
+						{
+							std::swap(head, tail);
+						}
+						std::cout << std::format("Head: {},tail: {}", head, tail) << std::endl;
+						if (head == -1 || tail == -1) return;
+
+						if (pressed_pathIdx < head) 
+						{
+							if (tabs[current_tab]->lastPress == 1) 
+							{
+								pivot = head - 1;
+								if (pivot < 0) return;
+								if (pivot == pressed_pathIdx) 
+								{
+									tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[pivot].entry.path());
+									tabs[current_tab]->lastPress = 1;
+									return;
+								}
+							}
+							else if (tabs[current_tab]->lastPress != 1)
+							{
+								tabs[current_tab]->selectedEntries.clear();
+								pivot = head;
+								tabs[current_tab]->lastPress = 1;
+							}
+						}
+						else if (pressed_pathIdx > tail) 
+						{
+							if (tabs[current_tab]->lastPress == 0) 
+							{
+								pivot = tail + 1;
+								if (pivot >= tabs[current_tab]->entries.size()) return;
+								if (pivot == pressed_pathIdx)
+								{
+									tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[pivot].entry.path());
+									tabs[current_tab]->lastPress = 0;
+									return;
+								}
+							}
+							else if (tabs[current_tab]->lastPress != 0) 
+							{
+								tabs[current_tab]->selectedEntries.clear();
+								pivot = tail;
+								tabs[current_tab]->lastPress = 0;
+							}
+						}
+						else
+						{
+							tabs[current_tab]->selectedEntries.clear();
+							if (tabs[current_tab]->lastPress == 1) 
+							{
+								pivot = tail;
+								tabs[current_tab]->lastPress = 1;
+							}
+							else if (tabs[current_tab]->lastPress == 0) 
+							{
+								pivot = head;
+								tabs[current_tab]->lastPress = 0;
+							}
+							else 
+							{
+								pivot = head;
+								tabs[current_tab]->lastPress = 0;
+							}
+						}
+					}
+					else 
+					{
+						pivot = findIndex(tabs[current_tab]->selected_path);
+						if (pivot == -1)
+						{
+							return;
+						}
+						if (pivot < pressed_pathIdx) 
+						{
+							tabs[current_tab]->lastPress = 0;
+						}
+						else if (pivot > pressed_pathIdx) 
+						{
+							tabs[current_tab]->lastPress = 1;
+						}
+					}
+
+
+					if (pivot < pressed_pathIdx)
+					{
+						for (size_t i = pivot; i <= pressed_pathIdx; i++)
+						{
+							tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
+						}
+						tabs[current_tab]->selected_path.clear();
+
+					}
+					else if (pivot > pressed_pathIdx)
+					{
+						for (int i = pivot; i >= pressed_pathIdx && i >=0; i--)
+						{
+							tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
+						}
+						tabs[current_tab]->selected_path.clear();
+					}
+					else if (pivot == pressed_pathIdx)
+					{
+						tabs[current_tab]->selectedEntries.clear();
+						tabs[current_tab]->selected_path = tabs[current_tab]->entries[pressed_pathIdx].entry.path();
+					}
+					
+				}
 			}
 			else
 			{
