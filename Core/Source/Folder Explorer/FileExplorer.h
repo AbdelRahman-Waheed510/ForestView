@@ -106,6 +106,15 @@ enum class DirAccessResult {
 	SYMLINK_LOOP,
 };
 
+enum class FileAccessResult {
+	OK,
+	ACCESS_DENIED,
+	NOT_FOUND,
+	IS_DIRECTORY,
+	LOCKED_OR_IN_USE,
+	OTHER
+};
+
 namespace Utils 
 {
 	std::string generate_new_folder_name(const fs::path& path, const std::string& name, const NewType& type);
@@ -326,6 +335,25 @@ public:
 
 		return res;
 
+	}
+
+	FileAccessResult check_file_access(const fs::path& path)
+	{
+		std::error_code ec;
+
+		if (!fs::exists(path, ec)) return FileAccessResult::NOT_FOUND;
+		if (fs::is_directory(path, ec)) return FileAccessResult::IS_DIRECTORY;
+
+		std::ifstream file(path, std::ios::binary);
+		if (!file.is_open())
+		{
+			if (errno == EACCES || ec == std::errc::permission_denied)
+				return FileAccessResult::ACCESS_DENIED;
+
+			return FileAccessResult::LOCKED_OR_IN_USE;
+		}
+
+		return FileAccessResult::OK;
 	}
 
 	DirAccessResult check_directory_access(const fs::path& path)
