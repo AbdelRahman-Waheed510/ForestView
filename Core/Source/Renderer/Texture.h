@@ -93,6 +93,7 @@ private:
 	Texture picture_icon;
 	Texture zip_icon;
 	Texture txt_file_icon;
+	Texture code_icon;
 	Texture default_icon;
 	
 	Texture LargeThumbnail_button_icon;
@@ -123,6 +124,7 @@ public:
 		picture_icon.loadTexture("assets/Images/picture.png");
 		zip_icon.loadTexture("assets/Images/rar-format.png");
 		txt_file_icon.loadTexture("assets/Images/txt-file.png");
+		code_icon.loadTexture("assets/Images/Code.png");
 		default_icon.loadTexture("assets/Images/default.png");
 		LargeThumbnail_button_icon.loadTexture("assets/Images/tile.png");
 		Rows_button_icon.loadTexture("assets/Images/list.png");
@@ -189,6 +191,18 @@ public:
 			else if (extention == ".docx") return word_icon.get_texture_id();
 			else if (extention == ".pptx") return power_point_icon.get_texture_id();
 			else if (extention == ".exe") return exe_icon.get_texture_id();
+			else if 
+				(
+				extention == L".cpp"   || 
+				extention == L".hpp"   || 
+				extention == L".c"     || 
+				extention == L".h"     || 
+				extention == L".py"    || 
+				extention == L".js"    || 
+				extention == L".json"  || 
+				extention == L".xml"
+				)
+			return code_icon.get_texture_id();
 			else if (extention == ".mp3") return music_icon.get_texture_id();
 			else if (extention == ".png" || extention == ".jpeg" || extention == ".jpg") return picture_icon.get_texture_id();
 			else if (extention == ".zip" || extention == ".rar") return zip_icon.get_texture_id();
