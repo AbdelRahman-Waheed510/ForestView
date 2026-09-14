@@ -38,11 +38,8 @@ void App::initialize_ImGui()
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.BackendRendererName = "Task++";
-
 	default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 16.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
-	arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 16.0f, nullptr);
-
-
+	arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 24.0f, nullptr);
 
 	switch (m_activeTheme)
 	{
@@ -1096,7 +1093,8 @@ void ForestView::tab_bar()
 		}
 
 		// The Tabs itself ===========================================================================
-		if (ImGui::BeginTabItem(tabLabel.c_str(), nullptr, flags))
+		bool isTabOpen = true;
+		if (ImGui::BeginTabItem(tabLabel.c_str(), &isTabOpen, flags))
 		{
 			current_tab = (int)i;
 			ImGui::EndTabItem();
@@ -1125,7 +1123,7 @@ void ForestView::tab_bar()
 		}
 
 		// Close Tab Logic =========================================================================== 
-		if (ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Middle))
+		if ((ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Middle)) || (!isTabOpen))
 		{
 			if ((current_tab == i && current_tab == (int)tabs.size() - 1) && (int)tabs.size() != 1)
 			{
