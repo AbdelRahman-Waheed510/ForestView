@@ -2751,6 +2751,7 @@ void ForestView::draw_tree(Node* node_to_show)
 			if (!node_to_show->path.empty())
 			{
 				tabs[current_tab]->fileExplorer->navigate_to(node_to_show->path, tabs[current_tab]->current_path);
+				tabs[current_tab]->entries_need_update = true;
 				tabs[current_tab]->current_path = node_to_show->path;
 				tabs[current_tab]->selected_path = "";
 			}
