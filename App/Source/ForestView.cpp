@@ -1261,6 +1261,13 @@ std::unique_ptr<State> ForestView::open_copy_tab(std::unique_ptr<State>& newTab)
 	return std::move(newTab);
 }
 
+ImVec2 ForestView::GetSelectionStartScreenPos() const
+{
+	ImVec2 p = m_SelectionRecStartingPos;
+	p.y -= ImGui::GetScrollY(); 
+	return p;
+}
+
 
 // Search Bar
 void ForestView::search_bar()
@@ -2793,8 +2800,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 			{
 				tabs[current_tab]->selected_path = "";
-
-				if (ctrlPressed) 
+				m_ctrlPressd = ctrlPressed;
+				if (m_ctrlPressd)
 				{
 					tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectedEntries;
 				}
@@ -2805,8 +2812,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 					tabs[current_tab]->isSelecting = false;
 				}
 
-				tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectedEntries;
 				m_SelectionRecStartingPos = ImGui::GetMousePos();
+				m_SelectionRecStartingPos.y += ImGui::GetScrollY();
 				m_isDraggingSelection = true;
 			}
 		}
@@ -2832,33 +2839,25 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 			ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
-			ImVec2 p_min = ImVec2(ImMin(m_SelectionRecStartingPos, ImGui::GetMousePos()));
-			ImVec2 p_max = ImVec2(ImMax(m_SelectionRecStartingPos, ImGui::GetMousePos()));
+			ImVec2 p_min = ImVec2(ImMin(GetSelectionStartScreenPos(), ImGui::GetMousePos()));
+			ImVec2 p_max = ImVec2(ImMax(GetSelectionStartScreenPos(), ImGui::GetMousePos()));
 
 			ImU32 SelectionColor = IM_COL32(unique_color.x * 255, unique_color.y * 255, unique_color.z * 255, (unique_color.w * 255) / 2);  // Transparent green fill
 			ImU32 SelectionOutlineColor = IM_COL32(unique_color.x * 255, unique_color.y * 255, unique_color.z * 255, unique_color.w * 255); // Solid green border outline
 
-			float currentScrollOffset = ImGui::GetScrollY();
-			float MaxScrollOffset = ImGui::GetScrollMaxY();
-			if (p_max.y > childMax.y && currentScrollOffset != MaxScrollOffset) // Going Down
+			const float currentScrollOffset = ImGui::GetScrollY();
+			const float MaxScrollOffset = ImGui::GetScrollMaxY();
+			const float MaxSpeed = 75.0f;
+
+			if (ImGui::GetMousePos().y > childMax.y && currentScrollOffset != MaxScrollOffset) // Going Down
 			{
 				const float goDown = (ImGui::GetMousePos().y - childMax.y);
-				m_SelectionRecStartingPos.y -= goDown;
-				if (m_SelectionRecStartingPos.y <= childPos.y) 
-				{
-					m_SelectionRecStartingPos.y = childPos.y;
-				}
-				ImGui::SetScrollY(currentScrollOffset + goDown);
+				ImGui::SetScrollY(currentScrollOffset + (std::min)(goDown, MaxSpeed));
 			}
-			else if (p_min.y < childPos.y && currentScrollOffset != 0.0f) // Going Up
+			else if (ImGui::GetMousePos().y < childPos.y && currentScrollOffset != 0.0f) // Going Up
 			{
 				const float goUp = (childPos.y - ImGui::GetMousePos().y);
-				m_SelectionRecStartingPos.y += goUp;
-				if (m_SelectionRecStartingPos.y >= childMax.y)
-				{
-					m_SelectionRecStartingPos.y = childMax.y;
-				}
-				ImGui::SetScrollY(currentScrollOffset - goUp);
+				ImGui::SetScrollY(currentScrollOffset - (std::min)(goUp,MaxSpeed));
 
 			}
 			draw_list->AddRectFilled(p_min, p_max, SelectionColor, 3.0f);
@@ -2912,7 +2911,7 @@ void ForestView::render_entries()
 		tabs[current_tab]->isSelecting = true;
 	}
 
-	if (m_isDraggingSelection )
+	if (m_isDraggingSelection)
 	{
 		tabs[current_tab]->selectedEntries = tabs[current_tab]->selectedEntriesSnapShot;
 	}
@@ -2934,8 +2933,8 @@ void ForestView::render_entries()
 				ImVec2 square_min = ImGui::GetCursorScreenPos();
 				ImVec2 square_max = ImVec2(square_min.x + tabs[current_tab]->icons_width, square_min.y + tabs[current_tab]->icons_height);
 
-				ImVec2 selection_min = ImMin(ImGui::GetMousePos(), m_SelectionRecStartingPos);
-				ImVec2 selection_max = ImMax(ImGui::GetMousePos(), m_SelectionRecStartingPos);
+				ImVec2 selection_min = ImMin(ImGui::GetMousePos(), GetSelectionStartScreenPos());
+				ImVec2 selection_max = ImMax(ImGui::GetMousePos(), GetSelectionStartScreenPos());
 
 				overlaps = (square_min.x < selection_max.x && square_max.x > selection_min.x) && (square_min.y < selection_max.y && square_max.y > selection_min.y);
 
@@ -3019,9 +3018,28 @@ void ForestView::render_entries()
 
 			ImGuiListClipper Clipper;
 			Clipper.Begin(tabs[current_tab]->entries.size());
+			if (m_isDraggingSelection)
+			{
+				float tableTopContentY = ImGui::GetCursorScreenPos().y + ImGui::GetScrollY();
+
+				float startContentY = m_SelectionRecStartingPos.y; // already content-space
+				float mouseContentY = ImGui::GetMousePos().y + ImGui::GetScrollY();
+
+				float selMinY = (std::min)(startContentY, mouseContentY) - tableTopContentY;
+				float selMaxY = (std::max)(startContentY, mouseContentY) - tableTopContentY;
+
+				int minIndex = (int)std::floor(selMinY / tabs[current_tab]->icons_height);
+				int maxIndex = (int)std::floor(selMaxY / tabs[current_tab]->icons_height);
+
+				int lastIndex = (int)tabs[current_tab]->entries.size() - 1;
+				minIndex = std::clamp(minIndex, 0, lastIndex);
+				maxIndex = std::clamp(maxIndex, 0, lastIndex);
+
+				Clipper.IncludeItemsByIndex(minIndex, maxIndex + 1); // end is exclusive
+			}
 			while (Clipper.Step()) 
 			{
-				for (size_t i = Clipper.DisplayStart; i < Clipper.DisplayEnd; ++i)
+				for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
 				{
 					ImGui::TableNextRow();
 
@@ -3037,8 +3055,8 @@ void ForestView::render_entries()
 						ImVec2 row_min = ImGui::GetCursorScreenPos();
 						ImVec2 row_max = ImVec2(row_min.x + 1000.0f, row_min.y + icon_height);
 
-						ImVec2 selection_min = ImMin(ImGui::GetMousePos(), m_SelectionRecStartingPos);
-						ImVec2 selection_max = ImMax(ImGui::GetMousePos(), m_SelectionRecStartingPos);
+						ImVec2 selection_min = ImMin(ImGui::GetMousePos(), GetSelectionStartScreenPos());
+						ImVec2 selection_max = ImMax(ImGui::GetMousePos(), GetSelectionStartScreenPos());
 
 						overlaps = (row_min.y < selection_max.y && row_max.y > selection_min.y) && (row_min.x < selection_max.x && row_max.x > selection_min.x);
 
@@ -3070,14 +3088,24 @@ void ForestView::render_entries()
 						}
 						if (okToAddOrRemoveToTheSelectedEntries)
 						{
-							if (std::erase(tabs[current_tab]->selectedEntries, tabs[current_tab]->entries[i].entry.path()) <= 0)
+							if (m_ctrlPressd) 
 							{
-								tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
-								is_selected = true;
+								if (std::erase(tabs[current_tab]->selectedEntries, tabs[current_tab]->entries[i].entry.path()) <= 0)
+								{
+									tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
+									is_selected = true;
+								}
+								else
+								{
+									is_selected = false;
+								}
 							}
-							else
+							else 
 							{
-								is_selected = false;
+								if (std::find(tabs[current_tab]->selectedEntries.begin(), tabs[current_tab]->selectedEntries.end(), tabs[current_tab]->entries[i].entry.path()) == tabs[current_tab]->selectedEntries.end())
+								{
+									tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
+								}
 							}
 						}
 					}

@@ -294,6 +294,7 @@ private:
 
 	ImVec2 m_SelectionRecStartingPos;
 	bool m_isDraggingSelection = false;
+	bool m_ctrlPressd = false;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
@@ -411,4 +412,6 @@ public:
 		}
 		return false;
 	}
+
+	ImVec2 GetSelectionStartScreenPos() const;
 };
