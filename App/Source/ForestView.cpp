@@ -477,6 +477,23 @@ void ForestView::on_update()
 	{
 		refocus_reload();
 
+		ImVec2 mousePos = ImGui::GetMousePos();
+
+		// 3. Offset the tooltip so it doesn't obscure the cursor (e.g., +15px, +15px)
+		ImVec2 tooltipPos = ImVec2(mousePos.x + 15.0f, mousePos.y + 15.0f);
+
+		// 4. Set position and pivot (Always pass ImGuiCond_Always so it updates every frame)
+		ImGui::SetNextWindowPos(tooltipPos, ImGuiCond_Always);
+
+		// 5. Render custom tooltip window
+		if (ImGui::BeginTooltip())
+		{
+			ImGui::Text("Tracking mouse: (%.0f, %.0f)", mousePos.x, mousePos.y);
+			ImGui::EndTooltip();
+		}
+
+		ImGui::GetMousePos();
+
 		tab_bar();
 
 		search_bar();
