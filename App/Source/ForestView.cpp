@@ -3006,6 +3006,7 @@ void ForestView::render_entries()
 
 	else if (tabs[current_tab]->view_type == ROWS)
 	{
+		const float tableTopContentX = ImGui::GetCursorScreenPos().x;
 		if (ImGui::BeginTable("entries", 4, ImGuiTableFlags_Resizable, ImVec2(1000.0f, 0.0f)))
 		{
 			ImGui::TableSetupColumn("Name");
@@ -3019,26 +3020,42 @@ void ForestView::render_entries()
 			Clipper.Begin(tabs[current_tab]->entries.size());
 			if (m_isDraggingSelection)
 			{
-				float tableTopContentY = ImGui::GetCursorScreenPos().y + ImGui::GetScrollY();
+				const float tableTopContentY = ImGui::GetCursorScreenPos().y + ImGui::GetScrollY();
 
-				float startContentY = m_SelectionRecStartingPos.y; // already content-space
-				float mouseContentY = ImGui::GetMousePos().y + ImGui::GetScrollY();
+				const float maxEntriesX = 1000.0;
 
-				float selMinY = (std::min)(startContentY, mouseContentY) - tableTopContentY;
-				float selMaxY = (std::max)(startContentY, mouseContentY) - tableTopContentY;
+				const float SelectionStartY = m_SelectionRecStartingPos.y; // already content-space
+				const float SelectionStartX = m_SelectionRecStartingPos.x;
 
-				int minIndex = (int)std::floor(selMinY / tabs[current_tab]->icons_height);
-				int maxIndex = (int)std::floor(selMaxY / tabs[current_tab]->icons_height);
+				const float mouseContentY = ImGui::GetMousePos().y + ImGui::GetScrollY();
+				const float mouseContentX = ImGui::GetMousePos().x;
 
-				int lastIndex = (int)tabs[current_tab]->entries.size() - 1;
-				minIndex = std::clamp(minIndex, 0, lastIndex);
-				maxIndex = std::clamp(maxIndex, 0, lastIndex);
+				const float selMinY = (std::min)(SelectionStartY, mouseContentY) - tableTopContentY;
+				const float selMaxY = (std::max)(SelectionStartY, mouseContentY) - tableTopContentY;
 
-				Clipper.IncludeItemsByIndex(minIndex, maxIndex + 1); // end is exclusive
+				const float selMinX = (std::min)(SelectionStartX, mouseContentX);
+				const float selMaxX = (std::max)(SelectionStartX, mouseContentX);
+
+				bool checkForTheY = (selMinX < tableTopContentX + maxEntriesX && selMaxX > tableTopContentX) ? true : false;
+				if (checkForTheY) 
+				{
+					const float rowYHeight = tabs[current_tab]->icons_height + ImGui::GetStyle().CellPadding.y * 2.0f;
+
+					int	minIndex = (int)std::floor(selMinY / rowYHeight);
+					int maxIndex = (int)std::floor(selMaxY / rowYHeight);
+
+					int lastIndex = (int)tabs[current_tab]->entries.size() - 1;
+					minIndex = std::clamp(minIndex, 0, lastIndex);
+					maxIndex = std::clamp(maxIndex, 0, lastIndex);
+
+					//tabs[current_tab]->m_selectedMinIndex = minIndex;
+					//tabs[current_tab]->m_selectedMaxIndex = maxIndex + 1;
+					Clipper.IncludeItemsByIndex(minIndex, maxIndex + 1);
+				}
 			}
 			while (Clipper.Step()) 
 			{
-				for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
+				for (size_t i = Clipper.DisplayStart; i < Clipper.DisplayEnd; ++i)
 				{
 					ImGui::TableNextRow();
 
@@ -3644,7 +3661,6 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 		}
 	}
 }
-
 
 // PARENT HANDLER TO CHOOSE WHICH POPUP TRIGGER
 void ForestView::decide_correct_rightClick_popup()
