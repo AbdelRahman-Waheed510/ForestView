@@ -4,6 +4,9 @@ project "App"
    cppdialect "C++20"
    staticruntime "off"
 
+   pchheader "pchApp.h"
+   pchsource "Source/pchApp.cpp"
+
    files 
    { "Source/**.h",
      "Source/**.cpp",
@@ -12,6 +15,10 @@ project "App"
      "../Vendor/HashForge/SHA256/SHA256.cpp",
      "../Vendor/HashForge/SHA256/SHA256.h",
     }
+
+   filter "files:../Vendor/**.cpp"
+       flags { "NoPCH" }
+   filter {}
 
    includedirs
    {

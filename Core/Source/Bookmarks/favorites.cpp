@@ -1,3 +1,4 @@
+#include "pchCore.h"
 #include "favorites.h"
 
 const bool Favorites::is_empty() const

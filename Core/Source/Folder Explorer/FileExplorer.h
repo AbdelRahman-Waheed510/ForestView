@@ -1,25 +1,5 @@
 #pragma once 
-
-#include <filesystem>
-#include <vector>
-#include <unordered_map>
-#include <iostream>
-
-#include <windows.h>
-#include <shobjidl.h>
-
-#include <format>
-#include <stack>
-#include <stdexcept>
-#include <ostream>
-#include <fstream>
-#include <istream>
 #include "tree.h"
-#include <functional>
-#include <chrono>
-#include <memory>
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
 #include "Texture.h"
 #include "SHA256.h"
 

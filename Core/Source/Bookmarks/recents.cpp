@@ -1,3 +1,4 @@
+#include "pchCore.h"
 #include "recents.h"
 
 const bool Recent::is_empty()

@@ -1,3 +1,4 @@
+#include "pchCore.h"
 #include "FileExplorer.h"
 
 

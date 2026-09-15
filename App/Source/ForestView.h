@@ -1,42 +1,7 @@
 #pragma once
 
-#include <iostream>
-#include <fstream>
-#include <algorithm>
-#include <string>
-#include <codecvt>
-#include <locale>
-#include <vector>
-#include <limits>
-#include <cmath>
-#include <chrono>
-#include <iomanip> 
-#include <functional>
-#include <ctime>
-#include <sstream>
-#include <deque>
-#include <format>
-
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include "stb_image.h"
-
-#include <imgui.h>
-#include <imgui_impl_opengl3.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_stdlib.h>
-#include "imgui_internal.h"
-
-#include <filesystem>
-
-#include <thread>
-#include <future>
-
-#include <chrono>
-
 #include "favorites.h"
 #include "recents.h"
-
 #include "tree.h"
 
 namespace fs = std::filesystem;

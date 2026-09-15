@@ -1,12 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <filesystem>
-
-#include <glad/glad.h>
-#include <GLFW/glfw3.h>
-#include "stb_image.h"
-
 namespace fs = std::filesystem;
 
 class Texture 

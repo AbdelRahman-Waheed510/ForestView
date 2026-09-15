@@ -1,12 +1,5 @@
 #pragma once
 
-#include <queue>
-#include <filesystem>
-#include <vector>
-#include <memory>
-#include <functional>
-#include <thread>
-
 #include "FileExplorer.h"
 
 namespace fs = std::filesystem;

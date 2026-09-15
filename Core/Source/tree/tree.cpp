@@ -1,5 +1,5 @@
-﻿#include "tree.h"
-#include <windows.h>
+﻿#include "pchCore.h"
+#include "tree.h"
 
 bool tree::isEmpty()
 {

@@ -1,17 +1,5 @@
 #pragma once
 
-#include <iostream>
-#include <unordered_map>
-#include <windows.h>
-#include <filesystem>
-#include <thread>
-#include <mutex>
-#include <ostream>
-#include <fstream>
-#include <istream>
-#include <future>
-#include <array>
-
 namespace fs = std::filesystem;
 
 constexpr static int s_bufferSize = 10000;
