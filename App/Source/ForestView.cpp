@@ -2863,7 +2863,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 			const float currentScrollOffset = ImGui::GetScrollY();
 			const float MaxScrollOffset = ImGui::GetScrollMaxY();
-			const float MaxSpeed = 75.0f;
+			const float MaxSpeed = 150.0f;
 
 			if (ImGui::GetMousePos().y > childMax.y && currentScrollOffset != MaxScrollOffset) // Going Down
 			{
