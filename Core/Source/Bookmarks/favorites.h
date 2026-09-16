@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <iostream>
+#include <cstdlib>
 #include <filesystem>
 #include <stack>
 
@@ -15,6 +16,18 @@ public:
 	Favorites()
 	{
 		favorites.reserve(20);
+		const char* env =
+#if defined(_WIN32)
+			std::getenv("USERPROFILE");
+#else
+			std::getenv("HOME");
+#endif
+		if (env) 
+		{
+			add_fav(fs::directory_entry(fs::path(env) / "Desktop"));
+			add_fav(fs::directory_entry(fs::path(env) / "Documents"));
+			add_fav(fs::directory_entry(fs::path(env) / "Downloads"));
+		}
 	}
 
 	const bool is_empty() const;
