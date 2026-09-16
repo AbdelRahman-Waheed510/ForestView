@@ -3163,7 +3163,7 @@ void ForestView::render_entries()
 					ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.005f, 0.5f));
 
 					ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, icon_height));
-					handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
+					handle_entries_mouse_click(tabs[current_tab]->entries[i].entry, i);
 					// ========================================== Last Modified ================================================
 					ImGui::TableNextColumn();
 
@@ -3402,7 +3402,7 @@ void ForestView::render_debug_panel()
 	ImGui::Separator();
 }
 
-void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
+void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, int idx)
 {
 	if (ImGui::IsItemHovered())
 	{
@@ -3520,6 +3520,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry)
 				if (std::erase(x, entry.path()) <= 0)
 				{
 					x.emplace_back(entry.path());
+					if (idx != -1) tabs[current_tab]->selectionManager.AddSingleSelection(idx);
 				}
 				tabs[current_tab]->selected_path.clear();
 			}

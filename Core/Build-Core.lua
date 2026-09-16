@@ -19,6 +19,7 @@ project "Core"
       "source/Renderer",
       "source/Tasks Manager",
       "source/Index",
+      "source/Selection Manager",
 
       "../Vendor/stb_image",
       "../Vendor/imgui-docking",

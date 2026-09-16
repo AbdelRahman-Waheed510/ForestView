@@ -9,6 +9,7 @@ namespace fs = std::filesystem;
 #include "FileExplorer.h"
 #include "TasksManager.h"
 #include "Index.h"
+#include "Selection Manager/SelectionManager.h"
 
 static int id = 1;
 
@@ -72,7 +73,7 @@ struct State
 
 	Favorites fav;
 	Recent recents;
-
+	SelectionManager selectionManager;
 
 	bool show_create_folder = false;
 	bool show_selected_folder_options = false;
@@ -324,7 +325,7 @@ public:
 	
 	void render_debug_panel();
 
-	void handle_entries_mouse_click(const fs::directory_entry& entry);
+	void handle_entries_mouse_click(const fs::directory_entry& entry, int idx = -1);
 
 	void decide_correct_rightClick_popup();
 
