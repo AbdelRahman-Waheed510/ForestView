@@ -152,9 +152,9 @@ void Index::paralaizedIndex()
 
 	auto end = std::chrono::steady_clock::now();
 	auto seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-	std::cout << "Indexing took: " << seconds << "s\n";
+	//std::cout << "Indexing took: " << seconds << "s\n";
 
-	std::cout << "Time Taken by look [m_lockWaitNs.load() / 1000000]" << m_lockWaitNs.load() / 1000000 << std::endl;
+	//std::cout << "Time Taken by look [m_lockWaitNs.load() / 1000000]" << m_lockWaitNs.load() / 1000000 << std::endl;
 
 	m_indexingDone.store(true);
 }
@@ -184,9 +184,9 @@ void Index::indexPartition(const fs::directory_entry& Partition)
 		if (m_cancel_request.load(std::memory_order_relaxed))
 		{
 			auto end = std::chrono::steady_clock::now();
-			std::wcout << Partition.path().wstring() << L": "
-				<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-				<< L"ms\n";
+		///*	std::wcout << Partition.path().wstring() << L": "
+		//		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+		//		<< L"ms\n";*/
 			break;
 		}
 		const fs::path path = Partition.path() / Entry.cFileName;
@@ -231,9 +231,9 @@ void Index::indexPartition(const fs::directory_entry& Partition)
 	for (auto& f : FoldersFuture) f.get();
 
 	auto end = std::chrono::steady_clock::now();
-	std::wcout << Partition.path().wstring() << L": "
-		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
-		<< L"ms\n";
+	///*std::wcout << Partition.path().wstring() << L": "
+	//	<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+	//	<< L"ms\n";*/
 }
 
 void Index::indexFolder(const fs::path& Folder)
@@ -373,8 +373,8 @@ void Index::indexFolder(const fs::path& Folder)
 
 	auto end = std::chrono::steady_clock::now();
 	auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-	if (ms > 100)
-		std::wcout << Folder.wstring() << L": " << ms << L"ms\n";
+	/*if (ms > 100)
+		std::wcout << Folder.wstring() << L": " << ms << L"ms\n";*/
 }
 
 void Index::index()
