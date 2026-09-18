@@ -145,6 +145,17 @@ public:
 		if (start > end) std::swap(start, end);
 		Clear();
 		m_selectedRanges.emplace_back(SelectionRange(start, end));
+		Print();
+	}
+
+	void SelectAnchoredRange(int end)
+	{
+		if (m_anchor < 0) return;
+		int anchor = m_anchor;
+		if (anchor > end) std::swap(anchor, end);
+		Clear();
+		m_selectedRanges.emplace_back(SelectionRange(anchor, end));
+		Print();
 	}
 
 	void AddRange(int start, int end)
@@ -208,7 +219,18 @@ public:
 
 	void SetAnchor(const int& NewAnchor) 
 	{
+		if (NewAnchor < 0)
+		{
+			m_anchor = -1;
+			return;
+		}
 		m_anchor = NewAnchor;
+	}
+
+	void ResetAnchor() 
+	{
+		m_anchor = -1;
+		std::cout << "anchor reseted" << std::endl;
 	}
 
 	const bool Empty() const
@@ -216,9 +238,25 @@ public:
 		return m_selectedRanges.empty();
 	}
 
-	void Clear() 
+	void SetRanges(const std::vector<SelectionRange>& ranges) 
+	{
+		m_selectedRanges = ranges;
+	}
+
+	const void Clear() const 
 	{
 		m_selectedRanges.clear();
+	}
+
+	int Size() 
+	{
+		return static_cast<int>(m_selectedRanges.size());
+	}
+
+	void Reset() 
+	{
+		m_selectedRanges.clear();
+		m_anchor = -1;
 	}
 
 	void Print() 
