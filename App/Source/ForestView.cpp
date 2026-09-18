@@ -1385,7 +1385,7 @@ void ForestView::tool_bar()
 			// Clear the selected Items
 			if (tabs[current_tab]->isSelecting)
 			{
-				tabs[current_tab]->selectedEntries.clear();
+				tabs[current_tab]->selectionManager.Reset();
 				tabs[current_tab]->isSelecting = false;
 			}
 			tabs[current_tab]->show_selected_folder_options = false;
@@ -1404,7 +1404,7 @@ void ForestView::tool_bar()
 				// Clear the selected Items
 				if (tabs[current_tab]->isSelecting)
 				{
-					tabs[current_tab]->selectedEntries.clear();
+					tabs[current_tab]->selectionManager.Reset();
 					tabs[current_tab]->isSelecting = false;
 				}
 				tabs[current_tab]->show_selected_folder_options = false;
@@ -1427,7 +1427,7 @@ void ForestView::tool_bar()
 			// Clear the selected Items
 			if (tabs[current_tab]->isSelecting)
 			{
-				tabs[current_tab]->selectedEntries.clear();
+				tabs[current_tab]->selectionManager.Reset();
 				tabs[current_tab]->isSelecting = false;
 			}
 			tabs[current_tab]->show_selected_folder_options = false;
@@ -1447,7 +1447,7 @@ void ForestView::tool_bar()
 		if (ImGui::Button("Refresh"))
 		{
 			tabs[current_tab]->selected_path = "";
-			tabs[current_tab]->selectedEntries.clear();
+			tabs[current_tab]->selectionManager.Reset();
 			tabs[current_tab]->entries_need_update = true;
 			tabs[current_tab]->globalKeyWord = "";
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
@@ -1468,12 +1468,15 @@ void ForestView::tool_bar()
 		bool isRootFolder = false;
 		if (tabs[current_tab]->isSelecting) 
 		{
-			for (const fs::path& path : tabs[current_tab]->selectedEntries) 
+			for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges()) 
 			{
-				if (path == path.root_path()) 
+				for (int i = range.first ; i <= range.last ; i++) 
 				{
-					isRootFolder = true;
-					break;
+					if (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->entries[i].entry.path().root_path()) 
+					{
+						isRootFolder = true;
+						break;
+					}
 				}
 			}
 		}
@@ -1485,7 +1488,7 @@ void ForestView::tool_bar()
 			}
 		}
 
-		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectedEntries.empty()) || isRootFolder);
+		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectionManager.Empty()) || isRootFolder);
 		if (ImGui::Button("Delete"))
 		{
 			need_delete_confirmation = true;
@@ -1495,13 +1498,20 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectedEntries.empty()) || isRootFolder);
+		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectionManager.Empty()) || isRootFolder);
 		if (ImGui::Button("Copy"))
 		{
 			if (tabs[current_tab]->isSelecting) 
 			{
-				tabs[current_tab]->copied_paths.reserve(tabs[current_tab]->selectedEntries.size());
-				tabs[current_tab]->copied_paths = tabs[current_tab]->selectedEntries;
+				tabs[current_tab]->copied_paths.clear();
+
+				for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
+				{
+					for (int i = range.first; i <= range.last; i++)
+					{
+						tabs[current_tab]->copied_paths.emplace_back(tabs[current_tab]->entries[i].entry.path());
+					}
+				}
 			}
 			else 
 			{
@@ -1893,13 +1903,13 @@ void ForestView::view_sort_options()
 				{
 					return a.entry.path() < b.entry.path();
 				});
-			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+			tabs[current_tab]->entries_need_update = true;
 			ImGui::CloseCurrentPopup();
 		}
 		if (ImGui::Selectable("Last Modified time"))
 		{
 			tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.last_write_time() > b.entry.last_write_time();});
-			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+			tabs[current_tab]->entries_need_update = true;
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::EndPopup();
@@ -1916,65 +1926,69 @@ void ForestView::delete_warning()
 
 		if (ImGui::Button("YES"))
 		{
-			// Syncing the Tasks (Duplicates , Empty Folders, Largest Files) =======================
+			// Syncing the Tasks (Duplicates, Empty Folders, Largest Files) =======================
 			// Sync the Empty Folders Deletion
 			if (tabs[current_tab]->isSelecting) 
 			{
-				for (const fs::path& path : tabs[current_tab]->selectedEntries)
+				for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
 				{
-					if (is_searching_for_empty_folders)
+					for (int i = range.first; i <= range.last; i++)
 					{
-						if (fs::is_directory(path))
+						const fs::path& path = tabs[current_tab]->entries[i].entry.path();
+						if (is_searching_for_empty_folders)
 						{
-							std::erase(m_emptyFolders, path);
-						}
-					}
-					if (is_searching_for_duplicates_files)
-					{
-						if (fs::is_regular_file(path)) 
-						{
-							auto targetIt = std::find_if(m_duplicateFiles.begin(), m_duplicateFiles.end(),
-								[&path](const Duplicate& duplicateObj) {
-									return path == duplicateObj.duplicateEntry.path();
-								});
-
-							int tempId = 0;
-							size_t count_deleted = std::erase_if(m_duplicateFiles, [&path, &tempId](const Duplicate& duplicateObj)
-								{
-									if (path == duplicateObj.duplicateEntry.path())
-									{
-										tempId = duplicateObj.groupId;
-										return true;
-									}
-									return false;
-								});
-							if (count_deleted != 0)
+							if (fs::is_directory(path))
 							{
-								size_t remainingInGroup = std::count_if(m_duplicateFiles.begin(), m_duplicateFiles.end(), [&tempId](const Duplicate& duplicateObj)
-									{
-										return duplicateObj.groupId == tempId;
+								std::erase(m_emptyFolders, path);
+							}
+						}
+						if (is_searching_for_duplicates_files)
+						{
+							if (fs::is_regular_file(path)) 
+							{
+								auto targetIt = std::find_if(m_duplicateFiles.begin(), m_duplicateFiles.end(),
+									[&path](const Duplicate& duplicateObj) {
+										return path == duplicateObj.duplicateEntry.path();
 									});
 
-								if (remainingInGroup < 2)
-								{
-									std::erase_if(m_duplicateFiles, [&tempId](const Duplicate& cleanUp)
+								int tempId = 0;
+								size_t count_deleted = std::erase_if(m_duplicateFiles, [&path, &tempId](const Duplicate& duplicateObj)
+									{
+										if (path == duplicateObj.duplicateEntry.path())
 										{
-											return cleanUp.groupId == tempId;
+											tempId = duplicateObj.groupId;
+											return true;
+										}
+										return false;
+									});
+								if (count_deleted != 0)
+								{
+									size_t remainingInGroup = std::count_if(m_duplicateFiles.begin(), m_duplicateFiles.end(), [&tempId](const Duplicate& duplicateObj)
+										{
+											return duplicateObj.groupId == tempId;
 										});
+
+									if (remainingInGroup < 2)
+									{
+										std::erase_if(m_duplicateFiles, [&tempId](const Duplicate& cleanUp)
+											{
+												return cleanUp.groupId == tempId;
+											});
+									}
 								}
 							}
 						}
-					}
-					if (is_searching_for_largest_files)
-					{
-						if (fs::is_regular_file(path))
+						if (is_searching_for_largest_files)
 						{
-							std::erase(m_largestFiles, path);
+							if (fs::is_regular_file(path))
+							{
+								std::erase(m_largestFiles, path);
+							}
 						}
-					}
-					if (m_isSearcing)
-					{
-						std::erase(m_founds, path);
+						if (m_isSearcing)
+						{
+							std::erase(m_founds, path);
+						}
 					}
 				}
 			}
@@ -2041,15 +2055,19 @@ void ForestView::delete_warning()
 			}
 			tabs[current_tab]->recents.remove(fs::directory_entry(tabs[current_tab]->deleted_path));
 
-			if (!tabs[current_tab]->selectedEntries.empty()) 
+			if (!tabs[current_tab]->selectionManager.Empty()) 
 			{
-				for (const fs::path& path : tabs[current_tab]->selectedEntries) 
+				for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
 				{
-					std::unique_ptr<Task> deleteTask = std::make_unique<Task>(TaskType::_DELETE);
-					deleteTask->source = path;
-					deleteTask->sourceName = Utils::reform_string(path.filename().string(), 10);
+					for (int i = range.first; i <= range.last; i++)
+					{
+						const fs::path& path = tabs[current_tab]->entries[i].entry.path();
+						std::unique_ptr<Task> deleteTask = std::make_unique<Task>(TaskType::_DELETE);
+						deleteTask->source = path;
+						deleteTask->sourceName = Utils::reform_string(path.filename().string(), 10);
 
-					m_queuedTasks.emplace_back(std::move(deleteTask));
+						m_queuedTasks.emplace_back(std::move(deleteTask));
+					}
 				}
 			}
 			else 
@@ -2068,11 +2086,13 @@ void ForestView::delete_warning()
 				});
 				tasks.emplace_back(std::move(deleteTask));
 			}
-			tabs[current_tab]->selectedEntries.clear();
+
+			tabs[current_tab]->selectionManager.Clear();
 			if (tabs[current_tab]->isSelecting) 
 			{
 				tabs[current_tab]->isSelecting = false;
 			}
+
 			tabs[current_tab]->deleted_path = "";
 			tabs[current_tab]->selected_path.clear();
 			ImGui::CloseCurrentPopup();
@@ -2797,6 +2817,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		// Updating the entries vector ============================================================
 		if (tabs[current_tab]->entries_need_update)
 		{
+			tabs[current_tab]->selectionManager.Reset();
+
 			tabs[current_tab]->fileExplorer->refresh(tabs[current_tab]->current_path);
 			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
 			auto u8_str = (tabs[current_tab]->current_path == tabs[current_tab]->current_path.root_path()) ? tabs[current_tab]->current_path.u8string() : tabs[current_tab]->current_path.filename().u8string();
@@ -2815,17 +2837,19 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		{
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 			{
+				tabs[current_tab]->selectionManager.ResetAnchor();
 				tabs[current_tab]->selected_path = "";
 				m_ctrlPressd = ctrlPressed;
 				if (m_ctrlPressd)
 				{
-					tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectedEntries;
+					tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectionManager.GetRanges();
 				}
 				else
 				{
 					tabs[current_tab]->selectedEntriesSnapShot.clear();
-					tabs[current_tab]->selectedEntries.clear();
+
 					tabs[current_tab]->selectionManager.Clear();
+
 					tabs[current_tab]->isSelecting = false;
 				}
 
@@ -2890,16 +2914,18 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		{
 			if (ctrlPressed && ImGui::IsKeyPressed(ImGuiKey_A, false)) 
 			{
-				// To Stop the the spam ctrl+A to readd the entries in the current Path #################
+				// To Stop the the spam ctrl+A to read the entries in the current Path #################
 				if (tabs[current_tab]->isSelecting) 
 				{
-					tabs[current_tab]->selectedEntries = tabs[current_tab]->selectedEntriesSnapShot;
+					tabs[current_tab]->selectionManager.SetRanges(tabs[current_tab]->selectedEntriesSnapShot);
 				}
 				// #######################################################################################
 
 				tabs[current_tab]->selected_path = "";
-				for (const Entry& entry : tabs[current_tab]->entries) 
+				tabs[current_tab]->selectionManager.Reset();
+				for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
 				{
+					const Entry& entry = tabs[current_tab]->entries[i];
 					DirAccessResult check = tabs[current_tab]->fileExplorer->check_directory_access(entry.entry.path());
 					if (check == DirAccessResult::ACCESS_DENIED) 
 					{
@@ -2907,7 +2933,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 					}
 					else 
 					{
-						tabs[current_tab]->selectedEntries.emplace_back(entry.entry.path());
+						tabs[current_tab]->selectionManager.AddSingleSelection(i);
 					}
 				}
 			}
@@ -2918,10 +2944,9 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 void ForestView::render_entries()
 {
-	if (tabs[current_tab]->selectedEntries.empty()) 
+	if (tabs[current_tab]->selectionManager.Empty()) 
 	{
 		tabs[current_tab]->isSelecting = false;
-		tabs[current_tab]->lastPress = -1;
 	}
 	else 
 	{
@@ -2930,7 +2955,7 @@ void ForestView::render_entries()
 
 	if (m_isDraggingSelection)
 	{
-		tabs[current_tab]->selectedEntries = tabs[current_tab]->selectedEntriesSnapShot;
+		tabs[current_tab]->selectionManager.SetRanges(tabs[current_tab]->selectedEntriesSnapShot);
 	}
 
 	if (tabs[current_tab]->view_type == LARGE_THUMBNAILS)
@@ -2968,7 +2993,7 @@ void ForestView::render_entries()
 				}
 				else
 				{
-					if (std::erase(tabs[current_tab]->selectedEntries, tabs[current_tab]->entries[i].entry.path()) <= 0)
+					/*if (std::erase(tabs[current_tab]->selectedEntries, tabs[current_tab]->entries[i].entry.path()) <= 0)
 					{
 						tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
 						is_selected = true;
@@ -2976,10 +3001,10 @@ void ForestView::render_entries()
 					else
 					{
 						is_selected = false;
-					}
+					}*/
 				}
 			}
-			if (!tabs[current_tab]->isSelecting)
+			/*if (!tabs[current_tab]->isSelecting)
 			{
 				is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
 			}
@@ -2990,7 +3015,7 @@ void ForestView::render_entries()
 				auto it = std::find(Temp.begin(), Temp.end(), tabs[current_tab]->entries[i].entry.path());
 				if (it != Temp.end()) is_selected = true;
 				else is_selected = false;
-			}
+			}*/
 
 
 
@@ -3068,7 +3093,7 @@ void ForestView::render_entries()
 
 					//tabs[current_tab]->m_selectedMinIndex = minIndex;
 					//tabs[current_tab]->m_selectedMaxIndex = maxIndex + 1;
-					Clipper.IncludeItemsByIndex(minIndex, maxIndex + 1);
+					//Clipper.IncludeItemsByIndex(minIndex, maxIndex + 1);
 				}
 			}
 			while (Clipper.Step()) 
@@ -3124,36 +3149,22 @@ void ForestView::render_entries()
 						{
 							if (m_ctrlPressd) 
 							{
-								if (std::erase(tabs[current_tab]->selectedEntries, tabs[current_tab]->entries[i].entry.path()) <= 0)
-								{
-									tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
-									is_selected = true;
-								}
-								else
-								{
-									is_selected = false;
-								}
+								tabs[current_tab]->selectionManager.toggleSingleSelection(i);
 							}
 							else 
 							{
-								if (std::find(tabs[current_tab]->selectedEntries.begin(), tabs[current_tab]->selectedEntries.end(), tabs[current_tab]->entries[i].entry.path()) == tabs[current_tab]->selectedEntries.end())
-								{
-									tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
-								}
+								tabs[current_tab]->selectionManager.AddSingleSelection(i);
 							}
 						}
 					}
-					if (!tabs[current_tab]->isSelecting) 
+
+					if (tabs[current_tab]->selectionManager.Empty()) 
 					{
 						is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
 					}
 					else 
 					{
-						const std::vector<fs::path>& Temp = tabs[current_tab]->selectedEntries;
-
-						auto it = std::find(Temp.begin(), Temp.end(), tabs[current_tab]->entries[i].entry.path());
-						if (it != Temp.end()) is_selected = true;
-						else is_selected = false;
+						is_selected = tabs[current_tab]->selectionManager.IsSelected(i);
 					}
 
 
@@ -3248,7 +3259,8 @@ void ForestView::render_entries()
 							if (entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishLower ||
 								entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishUpper)
 							{
-								tabs[current_tab]->selectedEntries.clear();
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(selected_PathIdxTemp);
 								tabs[current_tab]->selected_path = entriesRef[selected_PathIdxTemp].entry.path();
 								break;
 							}
@@ -3258,13 +3270,15 @@ void ForestView::render_entries()
 					}
 					else 
 					{
-						for (const Entry& entry : entriesRef)
+						for (size_t j = 0; j < entriesRef.size(); ++j)
 						{
+							const Entry& entry = entriesRef[j];
 							if (entry.entry.path().empty()) continue;
 							if (entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishLower ||
 								entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishUpper)
 							{
-								tabs[current_tab]->selectedEntries.clear();
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(j);
 								tabs[current_tab]->selected_path = entry.entry.path();
 								break;
 							}
@@ -3302,7 +3316,8 @@ void ForestView::render_entries()
 							}
 							if (entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].arabicChar)
 							{
-								tabs[current_tab]->selectedEntries.clear();
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(selected_PathIdxTemp);
 								tabs[current_tab]->selected_path = entriesRef[selected_PathIdxTemp].entry.path();
 								break;
 							}
@@ -3312,12 +3327,14 @@ void ForestView::render_entries()
 					}
 					else
 					{
-						for (const Entry& entry : entriesRef)
+						for (size_t j = 0; j < entriesRef.size(); ++j)
 						{
+							const Entry& entry = entriesRef[j];
 							if (entry.entry.path().empty()) continue;
 							if (entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].arabicChar)
 							{
-								tabs[current_tab]->selectedEntries.clear();
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(j);
 								tabs[current_tab]->selected_path = entry.entry.path();
 								break;
 							}
@@ -3364,8 +3381,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 			// Clear the selected Items
 			if (tabs[current_tab]->isSelecting)
 			{
-				tabs[current_tab]->selectedEntries.clear();
-				tabs[current_tab]->isSelecting = false;
+				tabs[current_tab]->selectionManager.Reset();
 			}
 
 			if (entry.is_directory())
@@ -3391,7 +3407,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 		{
 			if (tabs[current_tab]->isSelecting) 
 			{
-				tabs[current_tab]->selectedEntries.clear();
+				tabs[current_tab]->selectionManager.Reset();
 			}
 			if (entry.is_directory()) 
 			{
@@ -3446,21 +3462,23 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 			bool rightShiftPressed = io.KeyShift;
 			if (ctrlPressed && !m_isDraggingSelection)
 			{
-				std::vector<fs::path>& x = tabs[current_tab]->selectedEntries;
+				if (idx != -1)
+				{
+					tabs[current_tab]->selectionManager.SetAnchor(idx);
+				}
 				if (!tabs[current_tab]->selected_path.empty()) 
 				{
-					x.emplace_back(tabs[current_tab]->selected_path);
+					for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i) 
+					{
+						if (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) 
+						{
+							tabs[current_tab]->selectionManager.toggleSingleSelection(i);
+							break;
+						}
+					}
 				}
-				const size_t erasedSelections = std::erase(x, entry.path());
-				if (erasedSelections <= 0)
-				{
-					x.emplace_back(entry.path());
-					if (idx != -1) tabs[current_tab]->selectionManager.AddSingleSelection(idx);
-				}
-				else 
-				{
-					if (idx != -1) tabs[current_tab]->selectionManager.toggleSingleSelection(idx);
-				}
+				if (idx != -1) tabs[current_tab]->selectionManager.toggleSingleSelection(idx);
+				
 				tabs[current_tab]->selected_path.clear();
 			}
 			else if (rightShiftPressed && !m_isDraggingSelection) 
@@ -3468,142 +3486,11 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 				if (tabs[current_tab]->selected_path.empty() && !tabs[current_tab]->isSelecting)
 				{
 					left_click(entry);
+					tabs[current_tab]->selectionManager.SetAnchor(idx);
 				}
 				else 
 				{
-
-					auto findIndex = [this](const fs::path& path) -> int
-						{
-							const auto& entries = tabs[current_tab]->entries;
-							for (int i = 0; i < (int)entries.size(); ++i)
-								if (entries[i].entry.path() == path)
-									return i;
-							return -1;
-						};
-
-					int pivot = -1;
-					int pressed_pathIdx = -1;
-					pressed_pathIdx = findIndex(entry.path());
-					if (pressed_pathIdx == -1) 
-					{
-						return;
-					}
-					if (tabs[current_tab]->isSelecting) 
-					{
-						int head = findIndex(tabs[current_tab]->selectedEntries[0]);
-						int tail = findIndex(tabs[current_tab]->selectedEntries.back());
-						if (head > tail) 
-						{
-							std::swap(head, tail);
-						}
-						std::cout << std::format("Head: {},tail: {}", head, tail) << std::endl;
-						if (head == -1 || tail == -1) return;
-
-						if (pressed_pathIdx < head) 
-						{
-							if (tabs[current_tab]->lastPress == 1) 
-							{
-								pivot = head - 1;
-								if (pivot < 0) return;
-								if (pivot == pressed_pathIdx) 
-								{
-									tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[pivot].entry.path());
-									tabs[current_tab]->selectionManager.AddSingleSelection(pivot);
-									tabs[current_tab]->lastPress = 1;
-									return;
-								}
-							}
-							else if (tabs[current_tab]->lastPress != 1)
-							{
-								tabs[current_tab]->selectedEntries.clear();
-								pivot = head;
-								tabs[current_tab]->lastPress = 1;
-							}
-						}
-						else if (pressed_pathIdx > tail) 
-						{
-							if (tabs[current_tab]->lastPress == 0) 
-							{
-								pivot = tail + 1;
-								if (pivot >= tabs[current_tab]->entries.size()) return;
-								if (pivot == pressed_pathIdx)
-								{
-									tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[pivot].entry.path());
-									tabs[current_tab]->selectionManager.AddSingleSelection(pivot);
-									tabs[current_tab]->lastPress = 0;
-									return;
-								}
-							}
-							else if (tabs[current_tab]->lastPress != 0) 
-							{
-								tabs[current_tab]->selectedEntries.clear();
-								pivot = tail;
-								tabs[current_tab]->lastPress = 0;
-							}
-						}
-						else
-						{
-							tabs[current_tab]->selectedEntries.clear();
-							if (tabs[current_tab]->lastPress == 1) 
-							{
-								pivot = tail;
-								tabs[current_tab]->lastPress = 1;
-							}
-							else if (tabs[current_tab]->lastPress == 0) 
-							{
-								pivot = head;
-								tabs[current_tab]->lastPress = 0;
-							}
-							else 
-							{
-								pivot = head;
-								tabs[current_tab]->lastPress = 0;
-							}
-						}
-					}
-					else 
-					{
-						pivot = findIndex(tabs[current_tab]->selected_path);
-						if (pivot == -1)
-						{
-							return;
-						}
-						if (pivot < pressed_pathIdx) 
-						{
-							tabs[current_tab]->lastPress = 0;
-						}
-						else if (pivot > pressed_pathIdx) 
-						{
-							tabs[current_tab]->lastPress = 1;
-						}
-					}
-
-
-					if (pivot < pressed_pathIdx)
-					{
-						for (size_t i = pivot; i <= pressed_pathIdx; i++)
-						{
-							tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
-						}
-						tabs[current_tab]->selectionManager.AddRange(pivot, pressed_pathIdx);
-						tabs[current_tab]->selected_path.clear();
-
-					}
-					else if (pivot > pressed_pathIdx)
-					{
-						for (int i = pivot; i >= pressed_pathIdx && i >=0; i--)
-						{
-							tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
-						}
-						tabs[current_tab]->selectionManager.AddRange(pivot, pressed_pathIdx);
-						tabs[current_tab]->selected_path.clear();
-					}
-					else if (pivot == pressed_pathIdx)
-					{
-						tabs[current_tab]->selectedEntries.clear();
-						tabs[current_tab]->selected_path = tabs[current_tab]->entries[pressed_pathIdx].entry.path();
-					}
-					
+					if (idx != -1) tabs[current_tab]->selectionManager.SelectAnchoredRange(idx);
 				}
 			}
 			else
@@ -3613,8 +3500,11 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 					// Clear the selected Items
 					if (tabs[current_tab]->isSelecting) 
 					{
-						tabs[current_tab]->selectedEntries.clear();
-						tabs[current_tab]->isSelecting = false;
+						tabs[current_tab]->selectionManager.Clear();
+					}
+					if (idx != -1) 
+					{
+						tabs[current_tab]->selectionManager.SetAnchor(idx);
 					}
 					left_click(entry);
 				}
@@ -3682,9 +3572,13 @@ void ForestView::render_debug_panel()
 	ImGui::Text("isSelecting Flag: "); ImGui::SameLine();
 	ImGui::Text(flag3.c_str());
 
-	for (const fs::path& path : tabs[current_tab]->selectedEntries) 
+	for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
 	{
-		ImGui::Text(path.string().c_str());
+		for (int i = range.first; i <= range.last; i++)
+		{
+			const fs::path& path = tabs[current_tab]->entries[i].entry.path();
+			ImGui::Text(path.string().c_str());
+		}
 	}
 	ImGui::Separator();
 }
@@ -3748,9 +3642,9 @@ void ForestView::stats_bar()
 		
 		ImGui::SameLine();
 
-		if (tabs[current_tab]->isSelecting) 
+		if (tabs[current_tab]->isSelecting) // TODO
 		{
-			ImGui::Text(std::format(" |  {} Selected Items ", tabs[current_tab]->selectedEntries.size()).c_str());
+			//ImGui::Text(std::format(" |  {} Selected Items ", tabs[current_tab]->selectedEntries.size()).c_str());
 		}
 		ImGui::SameLine();
 

@@ -125,8 +125,7 @@ struct State
 
 	std::atomic<double> copying_progress;
 
-	std::vector<fs::path> selectedEntries;
-	std::vector<fs::path> selectedEntriesSnapShot;
+	std::vector<SelectionRange> selectedEntriesSnapShot;
 	bool isSelecting = false;
 
 	int lastPress = -1;
