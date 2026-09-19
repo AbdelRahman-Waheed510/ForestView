@@ -10,95 +10,25 @@ struct SelectionRange
 	{}
 };
 
-class SelectionManager 
+class SelectionManager
 {
 private:
 	std::vector<SelectionRange> m_selectedRanges;
 	int m_anchor = -1;
 public:
-	void AddSingleSelection(const int& ind) 
+	void AddSingleSelection(const int& ind)
 	{
 		const int size = static_cast<int>(m_selectedRanges.size());
 		if (ind < 0) return;
 		// Check if it already exist
-		for (const SelectionRange& range : m_selectedRanges) 
+		for (const SelectionRange& range : m_selectedRanges)
 		{
-			if (range.first == ind || range.last == ind) 
+			if (range.first == ind || range.last == ind)
 			{
 				return;
 			}
-			if (ind < range.last && ind > range.first) 
+			if (ind < range.last && ind > range.first)
 			{
-				return;
-			}
-		}
-		auto it = std::upper_bound(m_selectedRanges.begin(), m_selectedRanges.end(), ind,
-			[](int val, const SelectionRange& range)
-			{
-				return val < range.first; 
-			}
-		);
-		const int positionToInsertIn = std::distance(m_selectedRanges.begin(), it);
-
-			//           |
-			//           V
-			// [1,2] , [3,3] , [4,7]
-		if ((positionToInsertIn - 1 >= 0 && positionToInsertIn <= size - 1) && 
-			(m_selectedRanges[positionToInsertIn - 1].last - ind == -1 && m_selectedRanges[positionToInsertIn].first - ind == 1))
-		{
-			m_selectedRanges[positionToInsertIn - 1].last = m_selectedRanges[positionToInsertIn].last;
-			m_selectedRanges.erase(it);
-		}
-			//           |
-			//           V
-			// [1,2] , [3,3]
-		else if (positionToInsertIn - 1 >= 0 && m_selectedRanges[positionToInsertIn - 1].last - ind == -1) 
-		{
-			m_selectedRanges[positionToInsertIn - 1].last = ind;
-		}
-			//   |
-			//   V
-			// [3,3] , [4,7]
-		else if (positionToInsertIn <= size - 1 && m_selectedRanges[positionToInsertIn].first - ind == 1)
-		{
-			m_selectedRanges[positionToInsertIn].first = ind;
-		}
-		else 
-		{
-			m_selectedRanges.insert(it, SelectionRange(ind, ind));
-		}
-		Print();
-	}
-
-	void toggleSingleSelection(const int& ind) 
-	{
-		const int size = static_cast<int>(m_selectedRanges.size());
-		if (ind < 0) return;
-		// Check if it already exist
-		for (size_t i = 0 ; i < size; i++)
-		{
-			SelectionRange& range = m_selectedRanges[i];
-			if (ind >= range.first && ind <= range.last)
-			{
-				if (ind == range.first && ind == range.last) 
-				{
-					m_selectedRanges.erase(m_selectedRanges.begin() + i);
-				}
-				else if (ind == range.first) 
-				{
-					range.first++;
-				}
-				else if (ind == range.last) 
-				{
-					range.last--;
-				}
-				else if (ind > range.first && ind < range.last) 
-				{
-					const int oldLast = range.last;
-					m_selectedRanges.insert(m_selectedRanges.begin() + i + 1, SelectionRange(ind + 1, oldLast));
-					m_selectedRanges[i].last = ind - 1;
-				}
-				Print();
 				return;
 			}
 		}
@@ -137,15 +67,81 @@ public:
 		{
 			m_selectedRanges.insert(it, SelectionRange(ind, ind));
 		}
-		Print();
 	}
 
-	void SelectRange(int start, int end) 
+	void toggleSingleSelection(const int& ind)
+	{
+		const int size = static_cast<int>(m_selectedRanges.size());
+		if (ind < 0) return;
+		// Check if it already exist
+		for (size_t i = 0; i < size; i++)
+		{
+			SelectionRange& range = m_selectedRanges[i];
+			if (ind >= range.first && ind <= range.last)
+			{
+				if (ind == range.first && ind == range.last)
+				{
+					m_selectedRanges.erase(m_selectedRanges.begin() + i);
+				}
+				else if (ind == range.first)
+				{
+					range.first++;
+				}
+				else if (ind == range.last)
+				{
+					range.last--;
+				}
+				else if (ind > range.first && ind < range.last)
+				{
+					const int oldLast = range.last;
+					m_selectedRanges.insert(m_selectedRanges.begin() + i + 1, SelectionRange(ind + 1, oldLast));
+					m_selectedRanges[i].last = ind - 1;
+				}
+				return;
+			}
+		}
+		auto it = std::upper_bound(m_selectedRanges.begin(), m_selectedRanges.end(), ind,
+			[](int val, const SelectionRange& range)
+			{
+				return val < range.first;
+			}
+		);
+		const int positionToInsertIn = std::distance(m_selectedRanges.begin(), it);
+
+		//           |
+		//           V
+		// [1,2] , [3,3] , [4,7]
+		if ((positionToInsertIn - 1 >= 0 && positionToInsertIn <= size - 1) &&
+			(m_selectedRanges[positionToInsertIn - 1].last - ind == -1 && m_selectedRanges[positionToInsertIn].first - ind == 1))
+		{
+			m_selectedRanges[positionToInsertIn - 1].last = m_selectedRanges[positionToInsertIn].last;
+			m_selectedRanges.erase(it);
+		}
+		//           |
+		//           V
+		// [1,2] , [3,3]
+		else if (positionToInsertIn - 1 >= 0 && m_selectedRanges[positionToInsertIn - 1].last - ind == -1)
+		{
+			m_selectedRanges[positionToInsertIn - 1].last = ind;
+		}
+		//   |
+		//   V
+		// [3,3] , [4,7]
+		else if (positionToInsertIn <= size - 1 && m_selectedRanges[positionToInsertIn].first - ind == 1)
+		{
+			m_selectedRanges[positionToInsertIn].first = ind;
+		}
+		else
+		{
+			m_selectedRanges.insert(it, SelectionRange(ind, ind));
+		}
+	}
+
+	void SelectRange(int start, int end)
 	{
 		if (start > end) std::swap(start, end);
 		Clear();
 		m_selectedRanges.emplace_back(SelectionRange(start, end));
-		Print();
 	}
 
 	void SelectAnchoredRange(int end)
@@ -155,7 +151,6 @@ public:
 		if (anchor > end) std::swap(anchor, end);
 		Clear();
 		m_selectedRanges.emplace_back(SelectionRange(anchor, end));
-		Print();
 	}
 
 	void AddRange(int start, int end)
@@ -173,7 +168,6 @@ public:
 		if (firstIt == secondIt)
 		{
 			m_selectedRanges.emplace(firstIt, SelectionRange(start, end));
-			Print();
 			return;
 		}
 
@@ -181,7 +175,56 @@ public:
 		firstIt->first = (std::min)(firstIt->first, start);
 		firstIt->last = (std::max)(std::prev(secondIt)->last, end);
 		m_selectedRanges.erase(firstIt + 1, secondIt);
-		Print();
+	}
+
+	void ToggleRange(int start, int end)
+	{
+		if (start > end) std::swap(start, end);
+
+		auto startIt = std::lower_bound(
+			m_selectedRanges.begin(), m_selectedRanges.end(), start,
+			[](const SelectionRange& range, int val) { return range.last < val; }
+		);
+
+		auto endIt = std::upper_bound(
+			startIt, m_selectedRanges.end(), end,
+			[](int val, const SelectionRange& range) { return val < range.first; }
+		);
+
+		if (startIt == endIt)
+		{
+			m_selectedRanges.insert(startIt, SelectionRange(start, end));
+			return;
+		}
+
+		std::vector<SelectionRange> replacement;
+		int current = start;
+
+		for (auto it = startIt; it != endIt; ++it)
+		{
+			if (it->first < current)
+			{
+				replacement.emplace_back(it->first, current - 1);
+			}
+			else if (current < it->first)
+			{
+				replacement.emplace_back(current, it->first - 1);
+			}
+
+			current = it->last + 1;
+		}
+
+		if (current <= end)
+		{
+			replacement.emplace_back(current, end);
+		}
+		else if (end + 1 <= std::prev(endIt)->last)
+		{
+			replacement.emplace_back(end + 1, std::prev(endIt)->last);
+		}
+
+		auto eraseStart = m_selectedRanges.erase(startIt, endIt);
+		m_selectedRanges.insert(eraseStart, replacement.begin(), replacement.end());
 	}
 
 	const bool IsSelected(int ind) const
@@ -243,7 +286,17 @@ public:
 		m_selectedRanges = ranges;
 	}
 
-	const void Clear() const 
+	const int GetCount() const
+	{
+		int count = 0;
+		for (const SelectionRange& range : m_selectedRanges) 
+		{
+			count += (range.last - range.first) + 1;
+		}
+		return count;
+	}
+
+	void Clear()  
 	{
 		m_selectedRanges.clear();
 	}
