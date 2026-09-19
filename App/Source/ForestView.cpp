@@ -3228,6 +3228,24 @@ void ForestView::render_entries()
 							if (entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishLower ||
 								entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishUpper)
 							{
+								if (entriesRef[selected_PathIdxTemp].entry.is_directory())
+								{
+									DirAccessResult s = tabs[current_tab]->fileExplorer->check_directory_access(entriesRef[selected_PathIdxTemp].entry.path());
+									if (s == DirAccessResult::ACCESS_DENIED) 
+									{
+										need_access_denied_popup = true;
+										break;
+									}
+								}
+								else if (entriesRef[selected_PathIdxTemp].entry.is_regular_file())
+								{
+									FileAccessResult s = tabs[current_tab]->fileExplorer->check_file_access(entriesRef[selected_PathIdxTemp].entry.path());
+									if (s == FileAccessResult::ACCESS_DENIED || s == FileAccessResult::LOCKED_OR_IN_USE)
+									{
+										need_access_denied_popup = true;
+										break;
+									}
+								}
 								tabs[current_tab]->selectionManager.Reset();
 								tabs[current_tab]->selectionManager.SetAnchor(selected_PathIdxTemp);
 								tabs[current_tab]->selected_path = entriesRef[selected_PathIdxTemp].entry.path();
@@ -3246,6 +3264,24 @@ void ForestView::render_entries()
 							if (entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishLower ||
 								entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishUpper)
 							{
+								if (entry.entry.is_directory())
+								{
+									DirAccessResult s = tabs[current_tab]->fileExplorer->check_directory_access(entry.entry.path());
+									if (s == DirAccessResult::ACCESS_DENIED) 
+									{
+										need_access_denied_popup = true;
+										break;
+									}
+								}
+								else if (entry.entry.is_regular_file())
+								{
+									FileAccessResult s = tabs[current_tab]->fileExplorer->check_file_access(entry.entry.path());
+									if (s == FileAccessResult::ACCESS_DENIED || s == FileAccessResult::LOCKED_OR_IN_USE)
+									{
+										need_access_denied_popup = true;
+										break;
+									}
+								}
 								tabs[current_tab]->selectionManager.Reset();
 								tabs[current_tab]->selectionManager.SetAnchor(j);
 								tabs[current_tab]->selected_path = entry.entry.path();
@@ -3285,6 +3321,24 @@ void ForestView::render_entries()
 							}
 							if (entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].arabicChar)
 							{
+								if (entriesRef[selected_PathIdxTemp].entry.is_directory())
+								{
+									DirAccessResult s = tabs[current_tab]->fileExplorer->check_directory_access(entriesRef[selected_PathIdxTemp].entry.path());
+									if (s == DirAccessResult::ACCESS_DENIED)
+									{
+										need_access_denied_popup = true;
+										break;
+									}
+								}
+								else if (entriesRef[selected_PathIdxTemp].entry.is_regular_file())
+								{
+									FileAccessResult s = tabs[current_tab]->fileExplorer->check_file_access(entriesRef[selected_PathIdxTemp].entry.path());
+									if (s == FileAccessResult::ACCESS_DENIED || s == FileAccessResult::LOCKED_OR_IN_USE)
+									{
+										need_access_denied_popup = true;
+										break;
+									}
+								}
 								tabs[current_tab]->selectionManager.Reset();
 								tabs[current_tab]->selectionManager.SetAnchor(selected_PathIdxTemp);
 								tabs[current_tab]->selected_path = entriesRef[selected_PathIdxTemp].entry.path();
@@ -3302,6 +3356,24 @@ void ForestView::render_entries()
 							if (entry.entry.path().empty()) continue;
 							if (entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].arabicChar)
 							{
+								if (entry.entry.is_directory())
+								{
+									DirAccessResult s = tabs[current_tab]->fileExplorer->check_directory_access(entry.entry.path());
+									if (s == DirAccessResult::ACCESS_DENIED)
+									{
+										need_access_denied_popup = true;
+										break;
+									}
+								}
+								else if (entry.entry.is_regular_file())
+								{
+									FileAccessResult s = tabs[current_tab]->fileExplorer->check_file_access(entry.entry.path());
+									if (s == FileAccessResult::ACCESS_DENIED || s == FileAccessResult::LOCKED_OR_IN_USE)
+									{
+										need_access_denied_popup = true;
+										break;
+									}
+								}
 								tabs[current_tab]->selectionManager.Reset();
 								tabs[current_tab]->selectionManager.SetAnchor(j);
 								tabs[current_tab]->selected_path = entry.entry.path();
