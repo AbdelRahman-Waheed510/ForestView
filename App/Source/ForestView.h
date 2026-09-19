@@ -260,6 +260,7 @@ private:
 	ImVec2 m_SelectionRecStartingPos;
 	bool m_isDraggingSelection = false;
 	bool m_ctrlPressd = false;
+	bool m_shiftPressed = false;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)

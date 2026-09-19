@@ -2832,15 +2832,19 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 		// clearing the selected_Path if i press anywhere that not an entry =======================
 		ImGuiIO io = ImGui::GetIO();
-		bool ctrlPressed = io.KeyCtrl;
+		m_ctrlPressd = io.KeyCtrl;
+		m_shiftPressed = io.KeyShift;
 		if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered())
 		{
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 			{
 				tabs[current_tab]->selectionManager.ResetAnchor();
 				tabs[current_tab]->selected_path = "";
-				m_ctrlPressd = ctrlPressed;
 				if (m_ctrlPressd)
+				{
+					tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectionManager.GetRanges();
+				}
+				else if (m_shiftPressed) 
 				{
 					tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectionManager.GetRanges();
 				}
@@ -2912,15 +2916,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		// Ctrl+A selcetion 
 		if (!io.WantCaptureKeyboard) 
 		{
-			if (ctrlPressed && ImGui::IsKeyPressed(ImGuiKey_A, false)) 
+			if (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_A, false)) 
 			{
-				// To Stop the the spam ctrl+A to read the entries in the current Path #################
-				if (tabs[current_tab]->isSelecting) 
-				{
-					tabs[current_tab]->selectionManager.SetRanges(tabs[current_tab]->selectedEntriesSnapShot);
-				}
-				// #######################################################################################
-
 				tabs[current_tab]->selected_path = "";
 				tabs[current_tab]->selectionManager.Reset();
 				for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
@@ -2953,9 +2950,21 @@ void ForestView::render_entries()
 		tabs[current_tab]->isSelecting = true;
 	}
 
-	if (m_isDraggingSelection)
+
+	if (m_isDraggingSelection) 
 	{
-		tabs[current_tab]->selectionManager.SetRanges(tabs[current_tab]->selectedEntriesSnapShot);
+		if (m_ctrlPressd) 
+		{
+			tabs[current_tab]->selectionManager.SetRanges(tabs[current_tab]->selectedEntriesSnapShot);
+		}
+		else if (m_shiftPressed)
+		{
+			tabs[current_tab]->selectionManager.SetRanges(tabs[current_tab]->selectedEntriesSnapShot);
+		}
+		else 
+		{
+			tabs[current_tab]->selectionManager.Reset();
+		}
 	}
 
 	if (tabs[current_tab]->view_type == LARGE_THUMBNAILS)
@@ -2982,40 +2991,28 @@ void ForestView::render_entries()
 
 			}
 
-			bool is_selected;
+			bool is_selected = false;
 			if (overlaps)
 			{
-				DirAccessResult test = tabs[current_tab]->fileExplorer->check_directory_access(tabs[current_tab]->entries[i].entry.path());
-				if (test == DirAccessResult::ACCESS_DENIED)
+				if (m_ctrlPressd)
 				{
-					need_access_denied_popup = true;
-					is_selected = false;
+					tabs[current_tab]->selectionManager.toggleSingleSelection(i);
+					is_selected = tabs[current_tab]->selectionManager.IsSelected(i);
 				}
-				else
+				else 
 				{
-					/*if (std::erase(tabs[current_tab]->selectedEntries, tabs[current_tab]->entries[i].entry.path()) <= 0)
-					{
-						tabs[current_tab]->selectedEntries.emplace_back(tabs[current_tab]->entries[i].entry.path());
-						is_selected = true;
-					}
-					else
-					{
-						is_selected = false;
-					}*/
+					tabs[current_tab]->selectionManager.AddSingleSelection(i);
+					is_selected = true;
 				}
 			}
-			/*if (!tabs[current_tab]->isSelecting)
+			else if (tabs[current_tab]->isSelecting)
 			{
-				is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path) ? true : false;
+				is_selected = tabs[current_tab]->selectionManager.IsSelected(i);
 			}
 			else
 			{
-				const std::vector<fs::path>& Temp = tabs[current_tab]->selectedEntries;
-
-				auto it = std::find(Temp.begin(), Temp.end(), tabs[current_tab]->entries[i].entry.path());
-				if (it != Temp.end()) is_selected = true;
-				else is_selected = false;
-			}*/
+				is_selected = (tabs[current_tab]->entries[i].entry.path() == tabs[current_tab]->selected_path);
+			}
 
 
 
@@ -3080,20 +3077,40 @@ void ForestView::render_entries()
 				const float selMaxX = (std::max)(SelectionStartX, mouseContentX);
 
 				bool checkForTheY = (selMinX < tableTopContentX + maxEntriesX && selMaxX > tableTopContentX) ? true : false;
-				if (checkForTheY) 
+				if (checkForTheY)
 				{
 					const float rowYHeight = tabs[current_tab]->icons_height + ImGui::GetStyle().CellPadding.y * 2.0f;
+					const int totalEntries = (int)tabs[current_tab]->entries.size();
 
-					int	minIndex = (int)std::floor(selMinY / rowYHeight);
-					int maxIndex = (int)std::floor(selMaxY / rowYHeight);
+					if (totalEntries > 0)
+					{
+						const float totalContentHeight = totalEntries * rowYHeight;
 
-					int lastIndex = (int)tabs[current_tab]->entries.size() - 1;
-					minIndex = std::clamp(minIndex, 0, lastIndex);
-					maxIndex = std::clamp(maxIndex, 0, lastIndex);
+						if (selMinY < totalContentHeight && selMaxY > 0.0f)
+						{
+							int lastIndex = totalEntries - 1;
 
-					//tabs[current_tab]->m_selectedMinIndex = minIndex;
-					//tabs[current_tab]->m_selectedMaxIndex = maxIndex + 1;
-					//Clipper.IncludeItemsByIndex(minIndex, maxIndex + 1);
+							int minIndex = (int)std::floor(selMinY / rowYHeight);
+							int maxIndex = (int)std::floor(selMaxY / rowYHeight);
+
+							minIndex = std::clamp(minIndex, 0, lastIndex);
+							maxIndex = std::clamp(maxIndex, 0, lastIndex);
+
+							if (m_ctrlPressd)
+							{
+								tabs[current_tab]->selectionManager.ToggleRange(minIndex, maxIndex);
+							}
+							else if (m_shiftPressed)
+							{
+								tabs[current_tab]->selectionManager.AddRange(minIndex, maxIndex);
+							}
+							else
+							{
+								tabs[current_tab]->selectionManager.SelectRange(minIndex, maxIndex);
+							}
+						}
+						
+					}
 				}
 			}
 			while (Clipper.Step()) 
@@ -3108,55 +3125,7 @@ void ForestView::render_entries()
 					// ======================================== Name ==============================================
 					ImGui::TableNextColumn();
 
-					bool overlaps = false;
-					if (m_isDraggingSelection) 
-					{
-						ImVec2 row_min = ImGui::GetCursorScreenPos();
-						ImVec2 row_max = ImVec2(row_min.x + 1000.0f, row_min.y + icon_height);
-
-						ImVec2 selection_min = ImMin(ImGui::GetMousePos(), GetSelectionStartScreenPos());
-						ImVec2 selection_max = ImMax(ImGui::GetMousePos(), GetSelectionStartScreenPos());
-
-						overlaps = (row_min.y < selection_max.y && row_max.y > selection_min.y) && (row_min.x < selection_max.x && row_max.x > selection_min.x);
-
-					}
-
 					bool is_selected; 
-					if (overlaps) 
-					{
-						bool okToAddOrRemoveToTheSelectedEntries = true;
-						if (tabs[current_tab]->entries[i].entry.is_directory())
-						{
-							DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(tabs[current_tab]->entries[i].entry.path());
-							if (checkAccess == DirAccessResult::ACCESS_DENIED)
-							{
-								need_access_denied_popup = true;
-								okToAddOrRemoveToTheSelectedEntries = false;
-								is_selected = false;
-							}
-						}
-						else if (tabs[current_tab]->entries[i].entry.is_regular_file())
-						{
-							FileAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_file_access(tabs[current_tab]->entries[i].entry.path());
-							if (checkAccess == FileAccessResult::ACCESS_DENIED || checkAccess == FileAccessResult::LOCKED_OR_IN_USE)
-							{
-								need_access_denied_popup = true;
-								okToAddOrRemoveToTheSelectedEntries = false;
-								is_selected = false;
-							}
-						}
-						if (okToAddOrRemoveToTheSelectedEntries)
-						{
-							if (m_ctrlPressd) 
-							{
-								tabs[current_tab]->selectionManager.toggleSingleSelection(i);
-							}
-							else 
-							{
-								tabs[current_tab]->selectionManager.AddSingleSelection(i);
-							}
-						}
-					}
 
 					if (tabs[current_tab]->selectionManager.Empty()) 
 					{
@@ -3217,11 +3186,11 @@ void ForestView::render_entries()
 		}
 	}
 
-	if (!ImGui::GetIO().WantCaptureKeyboard) 
+	if (!ImGui::GetIO().WantCaptureKeyboard && !m_ctrlPressd && !m_shiftPressed) 
 	{
 		for (size_t i = 0; i < 26; i++) 
 		{
-			if (ImGui::IsKeyPressed(s_alphabetMappings[i].key)) 
+			if (ImGui::IsKeyPressed(s_alphabetMappings[i].key) && !m_ctrlPressd && !m_shiftPressed)
 			{
 				WORD activeLangId = LOWORD(GetKeyboardLayout(0));	
 				const std::wstring& selectedPathWstring = tabs[current_tab]->selected_path.filename().wstring();
