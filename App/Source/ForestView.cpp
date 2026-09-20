@@ -1055,6 +1055,9 @@ void ForestView::on_update()
 		decide_correct_rightClick_popup();
 
 		access_denied();
+
+		render_debug_panel();
+
 	}
 		ImGui::End();
 }
@@ -1141,7 +1144,7 @@ void ForestView::tab_bar()
 		}
 
 		// Close Tab Logic =========================================================================== 
-		if ((ImGui::IsItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Middle)) || (!isTabOpen))
+		if ((ImGui::IsItemHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Middle, false)) || (!isTabOpen))
 		{
 			if ((current_tab == i && current_tab == (int)tabs.size() - 1) && (int)tabs.size() != 1)
 			{
@@ -2858,8 +2861,6 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				m_isDraggingSelection = true;
 			}
 		}
-		// the current and selceted path debug panel ==============================================
-		render_debug_panel();
 
 		// asyncc folder structure copying ======================================================== 
 		if (tabs[current_tab]->folder_structure.valid() && tabs[current_tab]->folder_structure.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
@@ -3552,72 +3553,85 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 
 void ForestView::render_debug_panel()
 {
-	auto u8 = tabs[current_tab]->current_path.u8string();
-	std::string current_path_string_to_show(u8.begin(), u8.end());
-
-	auto u8_selected = tabs[current_tab]->selected_path.u8string();
-	std::string selected_path_string_to_show(u8_selected.begin(), u8_selected.end());
-
-	auto u8_deleted = tabs[current_tab]->deleted_path.u8string();
-	std::string deleted_path_string_to_show(u8_deleted.begin(), u8_deleted.end());
-
-
-	ImGui::Separator();
-
-	ImGui::Text("Current Path: "); ImGui::SameLine();
-	ImGui::Text(current_path_string_to_show.c_str());
-
-	ImGui::Text("Seleted Path: "); ImGui::SameLine();
-	ImGui::Text(selected_path_string_to_show.c_str());
-
-	ImGui::Text("Deleted Path: "); ImGui::SameLine();
-	ImGui::Text(deleted_path_string_to_show.c_str());
-
-	std::string flag = (is_searching_for_empty_folders) ? "True" : "False";
-	ImGui::Text("is_searching_for_empty_folders Flag: "); ImGui::SameLine();
-	ImGui::Text(flag.c_str());
-
-	std::string flag2 = (is_searching_for_duplicates_files) ? "True" : "False";
-	ImGui::Text("is_searching_for_duplicates_files Flag: "); ImGui::SameLine();
-	ImGui::Text(flag2.c_str());
-
-	WORD langId = LOWORD(GetKeyboardLayout(0));
-
-	WORD CurrentLanguage = PRIMARYLANGID(langId);
-	if (CurrentLanguage == LANG_ENGLISH) 
+	if (ImGui::Begin("Debug Panel")) 
 	{
-		ImGui::Text("Current Language is: English");
-	}
-	else if (CurrentLanguage == LANG_ARABIC)
-	{
-		ImGui::Text("Current Language is: Arabic");
-	}
+	
+		auto u8 = tabs[current_tab]->current_path.u8string();
+		std::string current_path_string_to_show(u8.begin(), u8.end());
 
-	ImGui::SeparatorText("Tasks Stuff");
-	ImGui::Text(std::format("Number of Copy Tasks: {}", get_copy_paste_Tasks_count()).c_str());
-	ImGui::Text(std::format("Number of Delete Tasks: {}", get_delete_Tasks_count()).c_str());
-	ImGui::Text(std::format("Number of Active Copy Tasks: {}", m_activeCopyingTasks.load()).c_str());
-	ImGui::Text(std::format("Number of Active Delete Tasks: {}", m_activeDeleteTasks.load()).c_str());
+		auto u8_selected = tabs[current_tab]->selected_path.u8string();
+		std::string selected_path_string_to_show(u8_selected.begin(), u8_selected.end());
 
-	ImGui::SeparatorText("Selected Entries");
+		auto u8_deleted = tabs[current_tab]->deleted_path.u8string();
+		std::string deleted_path_string_to_show(u8_deleted.begin(), u8_deleted.end());
 
-	std::string flag4 = (m_isDraggingSelection) ? "True" : "False";
-	ImGui::Text("m_isDraggingSelection Flag: "); ImGui::SameLine();
-	ImGui::Text(flag4.c_str());
 
-	std::string flag3 = (tabs[current_tab]->isSelecting) ? "True" : "False";
-	ImGui::Text("isSelecting Flag: "); ImGui::SameLine();
-	ImGui::Text(flag3.c_str());
+		ImGui::Separator();
 
-	for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
-	{
-		for (int i = range.first; i <= range.last; i++)
+		ImGui::Text("Current Path: "); ImGui::SameLine();
+		ImGui::Text(current_path_string_to_show.c_str());
+
+		ImGui::Text("Seleted Path: "); ImGui::SameLine();
+		ImGui::Text(selected_path_string_to_show.c_str());
+
+		ImGui::Text("Deleted Path: "); ImGui::SameLine();
+		ImGui::Text(deleted_path_string_to_show.c_str());
+
+		std::string flag = (is_searching_for_empty_folders) ? "True" : "False";
+		ImGui::Text("is_searching_for_empty_folders Flag: "); ImGui::SameLine();
+		ImGui::Text(flag.c_str());
+
+		std::string flag2 = (is_searching_for_duplicates_files) ? "True" : "False";
+		ImGui::Text("is_searching_for_duplicates_files Flag: "); ImGui::SameLine();
+		ImGui::Text(flag2.c_str());
+
+		WORD langId = LOWORD(GetKeyboardLayout(0));
+
+		WORD CurrentLanguage = PRIMARYLANGID(langId);
+		if (CurrentLanguage == LANG_ENGLISH) 
 		{
-			const fs::path& path = tabs[current_tab]->entries[i].entry.path();
-			ImGui::Text(path.string().c_str());
+			ImGui::Text("Current Language is: English");
 		}
+		else if (CurrentLanguage == LANG_ARABIC)
+		{
+			ImGui::Text("Current Language is: Arabic");
+		}
+
+		ImGui::SeparatorText("Tasks Stuff");
+		ImGui::Text(std::format("Number of Copy Tasks: {}", get_copy_paste_Tasks_count()).c_str());
+		ImGui::Text(std::format("Number of Delete Tasks: {}", get_delete_Tasks_count()).c_str());
+		ImGui::Text(std::format("Number of Active Copy Tasks: {}", m_activeCopyingTasks.load()).c_str());
+		ImGui::Text(std::format("Number of Active Delete Tasks: {}", m_activeDeleteTasks.load()).c_str());
+
+		ImGui::SeparatorText("Selected Entries");
+
+		std::string flag4 = (m_isDraggingSelection) ? "True" : "False";
+		ImGui::Text("m_isDraggingSelection Flag: "); ImGui::SameLine();
+		ImGui::Text(flag4.c_str());
+
+		std::string flag3 = (tabs[current_tab]->isSelecting) ? "True" : "False";
+		ImGui::Text("isSelecting Flag: "); ImGui::SameLine();
+		ImGui::Text(flag3.c_str());
+
+		std::string flag5 = (m_ctrlPressd) ? "True" : "False";
+		ImGui::Text("ctrl Pressed Flag: "); ImGui::SameLine();
+		ImGui::Text(flag5.c_str());
+
+		std::string flag6 = (m_shiftPressed) ? "True" : "False";
+		ImGui::Text("shift Pressed Flag: "); ImGui::SameLine();
+		ImGui::Text(flag6.c_str());
+
+		for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
+		{
+			for (int i = range.first; i <= range.last; i++)
+			{
+				const fs::path& path = tabs[current_tab]->entries[i].entry.path();
+				ImGui::Text(path.string().c_str());
+			}
+		}
+		ImGui::Separator();
 	}
-	ImGui::Separator();
+	ImGui::End();
 }
 
 // PARENT HANDLER TO CHOOSE WHICH POPUP TRIGGER
