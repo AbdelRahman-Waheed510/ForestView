@@ -98,7 +98,7 @@ void App::clean_up()
 
 void App::spacing_and_padding_and_stuff(ImGuiStyle& style)
 {
-	style.WindowPadding = ImVec2(10, 10);
+	style.WindowPadding = ImVec2(10, 7);
 	style.FramePadding = ImVec2(8, 5);
 	style.ItemSpacing = ImVec2(6, 6);
 	style.ItemInnerSpacing = ImVec2(6, 4);
@@ -1284,7 +1284,6 @@ ImVec2 ForestView::GetSelectionStartScreenPos() const
 	return p;
 }
 
-
 // Search Bar
 void ForestView::search_bar()
 {
@@ -1302,6 +1301,7 @@ void ForestView::search_bar()
 		ImGui::SetNextItemWidth(550.0f);
 
 		ImGui::PushID(ids);
+		
 		if (ImGui::InputTextWithHint("##Global Search Bar", tabs[current_tab]->fileExplorer->form_breadcrumb_navigation_string(tabs[current_tab]->current_path).c_str(), &tabs[current_tab]->globalKeyWord) || !tabs[current_tab]->globalKeyWord.empty())
 		{
 			tabs[current_tab]->ThisDirectoryKeyWord = "";
@@ -1353,14 +1353,13 @@ void ForestView::search_bar()
 
 		// Normal search bar
 		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
-
 		if (ImGui::InputTextWithHint("##Search Bar", std::format("Search {}", tabs[current_tab]->utf8_search_bar_hint).c_str(), &tabs[current_tab]->ThisDirectoryKeyWord) || !tabs[current_tab]->ThisDirectoryKeyWord.empty())
 		{
 			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
 			tabs[current_tab]->globalKeyWord = "";
 		}
 		ImGui::EndDisabled();
-
+	
 		if (!tabs[current_tab]->ThisDirectoryKeyWord.empty())
 		{
 			tabs[current_tab]->is_searching = true;
@@ -1749,13 +1748,10 @@ void ForestView::tool_bar()
 
 			ImGui::EndTooltip();
 		}
+		ImGui::SameLine();
 		// ##########################################################################
 
-		float spacing = ImGui::GetStyle().ItemSpacing.x;
-		float padding = ImGui::GetStyle().FramePadding.x;
-		float target_pos = ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - (15.0f + padding * 1.7);
-
-		ImGui::SetCursorPosX(target_pos);
+		ImGui::SetCursorPosX(1860.0f);
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 		if (ImGui::ImageButton("##Settings", M_texturesManager.get_settings_button_icon_texture_id(), ImVec2(15.0f, 15.0f)))
 		{
@@ -3683,9 +3679,9 @@ void ForestView::stats_bar()
 		
 		ImGui::SameLine();
 
-		if (tabs[current_tab]->isSelecting) // TODO
+		if (tabs[current_tab]->isSelecting)
 		{
-			//ImGui::Text(std::format(" |  {} Selected Items ", tabs[current_tab]->selectedEntries.size()).c_str());
+			ImGui::Text(std::format(" |  {} Selected Items ", tabs[current_tab]->selectionManager.GetCount()).c_str());
 		}
 		ImGui::SameLine();
 
