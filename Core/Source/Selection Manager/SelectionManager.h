@@ -146,8 +146,12 @@ public:
 
 	void SelectAnchoredRange(int end)
 	{
-		if (m_anchor < 0) return;
-		int anchor = m_anchor;
+		int anchor;
+		if (m_anchor < 0) anchor = 0;
+		else 
+		{
+			anchor = m_anchor;
+		}
 		if (anchor > end) std::swap(anchor, end);
 		Clear();
 		m_selectedRanges.emplace_back(SelectionRange(anchor, end));
