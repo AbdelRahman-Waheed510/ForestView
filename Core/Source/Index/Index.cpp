@@ -44,7 +44,7 @@
 		{
 			for (const uint32_t& id : node->Paths) 
 			{
-				if (!m_database[id].path.empty()) 
+				if (!m_database[id].isDeleted && !m_database[id].path.empty())
 				{
 					results.emplace_back(id);
 				}
@@ -611,6 +611,7 @@ void Index::searchForExtention(std::vector<fs::path>& founds, const std::wstring
 
 void Index::fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& filename)
 {
+	std::lock_guard<std::mutex> lock(m_lock);
 	if (!founds.empty()) founds.clear();
 	std::vector<uint32_t> indexes = trie.SearchPrefix(filename, m_dataBase);
 
@@ -622,12 +623,15 @@ void Index::fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& fi
 
 void Index::fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& filename, const fs::path& root_path)
 {
+	std::lock_guard<std::mutex> lock(m_lock);
 	if (!founds.empty()) founds.clear();
 	std::vector<uint32_t> indexes = trie.SearchPrefix(filename, m_dataBase);
 
 	for (const auto& idx : indexes)
 	{
 		const fs::path& candidate = m_dataBase[idx].path;
+
+		if (m_dataBase[idx].isDeleted || candidate.empty()) continue;
 
 		const auto x = std::mismatch(
 			candidate.begin(), candidate.end(),

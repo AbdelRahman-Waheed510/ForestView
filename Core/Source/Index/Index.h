@@ -22,6 +22,7 @@ struct FileInfo
 {
 	fs::path path;
 	uintmax_t size;
+	bool isDeleted = false;
 };
 
 class Trie
@@ -175,21 +176,33 @@ public:
 
 	const uint32_t getDirectoriesCount();
 
-	void removeFromDataBase(const fs::path& path_to_delete) 
+	void removeFromDataBase(const fs::path& path_to_delete)
 	{
-		for (FileInfo& file : m_dataBase) 
+		std::lock_guard<std::mutex> lock(m_lock);
+
+		fs::path targetNorm = path_to_delete.lexically_normal();
+
+		for (FileInfo& file : m_dataBase)
 		{
-			if (file.path == path_to_delete) 
+			if (file.isDeleted || file.path.empty()) continue;
+
+			fs::path fileNorm = file.path.lexically_normal();
+
+			auto [it1, it2] = std::mismatch(
+				targetNorm.begin(), targetNorm.end(),
+				fileNorm.begin(), fileNorm.end()
+			);
+
+			if (it1 == targetNorm.end())
 			{
-				file.path.clear();
-				file.size = 0;
-				break;
+				file.isDeleted = true; 
 			}
 		}
 	}
 
 	void renameFromDataBase(const fs::path& current_name, const fs::path& new_name) 
 	{
+		std::lock_guard<std::mutex> lock(m_lock);
 		for (FileInfo& file : m_dataBase)
 		{
 			if (file.path == current_name)
@@ -252,6 +265,24 @@ public:
 			}
 
 			Id++;
+		}
+	}
+
+	void addRecuirselyToDataBase(const fs::path& newPath) 
+	{
+		addToDataBase(newPath);
+
+		if (fs::is_directory(newPath))
+		{
+			std::error_code ec;
+			for (const auto& entry : fs::recursive_directory_iterator(newPath, ec))
+			{
+				if (ec)
+				{
+					continue;
+				}
+				addToDataBase(entry.path());
+			}
 		}
 	}
 };
