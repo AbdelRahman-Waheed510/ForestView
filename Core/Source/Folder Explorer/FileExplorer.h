@@ -652,23 +652,24 @@ public:
 		}
 	}
 
-	void copy_paste(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	const fs::path copy_paste(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{
 		Guard guard(finished);
 
 		if (!fs::exists(source))
 		{
 			std::cerr << "Error: source path doesnot exist: " << source << std::endl;
-			return;
+			return "";
 		}
 		std::error_code ec;
 
+		std::string name_of_the_folder;
+		fs::path dest;
 		// If the copied directory is a folder 
 		if (fs::is_directory(source))
 		{
-			std::string name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), FOLDER);
-			fs::path dest = destination / name_of_the_folder;
-
+			name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), FOLDER);
+			dest = destination / name_of_the_folder;
 			std::error_code ec_longPath;
 
 			fs::create_directories(dest, ec_longPath);
@@ -682,7 +683,7 @@ public:
 			{
 				if (cancel_request)
 				{
-					return;
+					return dest;
 				}
 				fs::path relativePath = fs::relative(entry->path(), source);
 				fs::path targetPath = dest / relativePath;
@@ -700,7 +701,7 @@ public:
 				else if (entry->is_regular_file())
 				{
 					copy_in_chuncks(entry->path(), targetPath, Sizeprogress, filesCountProgress, cancel_request);
-					if (cancel_request) return;
+					if (cancel_request) return dest;
 
 				}
 
@@ -714,8 +715,8 @@ public:
 		// If the copied directory is a regular file so it does not need the access to the for loop
 		else if (fs::is_regular_file(source))
 		{
-			std::string name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), REG_FILE);
-			fs::path dest = destination / name_of_the_folder;
+			name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), REG_FILE);
+			dest = destination / name_of_the_folder;
 
 			copy_in_chuncks(source, dest, Sizeprogress, filesCountProgress, cancel_request);
 		}
@@ -725,7 +726,7 @@ public:
 			std::cerr << "Copy failed: " << ec.message() << '\n';
 		}
 		
-		return;
+		return dest;
 	}
 
 	void copy_in_chuncks(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request)
