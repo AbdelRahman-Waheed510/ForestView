@@ -523,7 +523,7 @@ void ForestView::on_update()
 			{
 				switch (m_queuedTasks[i]->task_type)	
 				{
-				case TaskType::COPY_PASTE: 
+				case TaskType::COPY_PASTE:
 				{
 					if (m_activeCopyingTasks.load() < 3) 
 					{
@@ -534,7 +534,8 @@ void ForestView::on_update()
 						m_activeCopyingTasks++;
 						m_queuedTasks[i]->worker = std::thread([this, task]()
 							{
-								tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+								fs::path finalPath = tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+								m_index.addRecuirselyToDataBase(finalPath);
 								m_activeCopyingTasks--;
 							});
 
@@ -1500,75 +1501,31 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectionManager.Empty()) || isRootFolder);
+		bool cantCopy = isRootFolder || (tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectionManager.Empty());
+		ImGui::BeginDisabled(cantCopy);
 		if (ImGui::Button("Copy"))
 		{
-			if (tabs[current_tab]->isSelecting) 
-			{
-				tabs[current_tab]->copied_paths.clear();
-
-				for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
-				{
-					for (int i = range.first; i <= range.last; i++)
-					{
-						tabs[current_tab]->copied_paths.emplace_back(tabs[current_tab]->entries[i].entry.path());
-					}
-				}
-			}
-			else 
-			{
-				tabs[current_tab]->copied_path = tabs[current_tab]->selected_path;
-			}
+			copy_helper();
 		}
 		ImGui::EndDisabled();
+		if (!cantCopy && (!ImGui::GetIO().WantCaptureKeyboard && (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_C, false))))
+		{
+			copy_helper();
+		}
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(tabs[current_tab]->copied_path.empty() && tabs[current_tab]->copied_paths.empty());
+		bool cantPaste = tabs[current_tab]->copied_path.empty() && tabs[current_tab]->copied_paths.empty();
+		ImGui::BeginDisabled(cantPaste);
 		if (ImGui::Button("Paste"))
 		{
-			if (!tabs[current_tab]->copied_paths.empty()) 
-			{
-				for (const fs::path& path : tabs[current_tab]->copied_paths) 
-				{
-					fs::path src = path;
-					fs::path dest = tabs[current_tab]->current_path;
-
-					EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(path);
-
-					std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
-					copyTask->totalSize = data.directorySize;
-					copyTask->totalfilesCount = data.filesCount;
-					copyTask->source = src;
-					copyTask->destination = dest;
-					copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
-					copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
-
-					m_queuedTasks.emplace_back(std::move(copyTask));
-				}
-				tabs[current_tab]->copied_paths.clear();
-			}
-			else 
-			{
-				fs::path src = tabs[current_tab]->copied_path;
-				fs::path dest = tabs[current_tab]->current_path;
-
-				EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
-
-				std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
-				copyTask->totalSize = data.directorySize;
-				copyTask->totalfilesCount = data.filesCount;
-				copyTask->source = src;
-				copyTask->destination = dest;
-				copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
-				copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
-
-				m_queuedTasks.emplace_back(std::move(copyTask));
-			
-				tabs[current_tab]->copied_path.clear();
-			}
+			paste_helper();
 		}
 		ImGui::EndDisabled();
+		if (!cantPaste && (!ImGui::GetIO().WantCaptureKeyboard && (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_V, false)))) 
+		{
+			paste_helper();
+		}
 
 		ImGui::SameLine();
 		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
@@ -1785,6 +1742,72 @@ void ForestView::tool_bar()
 	ImGui::EndChild();
 	ImGui::PopStyleVar(1);
 
+}
+
+void ForestView::copy_helper()
+{
+	if (tabs[current_tab]->isSelecting)
+	{
+		tabs[current_tab]->copied_path.clear();
+		tabs[current_tab]->copied_paths.clear();
+
+		for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
+		{
+			for (int i = range.first; i <= range.last; i++)
+			{
+				tabs[current_tab]->copied_paths.emplace_back(tabs[current_tab]->entries[i].entry.path());
+			}
+		}
+	}
+	else
+	{
+		tabs[current_tab]->copied_paths.clear();
+		tabs[current_tab]->copied_path = tabs[current_tab]->selected_path;
+	}
+}
+
+void ForestView::paste_helper()
+{
+	if (!tabs[current_tab]->copied_paths.empty())
+	{
+		for (const fs::path& path : tabs[current_tab]->copied_paths)
+		{
+			fs::path src = path;
+			fs::path dest = tabs[current_tab]->current_path;
+
+			EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(path);
+
+			std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
+			copyTask->totalSize = data.directorySize;
+			copyTask->totalfilesCount = data.filesCount;
+			copyTask->source = src;
+			copyTask->destination = dest;
+			copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
+			copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
+
+			m_queuedTasks.emplace_back(std::move(copyTask));
+		}
+		tabs[current_tab]->copied_paths.clear();
+	}
+	else
+	{
+		fs::path src = tabs[current_tab]->copied_path;
+		fs::path dest = tabs[current_tab]->current_path;
+
+		EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
+
+		std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
+		copyTask->totalSize = data.directorySize;
+		copyTask->totalfilesCount = data.filesCount;
+		copyTask->source = src;
+		copyTask->destination = dest;
+		copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
+		copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
+
+		m_queuedTasks.emplace_back(std::move(copyTask));
+
+		tabs[current_tab]->copied_path.clear();
+	}
 }
 
 // ####################################################### POPUPS ######################################################

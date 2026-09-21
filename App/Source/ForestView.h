@@ -297,6 +297,9 @@ public:
 	// Tool Bar
 	void tool_bar();
 
+	void copy_helper();
+
+	void paste_helper();
 	// Popups
 	void view_settings();
 
@@ -380,4 +383,5 @@ public:
 	}
 
 	ImVec2 GetSelectionStartScreenPos() const;
+
 };
