@@ -478,13 +478,10 @@ void ForestView::on_update()
 		refocus_reload();
 
 		ImVec2 mousePos = ImGui::GetMousePos();
-
 		// 3. Offset the tooltip so it doesn't obscure the cursor (e.g., +15px, +15px)
 		ImVec2 tooltipPos = ImVec2(mousePos.x + 15.0f, mousePos.y + 15.0f);
-
 		// 4. Set position and pivot (Always pass ImGuiCond_Always so it updates every frame)
 		ImGui::SetNextWindowPos(tooltipPos, ImGuiCond_Always);
-
 		// 5. Render custom tooltip window
 		if (ImGui::BeginTooltip())
 		{
@@ -511,6 +508,24 @@ void ForestView::on_update()
 
 		ImGui::SameLine();
 
+		if (m_ctrlPressd) 
+		{
+			if (!ImGui::GetIO().WantCaptureKeyboard) 
+			{
+				if (ImGui::IsKeyPressed(ImGuiKey_1, false)) 
+				{
+					tabs[current_tab]->view_type = ROWS;
+					tabs[current_tab]->icons_height = 24.0f;
+					tabs[current_tab]->icons_width = 24.0f;
+				}
+				else if (ImGui::IsKeyPressed(ImGuiKey_2, false))
+				{
+					tabs[current_tab]->view_type = LARGE_THUMBNAILS;
+					tabs[current_tab]->icons_height = 128.0f;
+					tabs[current_tab]->icons_width = 128.0f;
+				}
+			}
+		}
 		files_navigation_panel(remainingHeight);
 
 		stats_bar();
@@ -1057,7 +1072,7 @@ void ForestView::on_update()
 
 		access_denied();
 
-		render_debug_panel();
+		render_debug_panel(); 
 
 	}
 		ImGui::End();
@@ -1167,7 +1182,6 @@ void ForestView::tab_bar()
 				tabs.erase(tabs.begin() + i);
 				--i;
 			}
-
 		}
 	}
 	ImGui::EndTabBar();
@@ -1222,15 +1236,48 @@ void ForestView::tab_bar()
 	{
 		create_tab_helper();
 	}
+	if (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_T, false)) 
+	{
+		if (!ImGui::GetIO().WantCaptureKeyboard)
 		{
-			tabs.emplace_back(open_new_tab(newTab));
+			create_tab_helper();
 		}
-		else if (m_openTabType == COPY)
+	}
+	
+	if (m_ctrlPressd && m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_Tab)) 
+	{
+		if (!ImGui::GetIO().WantCaptureKeyboard)
 		{
-			tabs.emplace_back(open_copy_tab(newTab));
+			if (current_tab - 1 < 0) open_new_tab_factor = static_cast<int>(tabs.size()) - 1;
+			else open_new_tab_factor = current_tab - 1;
 		}
-		current_tab = (int)tabs.size() - 1;
-		open_new_tab_factor = current_tab;
+	}
+	else if (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_Tab)) 
+	{
+		if (!ImGui::GetIO().WantCaptureKeyboard) 
+		{
+			open_new_tab_factor = (current_tab + 1) % static_cast<int>(tabs.size());
+		}
+	}
+	
+	if (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_W, false))
+	{
+		if (!ImGui::GetIO().WantCaptureKeyboard)
+		{
+			int tabToClose = current_tab;
+
+			if (tabs.size() == 1)
+			{
+				Shut_Down();
+			}
+
+			tabs.erase(tabs.begin() + tabToClose);
+
+			const int& size = static_cast<int>(tabs.size());
+			if (current_tab >= size) current_tab = size - 1;
+
+			open_new_tab_factor = current_tab;
+		}
 	}
 
 	if (ImGui::BeginPopupContextItem("##openTapTyoe"))
@@ -1303,6 +1350,7 @@ ImVec2 ForestView::GetSelectionStartScreenPos() const
 	return p;
 }
 
+
 // Search Bar
 void ForestView::search_bar()
 {
@@ -1352,6 +1400,7 @@ void ForestView::search_bar()
 				}
 			}
 		}
+
 		ImGui::PopID();
 
 		if (ImGui::IsItemActivated() && tabs[current_tab]->globalKeyWord.empty())
@@ -1405,26 +1454,17 @@ void ForestView::tool_bar()
 		{
 			go_back_helper();
 		}
-		if (!ImGui::GetIO().WantCaptureKeyboard) 
+		ImGui::EndDisabled();
+		if (canGoBack)
 		{
-			if (ImGui::IsKeyPressed(ImGuiKey_Backspace, false)) 
+			if (ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || (m_altPressed && ImGui::IsKeyPressed(ImGuiKey_LeftArrow))) 
 			{
-				// Clear the selected Items
-				if (tabs[current_tab]->isSelecting)
+				if (!ImGui::GetIO().WantCaptureKeyboard) 
 				{
-					tabs[current_tab]->selectionManager.Reset();
-					tabs[current_tab]->isSelecting = false;
+					go_back_helper();
 				}
-				tabs[current_tab]->show_selected_folder_options = false;
-				tabs[current_tab]->ThisDirectoryKeyWord = "";
-				tabs[current_tab]->globalKeyWord = "";
-				tabs[current_tab]->selected_path = "";
-				tabs[current_tab]->fileExplorer->back(tabs[current_tab]->current_path);
-				tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
-				tabs[current_tab]->entries_need_update = true;
 			}
 		}
-
 
 		ImGui::SameLine();
 
@@ -1435,20 +1475,17 @@ void ForestView::tool_bar()
 			go_forward_helper();
 		}
 		ImGui::EndDisabled();
+		if (canGoForward) 
+		{
+			if (m_altPressed && ImGui::IsKeyPressed(ImGuiKey_RightArrow))
 			{
-				tabs[current_tab]->selectionManager.Reset();
-				tabs[current_tab]->isSelecting = false;
+				if (!ImGui::GetIO().WantCaptureKeyboard)
+				{
+					go_forward_helper();
+				}
 			}
-			tabs[current_tab]->show_selected_folder_options = false;
-			tabs[current_tab]->ThisDirectoryKeyWord = "";
-			tabs[current_tab]->globalKeyWord = "";
-			tabs[current_tab]->selected_path = "";
-			tabs[current_tab]->fileExplorer->redo(tabs[current_tab]->current_path);
-			tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
-			tabs[current_tab]->entries_need_update = true;
 		}
 
-		ImGui::EndDisabled();
 		ImGui::PopStyleColor(1);
 
 		ImGui::SameLine();
@@ -1465,12 +1502,24 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
+		bool cantCreate = tabs[current_tab]->current_path.empty();
+		ImGui::BeginDisabled(cantCreate);
 		if (ImGui::Button("New"))
 		{
 			ImGui::OpenPopup("New?");
 		}
 		ImGui::EndDisabled();
+		if (!cantCreate) 
+		{
+			if (m_ctrlPressd && m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_N, false)) 
+			{
+				if (!ImGui::GetIO().WantCaptureKeyboard) 
+				{
+					create_new_folder_helper();
+				}
+			}
+		}
+
 
 		ImGui::SameLine();
 
@@ -1497,13 +1546,23 @@ void ForestView::tool_bar()
 			}
 		}
 
-		ImGui::BeginDisabled((tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectionManager.Empty()) || isRootFolder);
+
+		bool cantDelete = (tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectionManager.Empty()) || isRootFolder;
+		ImGui::BeginDisabled(cantDelete);
 		if (ImGui::Button("Delete"))
 		{
 			need_delete_confirmation = true;
 			tabs[current_tab]->deleted_path = tabs[current_tab]->selected_path;
 		}
 		ImGui::EndDisabled();
+		if (!cantDelete) 
+		{
+			if (ImGui::IsKeyPressed(ImGuiKey_Delete) && !ImGui::GetIO().WantCaptureKeyboard) 
+			{
+				need_delete_confirmation = true;
+				tabs[current_tab]->deleted_path = tabs[current_tab]->selected_path;
+			}
+		}
 
 		ImGui::SameLine();
 
@@ -1580,9 +1639,9 @@ void ForestView::tool_bar()
 			ImGui::Text(filter_by_type.c_str());
 			ImGui::EndTooltip();
 		}
-
+	
 		ImGui::SameLine();
-
+		 
 		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
 		if (ImGui::Button("Empty Folders")) 
 		{
@@ -2963,6 +3022,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 		ImGuiIO io = ImGui::GetIO();
 		m_ctrlPressd = io.KeyCtrl;
 		m_shiftPressed = io.KeyShift;
+		m_altPressed = io.KeyAlt;
 		if (ImGui::IsWindowHovered() && !ImGui::IsAnyItemHovered())
 		{
 			if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
