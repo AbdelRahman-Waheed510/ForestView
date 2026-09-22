@@ -1881,43 +1881,144 @@ void ForestView::new_whatever()
 	{
 		if (ImGui::Selectable("Folder"))
 		{
-
-			std::string name_of_the_folder = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New folder", FOLDER);
-			fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_folder, FOLDER);
-			
-			if (!finalNewPath.empty()) 
-			{
-				m_index.addToDataBase(finalNewPath);
-				if (m_isSearcing) 
-				{
-					m_founds.emplace_back(finalNewPath);
-				}
-			}
-
-			tabs[current_tab]->entries_need_update = true;
-			tabs[current_tab]->tree_need_update = true;
-			ImGui::CloseCurrentPopup();
+			create_new_folder_helper();	
 		}
 		if (ImGui::Selectable("Text Document"))
 		{
-			std::string name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Text Document.txt", REG_FILE);
-			fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, REG_FILE);
-			
-			if (!finalNewPath.empty())
-			{
-				m_index.addToDataBase(finalNewPath);
-				if (m_isSearcing)
-				{
-					m_founds.emplace_back(finalNewPath);
-				}
-			}
-			
-			tabs[current_tab]->entries_need_update = true;
-			tabs[current_tab]->tree_need_update = true;
-			ImGui::CloseCurrentPopup();
+			create_new_file_helper(NewType::TEXT_DOCUMENT);
 		}
+		if (ImGui::Selectable("Microsoft Word Document"))
+		{
+			create_new_file_helper(NewType::WORD);
+		}
+		if (ImGui::Selectable("Microsoft PowerPoint Presentation"))
+		{
+			create_new_file_helper(NewType::POWER_POINT);
+		}
+		if (ImGui::Selectable("Microsoft Excel Worksheet"))
+		{
+			create_new_file_helper(NewType::EXCEL);
+		}
+		if (ImGui::Selectable("WinRAR archive"))
+		{
+			create_new_file_helper(NewType::RAR);
+		}
+		if (ImGui::Selectable("WinRAR ZIP archive"))
+		{
+			create_new_file_helper(NewType::ZIP);
+		}
+		if (ImGui::Selectable("Microsoft Access Database"))
+		{
+			create_new_file_helper(NewType::ACCESS_DATABASE);
+		}
+		if (ImGui::Selectable("Microsoft Publisher Document"))
+		{
+			create_new_file_helper(NewType::PUBLISHER_DOCUMENT);
+		}
+		if (ImGui::Selectable("Bitmap image"))
+		{
+			create_new_file_helper(NewType::BITMAP);
+		}
+		
 		ImGui::EndPopup();
 	}
+}
+
+void ForestView::create_new_folder_helper()
+{
+	std::string name_of_the_folder = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New folder", NewType::FOLDER);
+	fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_folder, NewType::FOLDER);
+
+	if (!finalNewPath.empty())
+	{
+		m_index.addToDataBase(finalNewPath);
+		if (m_isSearcing)
+		{
+			m_founds.emplace_back(finalNewPath);
+		}
+	}
+
+	tabs[current_tab]->entries_need_update = true;
+	tabs[current_tab]->tree_need_update = true;
+	ImGui::CloseCurrentPopup();
+}
+
+void ForestView::create_new_file_helper(const NewType& type) 
+{
+	std::string name_of_the_file;
+	fs::path finalNewPath = "";
+	switch (type)
+	{
+	case NewType::TEXT_DOCUMENT:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Text Document.txt", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::TEXT_DOCUMENT);
+		break;
+	}     
+	case NewType::POWER_POINT:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft PowerPoint Presentation.pptx", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::POWER_POINT);
+		break;
+	}  
+	case NewType::WORD:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft Word Document.docx", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::WORD);
+		break;
+	}  
+	case NewType::RAR:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New WinRAR archive.rar", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::RAR);
+		break;
+	}  
+	case NewType::ZIP:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New WinRAR ZIP archive.zip", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::ZIP);
+		break;
+	}  
+	case NewType::EXCEL:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft Excel Worksheet.xlsx", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::EXCEL);
+		break;
+	}  
+	case NewType::BITMAP:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Bitmap image.bmp", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::BITMAP);
+		break;
+	}  
+	case NewType::PUBLISHER_DOCUMENT:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft Publisher Document.pub", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::PUBLISHER_DOCUMENT);
+		break;
+	}  
+	case NewType::ACCESS_DATABASE:
+	{
+		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft Access Database.accdb", NewType::REG_FILE);
+		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::ACCESS_DATABASE);
+		break;
+	} 
+	default:
+		break;
+	}
+
+	if (!finalNewPath.empty())
+	{
+		m_index.addToDataBase(finalNewPath);
+		if (m_isSearcing)
+		{
+			m_founds.emplace_back(finalNewPath);
+		}
+	}
+
+	tabs[current_tab]->entries_need_update = true;
+	tabs[current_tab]->tree_need_update = true;
+	ImGui::CloseCurrentPopup();
 }
 
 // Sorting popup

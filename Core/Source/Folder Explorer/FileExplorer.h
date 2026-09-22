@@ -70,10 +70,19 @@ struct fileSize
 	std::string label;
 };
 
-enum NewType
+enum class NewType
 {
-	FOLDER,
-	REG_FILE
+	FOLDER, 
+	REG_FILE,
+	TEXT_DOCUMENT,           // .txt
+	POWER_POINT,			 // .pptx
+	WORD,					 // .docx
+	RAR,					 // .rar
+	ZIP,					 // .zip
+	EXCEL,					 // .xlsx
+	BITMAP,					 // .bmp
+	PUBLISHER_DOCUMENT,		 // .pub
+	ACCESS_DATABASE          // .accdb
 };
 
 enum class DirAccessResult {
@@ -524,7 +533,12 @@ public:
 
 	const fs::path create_folder(fs::path& to_create, const std::string& name, const NewType& type) 
 	{
-		if (type == FOLDER) 
+		std::error_code ec;
+		if (!fs::exists(to_create,ec) || ec) 
+		{
+			return "";
+		}
+		if (type == NewType::FOLDER) 
 		{
 			std::error_code ec;
 			fs::path newFolder = to_create / name;
@@ -535,11 +549,53 @@ public:
 				return "";
 			}
 		}
-		else if (type == REG_FILE) 
+		else
 		{
 			fs::path newFilePath = to_create / name;
-			std::ofstream newfile(newFilePath);
-			return newFilePath;
+			switch (type)
+			{
+			case NewType::RAR:
+			{
+				bool success = fs::copy_file("assets/templates/temp.rar", newFilePath);
+				if (!success) return "";
+				return newFilePath;
+				break;
+			}
+			case NewType::ZIP:
+			{
+				bool success = fs::copy_file("assets/templates/temp.zip", newFilePath);
+				if (!success) return "";
+				return newFilePath;
+				break;
+			}
+			case NewType::EXCEL:
+			{
+				bool success = fs::copy_file("assets/templates/temp.xlsx", newFilePath);
+				if (!success) return "";
+				return newFilePath;
+				break;
+			}
+			case NewType::ACCESS_DATABASE:
+			{
+				bool success = fs::copy_file("assets/templates/temp.accdb", newFilePath);
+				if (!success) return "";
+				return newFilePath;
+				break;
+			}
+			case NewType::PUBLISHER_DOCUMENT:
+			{
+				bool success = fs::copy_file("assets/templates/temp.pub", newFilePath);
+				if (!success) return "";
+				return newFilePath;
+				break;
+			}
+			default: 
+			{
+				std::ofstream newfile(newFilePath);
+				return newFilePath;
+				break;
+			}
+			}
 		}
 
 		return "";
@@ -568,11 +624,11 @@ public:
 		
 		if (fs::is_directory(delted_path / new_name))
 		{
-			new_name = Utils::generate_new_folder_name(to_rename.parent_path(), new_name.filename().string(), FOLDER);
+			new_name = Utils::generate_new_folder_name(to_rename.parent_path(), new_name.filename().string(), NewType::FOLDER);
 		}
 		else if (fs::is_regular_file(delted_path / new_name))
 		{
-			new_name = Utils::generate_new_folder_name(to_rename.parent_path(), new_name.filename().string(), REG_FILE);
+			new_name = Utils::generate_new_folder_name(to_rename.parent_path(), new_name.filename().string(), NewType::REG_FILE);
 		}
 
 		fs::path newPath = delted_path / new_name;
@@ -673,7 +729,7 @@ public:
 		// If the copied directory is a folder 
 		if (fs::is_directory(source))
 		{
-			name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), FOLDER);
+			name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), NewType::FOLDER);
 			dest = destination / name_of_the_folder;
 			std::error_code ec_longPath;
 
@@ -720,7 +776,7 @@ public:
 		// If the copied directory is a regular file so it does not need the access to the for loop
 		else if (fs::is_regular_file(source))
 		{
-			name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), REG_FILE);
+			name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), NewType::REG_FILE);
 			dest = destination / name_of_the_folder;
 
 			copy_in_chuncks(source, dest, Sizeprogress, filesCountProgress, cancel_request);

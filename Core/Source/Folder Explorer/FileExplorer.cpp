@@ -7,7 +7,7 @@ std::string Utils::generate_new_folder_name(const fs::path& path, const std::str
     int count = 1;
     if (!fs::exists(path / name)) return name;
 
-    if (type == FOLDER)
+    if (type == NewType::FOLDER)
     {
         std::string res_name = name;
         while (fs::exists(path / fs::path(res_name)))
@@ -17,7 +17,7 @@ std::string Utils::generate_new_folder_name(const fs::path& path, const std::str
         }
         return res_name;
     }
-    else if (type == REG_FILE)
+    else if (type == NewType::REG_FILE)
     {
         fs::path file_path(name);
         std::string stem = file_path.stem().string();

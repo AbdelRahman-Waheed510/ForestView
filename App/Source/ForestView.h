@@ -299,6 +299,10 @@ public:
 
 	void copy_helper();
 
+	void create_new_folder_helper();
+
+	void create_new_file_helper(const NewType& type);
+
 	void paste_helper();
 	
 	void go_back_helper();
