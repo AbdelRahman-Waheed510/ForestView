@@ -300,6 +300,11 @@ public:
 	void copy_helper();
 
 	void paste_helper();
+	
+	void go_back_helper();
+
+	void go_forward_helper();
+
 	// Popups
 	void view_settings();
 
@@ -352,6 +357,8 @@ public:
 
 	// tabs Bar
 	void tab_bar();
+
+	void create_tab_helper();
 
 	std::unique_ptr<State> open_new_tab(std::unique_ptr<State>& newTab);
 

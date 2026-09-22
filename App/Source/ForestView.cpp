@@ -1220,8 +1220,8 @@ void ForestView::tab_bar()
 	ImGui::SameLine();
 	if (ImGui::Button("+"))
 	{
-		std::unique_ptr<State> newTab = std::make_unique<State>();
-		if (m_openTabType == NEW)
+		create_tab_helper();
+	}
 		{
 			tabs.emplace_back(open_new_tab(newTab));
 		}
@@ -1249,6 +1249,21 @@ void ForestView::tab_bar()
 	}
 
 	ImGui::EndChild();
+}
+
+void ForestView::create_tab_helper() 
+{
+	std::unique_ptr<State> newTab = std::make_unique<State>();
+	if (m_openTabType == NEW)
+	{
+		tabs.emplace_back(open_new_tab(newTab));
+	}
+	else if (m_openTabType == COPY)
+	{
+		tabs.emplace_back(open_copy_tab(newTab));
+	}
+	current_tab = (int)tabs.size() - 1;
+	open_new_tab_factor = current_tab;
 }
 
 std::unique_ptr<State> ForestView::open_new_tab(std::unique_ptr<State>& newTab)
@@ -1383,22 +1398,12 @@ void ForestView::tool_bar()
 	if (ImGui::BeginChild("ToolBar", ImVec2(0, 40), ImGuiChildFlags_Borders))
 	{
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+
+		const bool& canGoBack = tabs[current_tab]->fileExplorer->can_go_back();
+		ImGui::BeginDisabled(!canGoBack);
 		if (ImGui::ImageButton("##<--", M_texturesManager.get_backwards_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 		{
-			// Clear the selected Items
-			if (tabs[current_tab]->isSelecting)
-			{
-				tabs[current_tab]->selectionManager.Reset();
-				tabs[current_tab]->isSelecting = false;
-			}
-			tabs[current_tab]->show_selected_folder_options = false;
-			tabs[current_tab]->ThisDirectoryKeyWord = "";
-			tabs[current_tab]->globalKeyWord = "";
-			tabs[current_tab]->selected_path = "";
-			tabs[current_tab]->fileExplorer->back(tabs[current_tab]->current_path);
-			tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
-			tabs[current_tab]->entries_need_update = true;
-
+			go_back_helper();
 		}
 		if (!ImGui::GetIO().WantCaptureKeyboard) 
 		{
@@ -1423,12 +1428,13 @@ void ForestView::tool_bar()
 
 		ImGui::SameLine();
 
-		ImGui::BeginDisabled(!tabs[current_tab]->fileExplorer->can_go_forward());
-
+		const bool& canGoForward = tabs[current_tab]->fileExplorer->can_go_forward();
+		ImGui::BeginDisabled(!canGoForward);
 		if (ImGui::ImageButton("##-->", M_texturesManager.get_forward_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
 		{
-			// Clear the selected Items
-			if (tabs[current_tab]->isSelecting)
+			go_forward_helper();
+		}
+		ImGui::EndDisabled();
 			{
 				tabs[current_tab]->selectionManager.Reset();
 				tabs[current_tab]->isSelecting = false;
