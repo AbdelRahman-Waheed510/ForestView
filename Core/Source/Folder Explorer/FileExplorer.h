@@ -623,6 +623,11 @@ public:
 		return true;
 	}
 
+	bool can_go_back() 
+	{
+		return !undo_stack.empty();
+	}
+
 	void redo(fs::path& current_path)
 	{
 		if (redo_stack.empty()) return;
