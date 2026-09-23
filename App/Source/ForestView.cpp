@@ -570,6 +570,23 @@ void ForestView::on_update()
 						m_queuedTasks[i]->worker = std::thread([this, task]()
 							{
 								tabs[current_tab]->fileExplorer->recycleBin_delete(task->source);
+								const fs::path& root = task->source;
+								if (m_isSearcing) 
+								{
+									if (fs::is_directory(task->source))
+									{
+										std::erase_if(m_founds, [&root](const fs::path& path)
+											{
+												auto [root_it, path_it] = std::mismatch(root.begin(), root.end(), path.begin(), path.end());
+												return root_it == root.end();
+											}
+										);
+									}
+									else 
+									{
+										std::erase(m_founds, root);
+									}
+								}
 								// Remove from the index
 								m_index.removeFromDataBase(task->source);
 								task->finished = true;
@@ -1099,6 +1116,9 @@ void ForestView::refocus_reload()
 			tabs[current_tab]->entries_need_update = true;
 			was_focused = true;
 		}
+		tabs[current_tab]->copied_path.clear();
+		tabs[current_tab]->copied_paths.clear();
+		tabs[current_tab]->deleted_path.clear();
 	}
 }
 
@@ -1799,12 +1819,6 @@ void ForestView::tool_bar()
 		}
 		ImGui::PopStyleColor(1);
 
-		if (need_delete_confirmation)
-		{
-			ImGui::OpenPopup("Delete Warning?");
-			need_delete_confirmation = false; 
-		}
-
 		view_settings();
 
 		new_whatever();
@@ -2122,6 +2136,11 @@ void ForestView::view_sort_options()
 // Deleting Warning popup
 void ForestView::delete_warning()
 {
+	if (need_delete_confirmation)
+	{
+		ImGui::OpenPopup("Delete Warning?");
+		need_delete_confirmation = false;
+	}
 	if (ImGui::BeginPopupModal("Delete Warning?", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::Text("Are you sure you want to delete this folder?\nThe deleted file will be deleted permanently and will not go to the recycle bin \nThis action cannot be undone.");
@@ -2188,10 +2207,6 @@ void ForestView::delete_warning()
 								std::erase(m_largestFiles, path);
 							}
 						}
-						if (m_isSearcing)
-						{
-							std::erase(m_founds, path);
-						}
 					}
 				}
 			}
@@ -2243,10 +2258,6 @@ void ForestView::delete_warning()
 						std::erase(m_largestFiles, tabs[current_tab]->deleted_path);
 					}
 				}
-				if (m_isSearcing) 
-				{
-					std::erase(m_founds, tabs[current_tab]->deleted_path);
-				}
 			}
 
 			// =====================================================================================
@@ -2281,13 +2292,7 @@ void ForestView::delete_warning()
 				deleteTask->source = tabs[current_tab]->deleted_path;
 				deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->deleted_path.filename().string(), 10);
 
-				Task* task = deleteTask.get();
-				deleteTask->worker = std::thread([this, src, task]()
-				{
-					tabs[current_tab]->fileExplorer->recycleBin_delete(src);
-					task->finished = true;
-				});
-				tasks.emplace_back(std::move(deleteTask));
+				m_queuedTasks.emplace_back(std::move(deleteTask));
 			}
 
 			tabs[current_tab]->selectionManager.Clear();
@@ -2298,6 +2303,8 @@ void ForestView::delete_warning()
 
 			tabs[current_tab]->deleted_path = "";
 			tabs[current_tab]->selected_path.clear();
+			tabs[current_tab]->copied_path.clear();
+			tabs[current_tab]->copied_paths.clear();
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SetItemDefaultFocus();
