@@ -96,6 +96,7 @@ struct State
 
 	bool need_folder_right_click_call = false;
 	bool need_file_right_click_call = false;
+	bool need_selection_right_click_call = false;
 
 	fs::path selected_path;
 	fs::path current_path;
@@ -345,6 +346,8 @@ public:
 	void folders_right_click_popup(const fs::directory_entry& FolderEntry);
 
 	void files_right_click_popup(const fs::directory_entry& entry);
+
+	void selection_right_click_popup(const std::vector<SelectionRange>& selecitons);
 
 	void left_double_click(const fs::directory_entry& entry);
 

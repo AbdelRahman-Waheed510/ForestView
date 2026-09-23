@@ -1567,15 +1567,30 @@ void ForestView::tool_bar()
 		ImGui::SameLine();
 
 		bool cantCopy = isRootFolder || (tabs[current_tab]->selected_path.empty() && tabs[current_tab]->selectionManager.Empty());
-		ImGui::BeginDisabled(cantCopy);
-		if (ImGui::Button("Copy"))
-		{
-			copy_helper();
-		}
-		ImGui::EndDisabled();
+		///*ImGui::BeginDisabled(cantCopy);
+		//if (ImGui::Button("Copy"))
+		//{
+		//	copy_helper();
+		//}
+		//ImGui::EndDisabled();*/
 		if (!cantCopy && (!ImGui::GetIO().WantCaptureKeyboard && (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_C, false))))
 		{
-			copy_helper();
+			bool permissonToCopy = true;
+			if (tabs[current_tab]->isSelecting) 
+			{
+				for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges()) 
+				{
+					for (int j = range.first; j <= range.last; ++j) 
+					{
+						AccessResult res = tabs[current_tab]->fileExplorer->check_access(tabs[current_tab]->entries[j].entry.path());
+						if (res == AccessResult::ACCESS_DENIED || res == AccessResult::LOCKED_OR_IN_USE)
+						{
+							permissonToCopy = false;
+						}
+					}
+				}
+			}
+			if (permissonToCopy) copy_helper();
 		}
 
 		ImGui::SameLine();
@@ -2668,6 +2683,12 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 			ImGui::Separator();
 		}
 
+		// Copy 
+		if (ImGui::Selectable("Copy"))
+		{
+			copy_helper();
+		}
+
 		// Delete
 		if (ImGui::Button("Delete")) 
 		{
@@ -2819,6 +2840,11 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 
 		}
 
+		// Copy 
+		if (ImGui::Selectable("Copy")) 
+		{
+			copy_helper();
+		}
 		// Delete
 		if (ImGui::Button("Delete##Duplicate"))
 		{
@@ -2846,6 +2872,94 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 	files_popup_was_open = files_popup_is_open;
 }
 	
+// Selections RIGHT CLICK
+void ForestView::selection_right_click_popup(const std::vector<SelectionRange>& selections) 
+{
+	if(tabs[current_tab]->need_selection_right_click_call)
+	{
+		ImGui::OpenPopup("SelectionRightClickPopUp");
+		tabs[current_tab]->need_selection_right_click_call = false;
+	}
+	static bool selection_popup_was_open = false;
+	bool selection_popup_is_open = ImGui::BeginPopup("SelectionRightClickPopUp");
+	if (selection_popup_is_open)
+	{
+		if (ImGui::Selectable("Copy")) 
+		{
+			const std::vector<Entry>& entries = tabs[current_tab]->entries;
+			bool canCopy = true;
+			for (const SelectionRange& range : selections)
+			{
+				if (!canCopy) break;
+				if (range.first < 0 || range.last >= static_cast<int>(entries.size()) || range.first > range.last)
+				{
+					canCopy = false;
+					break;
+				}
+				for (int i = range.first; i <= range.last; ++i)
+				{
+					AccessResult res = tabs[current_tab]->fileExplorer->check_access(entries[i].entry.path());
+					if (res == AccessResult::ACCESS_DENIED || res == AccessResult::LOCKED_OR_IN_USE)
+					{
+						canCopy = false;
+						break;
+					}
+				}
+			}
+			if (!canCopy) 
+			{
+				need_access_denied_popup = true;
+				ImGui::CloseCurrentPopup();
+			}
+			else if (canCopy) 
+			{
+				copy_helper();
+				ImGui::CloseCurrentPopup();
+			}
+
+		}
+		if (ImGui::Selectable("Delete")) 
+		{
+			const std::vector<Entry>& entries = tabs[current_tab]->entries;
+			bool canDelete = true;
+			for (const SelectionRange& range : selections) 
+			{
+				if (!canDelete) break;
+				if (range.first < 0 || range.last >= static_cast<int>(entries.size()) || range.first > range.last)
+				{
+					canDelete = false;
+					break;
+				}
+				for (int i = range.first; i <= range.last; ++i) 
+				{
+					AccessResult res = tabs[current_tab]->fileExplorer->check_access(entries[i].entry.path());
+					if (res == AccessResult::ACCESS_DENIED || res == AccessResult::LOCKED_OR_IN_USE) 
+					{
+						canDelete = false;
+						break;
+					}
+				}
+			}
+
+			if (!canDelete) 
+			{
+				need_access_denied_popup = true;
+				ImGui::CloseCurrentPopup();
+			}
+			else if (canDelete)
+			{
+				need_delete_confirmation = true;
+			}
+
+		}
+		ImGui::EndPopup();
+	}
+	if (selection_popup_was_open && !selection_popup_is_open)
+	{
+		tabs[current_tab]->selected_path = "";
+	}
+	selection_popup_was_open = selection_popup_is_open;
+}
 // ######################################################################################################################
 
 // Folders Tree 
@@ -3574,9 +3688,9 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 		{
-			if (tabs[current_tab]->isSelecting) 
+			if (tabs[current_tab]->isSelecting && tabs[current_tab]->selectionManager.IsSelected(idx))
 			{
-				tabs[current_tab]->selectionManager.Reset();
+				tabs[current_tab]->need_selection_right_click_call = true;
 			}
 			else
 			{
@@ -3601,16 +3715,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 		{
-			if (entry.is_directory())
-			{
-				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
-				if (checkAccess == DirAccessResult::ACCESS_DENIED)
-				{
-					need_access_denied_popup = true;
-					return;
-				}
-			}
-			else if (entry.is_regular_file())
+			if (!m_ctrlPressd && !m_shiftPressed) 
 			{
 				AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(entry.path());
 				if (checkAccess == AccessResult::ACCESS_DENIED || checkAccess == AccessResult::LOCKED_OR_IN_USE)
@@ -3763,6 +3868,7 @@ void ForestView::decide_correct_rightClick_popup()
 {
 	folders_right_click_popup(fs::directory_entry(tabs[current_tab]->selected_path));
 	files_right_click_popup(fs::directory_entry(tabs[current_tab]->selected_path));
+	selection_right_click_popup(tabs[current_tab]->selectionManager.GetRanges());
 }
 
 void ForestView::left_double_click(const fs::directory_entry& entry)
