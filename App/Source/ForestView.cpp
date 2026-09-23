@@ -1378,8 +1378,8 @@ void ForestView::search_bar()
 				fs::path path_(tabs[current_tab]->globalKeyWord);
 				if (fs::is_directory(path_) && fs::exists(path_))
 				{
-					DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(path_);
-					if (checkAccess == DirAccessResult::ACCESS_DENIED) 
+					AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(path_);
+					if (checkAccess == AccessResult::ACCESS_DENIED)
 					{
 						need_access_denied_popup = true;
 						tabs[current_tab]->entries_need_update = true;
@@ -3110,8 +3110,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
 				{
 					const Entry& entry = tabs[current_tab]->entries[i];
-					DirAccessResult check = tabs[current_tab]->fileExplorer->check_directory_access(entry.entry.path());
-					if (check == DirAccessResult::ACCESS_DENIED) 
+					AccessResult check = tabs[current_tab]->fileExplorer->check_access(entry.entry.path());
+					if (check == AccessResult::ACCESS_DENIED)
 					{
 						need_access_denied_popup = true;
 					}
@@ -3415,23 +3415,11 @@ void ForestView::render_entries()
 							if (entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishLower ||
 								entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishUpper)
 							{
-								if (entriesRef[selected_PathIdxTemp].entry.is_directory())
+								AccessResult s = tabs[current_tab]->fileExplorer->check_access(entriesRef[selected_PathIdxTemp].entry.path());
+								if (s == AccessResult::ACCESS_DENIED)
 								{
-									DirAccessResult s = tabs[current_tab]->fileExplorer->check_directory_access(entriesRef[selected_PathIdxTemp].entry.path());
-									if (s == DirAccessResult::ACCESS_DENIED) 
-									{
-										need_access_denied_popup = true;
-										break;
-									}
-								}
-								else if (entriesRef[selected_PathIdxTemp].entry.is_regular_file())
-								{
-									FileAccessResult s = tabs[current_tab]->fileExplorer->check_file_access(entriesRef[selected_PathIdxTemp].entry.path());
-									if (s == FileAccessResult::ACCESS_DENIED || s == FileAccessResult::LOCKED_OR_IN_USE)
-									{
-										need_access_denied_popup = true;
-										break;
-									}
+									need_access_denied_popup = true;
+									break;
 								}
 								tabs[current_tab]->selectionManager.Reset();
 								tabs[current_tab]->selectionManager.SetAnchor(selected_PathIdxTemp);
@@ -3451,23 +3439,11 @@ void ForestView::render_entries()
 							if (entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishLower ||
 								entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].englishUpper)
 							{
-								if (entry.entry.is_directory())
+								AccessResult s = tabs[current_tab]->fileExplorer->check_access(entry.entry.path());
+								if (s == AccessResult::ACCESS_DENIED)
 								{
-									DirAccessResult s = tabs[current_tab]->fileExplorer->check_directory_access(entry.entry.path());
-									if (s == DirAccessResult::ACCESS_DENIED) 
-									{
-										need_access_denied_popup = true;
-										break;
-									}
-								}
-								else if (entry.entry.is_regular_file())
-								{
-									FileAccessResult s = tabs[current_tab]->fileExplorer->check_file_access(entry.entry.path());
-									if (s == FileAccessResult::ACCESS_DENIED || s == FileAccessResult::LOCKED_OR_IN_USE)
-									{
-										need_access_denied_popup = true;
-										break;
-									}
+									need_access_denied_popup = true;
+									break;
 								}
 								tabs[current_tab]->selectionManager.Reset();
 								tabs[current_tab]->selectionManager.SetAnchor(j);
@@ -3508,23 +3484,11 @@ void ForestView::render_entries()
 							}
 							if (entriesRef[selected_PathIdxTemp].entry.path().filename().wstring()[0] == s_alphabetMappings[i].arabicChar)
 							{
-								if (entriesRef[selected_PathIdxTemp].entry.is_directory())
+								AccessResult s = tabs[current_tab]->fileExplorer->check_access(entriesRef[selected_PathIdxTemp].entry.path());
+								if (s == AccessResult::ACCESS_DENIED)
 								{
-									DirAccessResult s = tabs[current_tab]->fileExplorer->check_directory_access(entriesRef[selected_PathIdxTemp].entry.path());
-									if (s == DirAccessResult::ACCESS_DENIED)
-									{
-										need_access_denied_popup = true;
-										break;
-									}
-								}
-								else if (entriesRef[selected_PathIdxTemp].entry.is_regular_file())
-								{
-									FileAccessResult s = tabs[current_tab]->fileExplorer->check_file_access(entriesRef[selected_PathIdxTemp].entry.path());
-									if (s == FileAccessResult::ACCESS_DENIED || s == FileAccessResult::LOCKED_OR_IN_USE)
-									{
-										need_access_denied_popup = true;
-										break;
-									}
+									need_access_denied_popup = true;
+									break;
 								}
 								tabs[current_tab]->selectionManager.Reset();
 								tabs[current_tab]->selectionManager.SetAnchor(selected_PathIdxTemp);
@@ -3543,23 +3507,11 @@ void ForestView::render_entries()
 							if (entry.entry.path().empty()) continue;
 							if (entry.entry.path().filename().wstring()[0] == s_alphabetMappings[i].arabicChar)
 							{
-								if (entry.entry.is_directory())
+								AccessResult s = tabs[current_tab]->fileExplorer->check_access(entry.entry.path());
+								if (s == AccessResult::ACCESS_DENIED)
 								{
-									DirAccessResult s = tabs[current_tab]->fileExplorer->check_directory_access(entry.entry.path());
-									if (s == DirAccessResult::ACCESS_DENIED)
-									{
-										need_access_denied_popup = true;
-										break;
-									}
-								}
-								else if (entry.entry.is_regular_file())
-								{
-									FileAccessResult s = tabs[current_tab]->fileExplorer->check_file_access(entry.entry.path());
-									if (s == FileAccessResult::ACCESS_DENIED || s == FileAccessResult::LOCKED_OR_IN_USE)
-									{
-										need_access_denied_popup = true;
-										break;
-									}
+									need_access_denied_popup = true;
+									break;
 								}
 								tabs[current_tab]->selectionManager.Reset();
 								tabs[current_tab]->selectionManager.SetAnchor(j);
@@ -3581,29 +3533,18 @@ void ForestView::render_entries()
 
 }
 
+
 void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, int idx)
 {
 	if (ImGui::IsItemHovered())
 	{
 		if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
-			if (entry.is_directory())
+			AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(entry.path());
+			if (checkAccess == AccessResult::ACCESS_DENIED || checkAccess == AccessResult::LOCKED_OR_IN_USE)
 			{
-				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
-				if (checkAccess == DirAccessResult::ACCESS_DENIED)
-				{
-					need_access_denied_popup = true;
-					return;
-				}
-			}
-			else if (entry.is_regular_file())
-			{
-				FileAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_file_access(entry.path());
-				if (checkAccess == FileAccessResult::ACCESS_DENIED || checkAccess == FileAccessResult::LOCKED_OR_IN_USE)
-				{
-					need_access_denied_popup = true;
-					return;
-				}
+				need_access_denied_popup = true;
+				return;
 			}
 			
 			// Clear the selected Items
@@ -3637,32 +3578,25 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 			{
 				tabs[current_tab]->selectionManager.Reset();
 			}
-			if (entry.is_directory()) 
-			{
-				DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
-				if (checkAccess == DirAccessResult::ACCESS_DENIED)
-				{
-					need_access_denied_popup = true;
-					return;
-				}
-			}
-			else if (entry.is_regular_file()) 
-			{
-				FileAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_file_access(entry.path());
-				if (checkAccess == FileAccessResult::ACCESS_DENIED || checkAccess == FileAccessResult::LOCKED_OR_IN_USE) 
-				{
-					need_access_denied_popup = true;
-					return;
-				}
-			}
-			tabs[current_tab]->selected_path = entry.path();
-			if (entry.is_directory())
-			{
-				tabs[current_tab]->need_folder_right_click_call = true;
-			}
 			else
 			{
-				tabs[current_tab]->need_file_right_click_call = true;
+				tabs[current_tab]->selectionManager.Reset();
+
+				AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(entry.path());
+				if (checkAccess == AccessResult::ACCESS_DENIED || checkAccess == AccessResult::LOCKED_OR_IN_USE)
+				{
+					need_access_denied_popup = true;
+					return;
+				}
+				tabs[current_tab]->selected_path = entry.path();
+				if (entry.is_directory())
+				{
+					tabs[current_tab]->need_folder_right_click_call = true;
+				}
+				else
+				{
+					tabs[current_tab]->need_file_right_click_call = true;
+				}
 			}
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
@@ -3678,8 +3612,8 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 			}
 			else if (entry.is_regular_file())
 			{
-				FileAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_file_access(entry.path());
-				if (checkAccess == FileAccessResult::ACCESS_DENIED || checkAccess == FileAccessResult::LOCKED_OR_IN_USE)
+				AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(entry.path());
+				if (checkAccess == AccessResult::ACCESS_DENIED || checkAccess == AccessResult::LOCKED_OR_IN_USE)
 				{
 					need_access_denied_popup = true;
 					return;
@@ -3835,11 +3769,11 @@ void ForestView::left_double_click(const fs::directory_entry& entry)
 {
 	if (entry.is_directory())
 	{
-		DirAccessResult checkAccess = tabs[current_tab]->fileExplorer->check_directory_access(entry.path());
-
-		if (checkAccess == DirAccessResult::ACCESS_DENIED)
+		AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(entry.path());
+		if (checkAccess == AccessResult::ACCESS_DENIED || checkAccess == AccessResult::LOCKED_OR_IN_USE)
 		{
-			ImGui::OpenPopup("Access Denied");
+			need_access_denied_popup = true;
+			return;
 		}
 		else
 		{

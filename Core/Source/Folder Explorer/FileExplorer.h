@@ -85,22 +85,15 @@ enum class NewType
 	ACCESS_DATABASE          // .accdb
 };
 
-enum class DirAccessResult {
+enum class AccessResult
+{
 	OK,
-	ACCESS_DENIED,
 	NOT_FOUND,
+	ACCESS_DENIED,
+	LOCKED_OR_IN_USE, // This is only for files
 	NOT_A_DIRECTORY,
-	OTHER,
-	NOT_READY,
+	NOT_READY,         
 	SYMLINK_LOOP,
-};
-
-enum class FileAccessResult {
-	OK,
-	ACCESS_DENIED,
-	NOT_FOUND,
-	IS_DIRECTORY,
-	LOCKED_OR_IN_USE,
 	OTHER
 };
 
@@ -326,44 +319,48 @@ public:
 
 	}
 
-	FileAccessResult check_file_access(const fs::path& path)
+	AccessResult check_access(const fs::path& path)
 	{
 		std::error_code ec;
+		auto st = fs::status(path, ec);
 
-		if (!fs::exists(path, ec)) return FileAccessResult::NOT_FOUND;
-		if (fs::is_directory(path, ec)) return FileAccessResult::IS_DIRECTORY;
+		if (st.type() == fs::file_type::not_found)
+			return AccessResult::NOT_FOUND;
+
+		if (ec)
+		{
+			if (ec.value() == ERROR_ACCESS_DENIED || ec == std::errc::permission_denied)
+				return AccessResult::ACCESS_DENIED;
+			if (ec.value() == ERROR_NOT_READY)
+				return AccessResult::NOT_READY;
+			if (ec == std::errc::too_many_symbolic_link_levels)
+				return AccessResult::SYMLINK_LOOP;
+			return AccessResult::OTHER;
+		}
+
+		if (st.type() == fs::file_type::directory)
+		{
+			std::error_code dir_ec;
+			fs::directory_iterator it(path, dir_ec);
+
+			if (!dir_ec) return AccessResult::OK;
+
+			if (dir_ec.value() == ERROR_ACCESS_DENIED || dir_ec == std::errc::permission_denied)
+				return AccessResult::ACCESS_DENIED;
+			if (dir_ec == std::errc::not_a_directory)
+				return AccessResult::NOT_A_DIRECTORY;
+			return AccessResult::OTHER;
+		}
 
 		std::ifstream file(path, std::ios::binary);
 		if (!file.is_open())
 		{
 			if (errno == EACCES || ec == std::errc::permission_denied)
-				return FileAccessResult::ACCESS_DENIED;
-
-			return FileAccessResult::LOCKED_OR_IN_USE;
+				return AccessResult::ACCESS_DENIED;
+			return AccessResult::LOCKED_OR_IN_USE;
 		}
 
-		return FileAccessResult::OK;
-	}
-
-	DirAccessResult check_directory_access(const fs::path& path)
-	{
-		std::error_code ec;
-		auto it = fs::directory_iterator(path, ec);
-
-		if (!ec) return DirAccessResult::OK;
-
-		if (ec.value() == ERROR_ACCESS_DENIED || ec == std::errc::permission_denied)
-			return DirAccessResult::ACCESS_DENIED;
-		if (ec.value() == ERROR_FILE_NOT_FOUND || ec.value() == ERROR_PATH_NOT_FOUND|| ec == std::errc::no_such_file_or_directory)
-			return DirAccessResult::NOT_FOUND;
-		if (ec == std::errc::not_a_directory)
-			return DirAccessResult::NOT_A_DIRECTORY;
-		if (ec.value() == ERROR_NOT_READY)
-			return DirAccessResult::NOT_READY;
-		if (ec == std::errc::too_many_symbolic_link_levels)
-			return DirAccessResult::SYMLINK_LOOP;
-
-		return DirAccessResult::OTHER;
+		return AccessResult::OK;
 	}
 
 	void load_entries_from_specific_path(fs::path path)
@@ -658,7 +655,7 @@ public:
 				redo_stack.push(current_path);
 				break;
 			}
-			else if (check_directory_access(undo_stack.top()) == DirAccessResult::NOT_FOUND) undo_stack.pop();
+			else if (check_access(undo_stack.top()) == AccessResult::NOT_FOUND) undo_stack.pop();
 			else
 			{
 				path_to_undo = undo_stack.top(); undo_stack.pop();
@@ -691,8 +688,8 @@ public:
 
 		while (!redo_stack.empty())
 		{
-			DirAccessResult state = check_directory_access(redo_stack.top());
-			if (state == DirAccessResult::NOT_FOUND) redo_stack.pop();
+			AccessResult state = check_access(redo_stack.top());
+			if (state == AccessResult::NOT_FOUND) redo_stack.pop();
 			else
 			{
 				path_to_redo = redo_stack.top(); redo_stack.pop();
