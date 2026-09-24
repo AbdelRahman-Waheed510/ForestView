@@ -5,54 +5,88 @@
 
 namespace fs = std::filesystem;
 
+#include <chrono>
+#include <fstream>
+#include <string>
+
 class Timer
 {
 private:
-	std::chrono::time_point<std::chrono::high_resolution_clock> start_;
-	float duration = 0.0;
+	using Clock = std::chrono::high_resolution_clock;
+	using Microseconds = std::chrono::microseconds;
+
+	Clock::time_point m_startTimePoint;
+	Microseconds m_elapsedTime{ 0 };
+	bool m_running = false;
+
 public:
-
-	Timer()
+	Timer(bool startTheTimer = false)
 	{
-		start_ = std::chrono::high_resolution_clock::now();
+		if (startTheTimer)
+		{
+			Restart();
+		}
 	}
 
-	~Timer()
+	void Restart()
 	{
-		stop();
-		load_to_txt_file();
+		m_elapsedTime = Microseconds(0);
+		m_startTimePoint = Clock::now();
+		m_running = true;
 	}
 
-	void restart()
+	void Stop()
 	{
-		start_ = std::chrono::high_resolution_clock::now();
-
+		if (m_running)
+		{
+			auto now = Clock::now();
+			m_elapsedTime += std::chrono::duration_cast<Microseconds>(now - m_startTimePoint);
+			m_running = false;
+		}
 	}
 
-	void stop()
+	void Resume()
 	{
-		std::chrono::time_point<std::chrono::high_resolution_clock> end_ = std::chrono::high_resolution_clock::now();
-		auto start = std::chrono::time_point_cast<std::chrono::microseconds>(start_).time_since_epoch().count();
-		auto end = std::chrono::time_point_cast<std::chrono::microseconds>(end_).time_since_epoch().count();
-		duration = end - start;
+		if (!m_running)
+		{
+			m_startTimePoint = Clock::now();
+			m_running = true;
+		}
 	}
 
-	float get_duration()
+	const bool IsRunning() const { return m_running; }
+
+	float GetElapsedMicroseconds() const
 	{
-		return duration;
+		if (m_running)
+		{
+			auto now = Clock::now();
+			return static_cast<float>((m_elapsedTime + std::chrono::duration_cast<Microseconds>(now - m_startTimePoint)).count());
+		}
+		return static_cast<float>(m_elapsedTime.count());
+	}
+
+	float GetElapsedSeconds() const
+	{
+		return GetElapsedMicroseconds() * 0.000001f;
+	}
+
+	float GetElapsedMilliseconds() const
+	{
+		return GetElapsedMicroseconds() * 0.001f;
 	}
 
 	void load_to_txt_file()
 	{
+		float us = GetElapsedMicroseconds();
 		std::ofstream speedLog("Log.txt", std::ios::app);
 		if (speedLog.is_open())
 		{
-			speedLog << std::to_string(duration) << " MicroSeconds\n";
-			speedLog << std::to_string(duration * 0.001) << " MillieSeconds\n";
-			speedLog << std::to_string(duration * 0.000001) << " Seconds\n";
+			speedLog << us << " MicroSeconds\n";
+			speedLog << (us * 0.001f) << " MilliSeconds\n";
+			speedLog << (us * 0.000001f) << " Seconds\n";
 			speedLog << "=============================================================\n";
 		}
-		speedLog.close();
 	}
 };
 
