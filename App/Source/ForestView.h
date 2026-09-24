@@ -355,7 +355,7 @@ public:
 
 	void left_double_click(const fs::directory_entry& entry);
 
-	void left_click(const fs::directory_entry& entry);
+	bool left_click(const fs::directory_entry& entry);
 
 	// Stats Bar
 	void stats_bar();
