@@ -263,6 +263,8 @@ private:
 	bool m_ctrlPressd = false;
 	bool m_shiftPressed = false;
 	bool m_altPressed = false;
+
+	Timer m_copyPathtimer;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
@@ -310,6 +312,8 @@ public:
 	void go_back_helper();
 
 	void go_forward_helper();
+
+	void timed_tooltip(const std::string& msg, Timer& timer, const float& secondsNeeded);
 
 	// Popups
 	void view_settings();

@@ -524,8 +524,18 @@ void ForestView::on_update()
 					tabs[current_tab]->icons_height = 128.0f;
 					tabs[current_tab]->icons_width = 128.0f;
 				}
+				else if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_C, false))
+				{
+					if (!tabs[current_tab]->current_path.empty())
+					{
+						ImGui::SetClipboardText(tabs[current_tab]->current_path.string().c_str());
+						m_copyPathtimer.Restart();
+					}
+				}
 			}
 		}
+		timed_tooltip("Current Path is copied to the clipboard", m_copyPathtimer, 2.0);
+
 		files_navigation_panel(remainingHeight);
 
 		stats_bar();
@@ -1904,6 +1914,20 @@ void ForestView::paste_helper()
 	}
 }
 
+void ForestView::timed_tooltip(const std::string& msg, Timer& timer, const float& secondsNeeded)
+{
+	if (timer.IsRunning()) 
+	{
+		if (timer.GetElapsedSeconds() < secondsNeeded) 
+		{
+			ImGui::SetTooltip(msg.c_str());
+		}
+		else 
+		{
+			timer.Stop();
+		}
+	}
+}
 // ####################################################### POPUPS ######################################################
 // View Settings Popup
 void ForestView::view_settings() 
