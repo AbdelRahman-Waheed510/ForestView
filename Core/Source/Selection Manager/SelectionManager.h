@@ -1,5 +1,4 @@
 #pragma once
-#include "pchCore.h"
 
 struct SelectionRange
 {
@@ -259,6 +258,34 @@ public:
 		return false;
 	}
 
+	const int Find(int ind) const 
+	{
+		int head = 0;
+		int tail = static_cast<int>(m_selectedRanges.size()) - 1;
+
+		while (head <= tail)
+		{
+			int mid = head + (tail - head) / 2;
+
+			const auto& range = m_selectedRanges[mid];
+
+			if (ind < range.first)
+			{
+				tail = mid - 1;
+			}
+			else if (ind > range.last)
+			{
+				head = mid + 1;
+			}
+			else
+			{
+				return mid;
+			}
+		}
+
+		return -1;
+	}
+
 	const std::vector<SelectionRange>& GetRanges() const
 	{
 		return m_selectedRanges;
@@ -298,6 +325,23 @@ public:
 			count += (range.last - range.first) + 1;
 		}
 		return count;
+	}
+
+	const int GetAnchor() const
+	{
+		return m_anchor;
+	}
+
+	const int GetFirstInd() const 
+	{
+		if (m_selectedRanges.empty()) return -1;
+		return m_selectedRanges[0].first;
+	}
+
+	const int GetLastInd() const
+	{
+		if (m_selectedRanges.empty()) return -1;
+		return m_selectedRanges[static_cast<int>(m_selectedRanges.size()) - 1].last;
 	}
 
 	void Clear()  
