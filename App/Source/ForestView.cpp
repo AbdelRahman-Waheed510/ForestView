@@ -446,18 +446,6 @@ void App::run_loop()
 	on_shutdown();
 }
 
-void ForestView::render_msg()
-{
-	if (!tabs[current_tab]->message.empty())
-	{
-		if (tabs[current_tab]->message == "Task added successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
-		else if (tabs[current_tab]->message == "Task edtied successfuly")  ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
-		else if (tabs[current_tab]->message == "Added dependencies successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
-		else if (tabs[current_tab]->message == "Removed dependencies successfuly") ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
-		else ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), tabs[current_tab]->message.c_str());
-	}
-}
-
 void ForestView::on_start()
 {
 	M_texturesManager.load_images();
@@ -530,12 +518,13 @@ void ForestView::on_update()
 					if (!tabs[current_tab]->current_path.empty())
 					{
 						ImGui::SetClipboardText(tabs[current_tab]->current_path.string().c_str());
-						m_copyPathtimer.Restart();
+						call_timed_tooltip("Current Path is copied to the clipboard", ImVec4(0.0f, 0.6235f, 0.0392f, 1.0f));
 					}
 				}
 			}
 		}
-		timed_tooltip("Current Path is copied to the clipboard", m_copyPathtimer, 2.0);
+
+		timed_tooltip(5.0);
 
 		files_navigation_panel(remainingHeight);
 
@@ -1925,17 +1914,32 @@ void ForestView::paste_helper()
 	}
 }
 
-void ForestView::timed_tooltip(const std::string& msg, Timer& timer, const float& secondsNeeded)
 {
 	if (timer.IsRunning()) 
+void ForestView::call_timed_tooltip(const std::string message, const ImVec4& color)
+{
+	m_message = message;
+	m_msgColor = color;
+	m_timer.Restart();
+}
+
+void ForestView::timed_tooltip(const float& secondsNeeded)
+{
+	if (m_timer.IsRunning()) 
 	{
-		if (timer.GetElapsedSeconds() < secondsNeeded) 
+		if (m_timer.GetElapsedSeconds() < secondsNeeded) 
 		{
-			ImGui::SetTooltip(msg.c_str());
+			ImGui::BeginTooltip();
+
+			ImGui::TextColored(m_msgColor, m_message.c_str());
+
+			ImGui::EndTooltip();
 		}
 		else 
 		{
-			timer.Stop();
+			m_timer.Stop();
+			m_message.clear();
+			m_msgColor = ImVec4(0.0, 0.0, 0.0, 1.0);
 		}
 	}
 }
@@ -2717,12 +2721,10 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 				else
 				{
 					tabs[current_tab]->selected_path = "";
-					tabs[current_tab]->message = "This name already exists";
 				}
 				ImGui::CloseCurrentPopup();
 			}
 			if (!tabs[current_tab]->message.empty()) ImGui::SameLine();
-			render_msg();
 			ImGui::Separator();
 		}
 
@@ -2875,9 +2877,6 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 				}
 				ImGui::CloseCurrentPopup();
 			}
-			if (!tabs[current_tab]->message.empty()) ImGui::SameLine();
-
-			render_msg();
 
 			ImGui::Separator();
 

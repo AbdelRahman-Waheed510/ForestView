@@ -105,8 +105,6 @@ struct State
 	std::string copied_structure = "";
 	fs::path deleted_path;
 
-	std::string message;
-
 	std::string globalKeyWord;
 	std::string ThisDirectoryKeyWord;
 
@@ -264,7 +262,10 @@ private:
 	bool m_shiftPressed = false;
 	bool m_altPressed = false;
 
-	Timer m_copyPathtimer;
+	Timer m_timer;
+	std::string m_message;
+	ImVec4 m_msgColor = ImVec4(0.0, 0.0, 0.0, 1.0);
+
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
@@ -280,8 +281,6 @@ public:
 	~ForestView() 
 	{
 	}
-
-	void render_msg();
 
 	void on_start() override;
 
@@ -313,7 +312,9 @@ public:
 
 	void go_forward_helper();
 
-	void timed_tooltip(const std::string& msg, Timer& timer, const float& secondsNeeded);
+	void call_timed_tooltip(const std::string message, const ImVec4& color);
+
+	void timed_tooltip(const float& secondsNeeded);
 
 	// Popups
 	void view_settings();
