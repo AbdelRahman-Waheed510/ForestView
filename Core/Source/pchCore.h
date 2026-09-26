@@ -34,10 +34,10 @@
 
 // C Low-Level / System
 #include <cstdlib>
-
-// Windows API
 #include <windows.h>
 #include <shobjidl.h>
+#include <shlwapi.h>
+#pragma comment(lib, "Shlwapi.lib")
 
 // Graphics & Third-Party Libraries
 #include <glad/glad.h>

@@ -5,10 +5,6 @@
 
 namespace fs = std::filesystem;
 
-#include <chrono>
-#include <fstream>
-#include <string>
-
 class Timer
 {
 private:
@@ -119,6 +115,19 @@ enum class NewType
 	ACCESS_DATABASE          // .accdb
 };
 
+enum class SortType 
+{
+	NAME,
+	SIZE,
+	LAST_MODIFIED,
+};
+
+enum class SortOrder
+{
+	ASCENDING,
+	DESCENDING
+};
+
 enum class AccessResult
 {
 	OK,
@@ -204,6 +213,14 @@ private:
 	std::stack<fs::path> undo_stack;
 	
 	FilterOptions filterBy = FilterOptions::ALL;
+
+	SortType m_activeSortType = SortType::NAME;
+	SortOrder m_activeSortOrder = SortOrder::ASCENDING;
+
+private:
+
+	void sort_entries();
+
 public:
 	
 	Explorer(TexturesManager& textures_manager) : M_texturesManager(textures_manager)
@@ -277,10 +294,38 @@ public:
 		}
 		return drives;
 	}
-
+	
 	int get_size() 
 	{
 		return entries.size();
+	}
+
+	void sort_entries(const SortType& type) 
+	{
+		if (type == m_activeSortType) 
+		{
+			if (m_activeSortOrder == SortOrder::ASCENDING) m_activeSortOrder = SortOrder::DESCENDING;
+			else m_activeSortOrder = SortOrder::ASCENDING;
+		}
+		m_activeSortType = type;
+		sort_entries();
+	}
+
+	void sort_entries(const SortOrder& orderType) 
+	{
+		if (orderType == m_activeSortOrder) return;
+		m_activeSortOrder = orderType;
+		sort_entries();
+	}
+
+	const SortType get_active_sort_tyoe() 
+	{
+		return m_activeSortType;
+	}
+
+	const SortOrder get_active_sort_order()
+	{
+		return m_activeSortOrder;
 	}
 
 	const fileSize decide_file_size_format(const double& count_in_bytes)
@@ -455,6 +500,7 @@ public:
 				break;
 			}
 		}
+		sort_entries();
 		return;
 	}
 
@@ -982,11 +1028,6 @@ public:
 		return result;
 	}
 
-	void sort_entries(const std::function<bool(Entry&, Entry&)>& comp)
-	{
-		std::sort(entries.begin(), entries.end(), comp);
-		return;
-	}
 
 	void find_empty_folders(const fs::path& source, std::vector<fs::path>& empty_folders, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{

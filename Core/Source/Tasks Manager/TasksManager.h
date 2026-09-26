@@ -1,7 +1,5 @@
 #pragma once
 
-#include "FileExplorer.h"
-
 namespace fs = std::filesystem;
 
 enum class TaskType
