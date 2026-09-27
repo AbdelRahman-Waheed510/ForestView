@@ -128,6 +128,10 @@ struct State
 	bool isSelecting = false;
 
 	int lastPress = -1;
+	int m_minVisibleIndex = 0;
+	int m_maxVisibleIndex = 0;
+	bool m_needToScroll = false;
+
 	State() 
 	{
 		tabID = id;
@@ -343,6 +347,10 @@ public:
 	void render_entries();
 	
 	void render_debug_panel();
+
+	void need_to_scroll(int selectedIndex);
+
+	int find_accessible_index(int start, int direction);
 
 	void handle_entries_mouse_click(const fs::directory_entry& entry, int idx = -1);
 

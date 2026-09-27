@@ -3519,6 +3519,42 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 	}
 }
 
+int ForestView::find_accessible_index(int start, int direction)
+{
+	auto& entries = tabs[current_tab]->entries;
+	for (int i = start; i >= 0 && i < static_cast<int>(entries.size()); i += direction)
+	{
+		if (left_click(entries[i].entry))
+			return i;
+		call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+	}
+	return -1;
+}
+
+void ForestView::need_to_scroll(int selectedIndex)
+{
+	if (selectedIndex == -1)
+		return;
+
+	auto& tab = *tabs[current_tab];
+	const float rowHeight = tab.icons_height + ImGui::GetStyle().CellPadding.y * 2.0f;
+
+	if (selectedIndex == 0)
+	{
+		ImGui::SetScrollY(0.0f);
+	}
+	else if (selectedIndex < tab.m_minVisibleIndex)
+	{
+		const float scrollY = ImGui::GetScrollY();
+		ImGui::SetScrollY(scrollY - (tab.m_minVisibleIndex - selectedIndex) * rowHeight);
+	}
+	else if (selectedIndex >= tab.m_maxVisibleIndex)
+	{
+		const float scrollY = ImGui::GetScrollY();
+		ImGui::SetScrollY(scrollY + (selectedIndex + 1 - tab.m_maxVisibleIndex) * rowHeight);
+	}
+}
+
 void ForestView::render_entries()
 {
 	if (tabs[current_tab]->selectionManager.Empty()) 
