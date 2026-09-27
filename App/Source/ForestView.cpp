@@ -2154,19 +2154,55 @@ void ForestView::view_sort_options()
 {
 	if (ImGui::BeginPopup("Sort Type"))
 	{
-		if (ImGui::Selectable("Name"))
+		const SortType& currentSortType = tabs[current_tab]->fileExplorer->get_active_sort_tyoe();
+		const SortOrder& currentSortOrder = tabs[current_tab]->fileExplorer->get_active_sort_order();
+
+		if (ImGui::Selectable("Name", currentSortType == SortType::NAME))
 		{
-			tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b)
-				{
-					return a.entry.path() < b.entry.path();
-				});
-			tabs[current_tab]->entries_need_update = true;
+			tabs[current_tab]->fileExplorer->sort_entries(SortType::NAME);
+			
+			tabs[current_tab]->selectionManager.Reset();
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+
 			ImGui::CloseCurrentPopup();
 		}
-		if (ImGui::Selectable("Last Modified time"))
+		if (ImGui::Selectable("Size", currentSortType == SortType::SIZE))
 		{
-			tabs[current_tab]->fileExplorer->sort_entries([](const Entry& a, const Entry& b) {return a.entry.last_write_time() > b.entry.last_write_time();});
-			tabs[current_tab]->entries_need_update = true;
+			tabs[current_tab]->fileExplorer->sort_entries(SortType::SIZE);
+
+			tabs[current_tab]->selectionManager.Reset();
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::Selectable("Last Modified time", currentSortType == SortType::LAST_MODIFIED))
+		{
+			tabs[current_tab]->fileExplorer->sort_entries(SortType::LAST_MODIFIED);
+
+			tabs[current_tab]->selectionManager.Reset();
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+
+			ImGui::CloseCurrentPopup();
+		}
+
+		ImGui::Separator();
+
+		if (ImGui::Selectable("Ascending", currentSortOrder == SortOrder::ASCENDING))
+		{
+			tabs[current_tab]->fileExplorer->sort_entries(SortOrder::ASCENDING);
+
+			tabs[current_tab]->selectionManager.Reset();
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+
+			ImGui::CloseCurrentPopup();
+		}
+		if (ImGui::Selectable("Descending", currentSortOrder == SortOrder::DESCENDING))
+		{
+			tabs[current_tab]->fileExplorer->sort_entries(SortOrder::DESCENDING);
+			
+			tabs[current_tab]->selectionManager.Reset();
+			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::EndPopup();
