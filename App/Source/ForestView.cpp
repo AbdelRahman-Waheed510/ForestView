@@ -1608,19 +1608,34 @@ void ForestView::tool_bar()
 			bool permissonToCopy = true;
 			if (tabs[current_tab]->isSelecting) 
 			{
-				for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges()) 
+				const std::vector<Entry>& entries = tabs[current_tab]->entries;
+				const std::vector<SelectionRange>& selections = tabs[current_tab]->selectionManager.GetRanges();
+				for (const SelectionRange& range : selections)
 				{
-					for (int j = range.first; j <= range.last; ++j) 
+					if (!permissonToCopy) break;
+					if (range.first < 0 || range.last >= static_cast<int>(entries.size()) || range.first > range.last)
 					{
-						AccessResult res = tabs[current_tab]->fileExplorer->check_access(tabs[current_tab]->entries[j].entry.path());
+						permissonToCopy = false;
+						break;
+					}
+					for (int i = range.first; i <= range.last; ++i)
+					{
+						AccessResult res = tabs[current_tab]->fileExplorer->check_access(entries[i].entry.path());
 						if (res == AccessResult::ACCESS_DENIED || res == AccessResult::LOCKED_OR_IN_USE)
 						{
 							permissonToCopy = false;
+							break;
 						}
 					}
 				}
+				
 			}
-			if (permissonToCopy) copy_helper();
+			if (!permissonToCopy)
+			{
+				need_access_denied_popup = true;
+				ImGui::CloseCurrentPopup();
+			}
+			else if (permissonToCopy) copy_helper();
 		}
 
 		ImGui::SameLine();
@@ -2547,6 +2562,14 @@ void ForestView::advanced_search()
 						{
 							m_index.fastNameLookUp(m_founds, FileNameSearch);
 						}
+						if (!m_founds.empty())
+						{
+							m_founds.erase(
+								std::remove_if(m_founds.begin(), m_founds.end(),
+									[](const fs::path& p) { return p.empty() || !fs::exists(p); }),
+								m_founds.end()
+							);
+						}
 					}
 				}
 				else if (current_searchBy_filter == SearchBy::EXTENTION) 
@@ -2583,6 +2606,14 @@ void ForestView::advanced_search()
 						else 
 						{
 							m_index.fastNameLookUp(m_founds, FileNameSearch);
+						}
+						if (!m_founds.empty()) 
+						{
+							m_founds.erase(
+								std::remove_if(m_founds.begin(), m_founds.end(),
+									[](const fs::path& p) { return p.empty() || !fs::exists(p); }),
+								m_founds.end()
+							);
 						}
 					}
 					else
@@ -2636,9 +2667,8 @@ void ForestView::advanced_search()
 						{
 							ImGui::TableNextRow();
 
-
 							// ========================================== Path ================================================
-							ImGui::TableNextColumn();
+							ImGui::TableSetColumnIndex(0);
 							std::u8string utf8_filename= m_founds[i].filename().u8string();
 	#if defined(__cpp_lib_char8_t)
 							std::string display_filename(utf8_filename.begin(), utf8_filename.end());
@@ -2664,19 +2694,27 @@ void ForestView::advanced_search()
 							handle_entries_mouse_click(foundsEntry);
 
 							// ========================================== Type ================================================
-							ImGui::TableNextColumn();
+							ImGui::TableSetColumnIndex(1);
 							fs::file_type type = foundsEntry.status().type();
 
 							ImGui::Selectable(Utils::file_type_to_string(type).c_str());
 
 							// ========================================== Size ================================================
-							ImGui::TableNextColumn();
+							ImGui::TableSetColumnIndex(2);
 
 							if (!foundsEntry.is_directory())
 							{
 								std::error_code ec;
-								fileSize size = tabs[current_tab]->fileExplorer->decide_file_size_format(foundsEntry.file_size(ec));
-								ImGui::Selectable(std::format("{:.2f} {}", size.size, size.label).c_str());
+								auto rawSize = foundsEntry.file_size(ec);
+								if (ec)
+								{
+									ImGui::Selectable("(unavailable)");
+								}
+								else
+								{
+									fileSize size = tabs[current_tab]->fileExplorer->decide_file_size_format(rawSize);
+									ImGui::Selectable(std::format("{:.2f} {}", size.size, size.label).c_str());
+								}
 							}
 
 						}
