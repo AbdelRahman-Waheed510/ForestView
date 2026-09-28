@@ -1929,8 +1929,40 @@ void ForestView::paste_helper()
 	}
 }
 
+void ForestView::go_back_helper() 
 {
-	if (timer.IsRunning()) 
+	// Clear the selected Items
+	if (tabs[current_tab]->isSelecting)
+	{
+		tabs[current_tab]->selectionManager.Reset();
+		tabs[current_tab]->isSelecting = false;
+	}
+	tabs[current_tab]->show_selected_folder_options = false;
+	tabs[current_tab]->ThisDirectoryKeyWord = "";
+	tabs[current_tab]->globalKeyWord = "";
+	tabs[current_tab]->selected_path = "";
+	tabs[current_tab]->fileExplorer->back(tabs[current_tab]->current_path);
+	tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
+	tabs[current_tab]->entries_need_update = true;
+}
+
+void ForestView::go_forward_helper() 
+{
+	// Clear the selected Items
+	if (tabs[current_tab]->isSelecting)
+	{
+		tabs[current_tab]->selectionManager.Reset();
+		tabs[current_tab]->isSelecting = false;
+	}
+	tabs[current_tab]->show_selected_folder_options = false;
+	tabs[current_tab]->ThisDirectoryKeyWord = "";
+	tabs[current_tab]->globalKeyWord = "";
+	tabs[current_tab]->selected_path = "";
+	tabs[current_tab]->fileExplorer->redo(tabs[current_tab]->current_path);
+	tabs[current_tab]->recents.visit(fs::directory_entry(tabs[current_tab]->current_path));
+	tabs[current_tab]->entries_need_update = true;
+}
+
 void ForestView::call_timed_tooltip(const std::string message, const ImVec4& color)
 {
 	m_message = message;
@@ -2743,6 +2775,7 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 	}
 	static bool folder_popup_was_open = false;
 	bool folder_popup_is_open = ImGui::BeginPopup("FoldersRightClickPopUp");
+	
 	if (folder_popup_is_open)
 	{
 		if (FolderEntry.path() != tabs[current_tab]->selected_path) tabs[current_tab]->selected_path = FolderEntry.path();
@@ -3147,10 +3180,23 @@ void ForestView::folders_tree(const float& remainingHeight)
 
 					if (ImGui::Selectable(favorite_to_show.c_str()))
 					{
-						tabs[current_tab]->fileExplorer->navigate_to(favorite_item.path(), tabs[current_tab]->current_path);
-						tabs[current_tab]->current_path = favorite_item.path();
-						tabs[current_tab]->entries_need_update = true;
-						tabs[current_tab]->selected_path = "";
+						AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(favorite_item.path());
+						if (checkAccess == AccessResult::ACCESS_DENIED)
+						{
+							need_access_denied_popup = true;
+							return;
+						}
+
+						// Clear the selected Items
+						if (tabs[current_tab]->isSelecting)
+						{
+							tabs[current_tab]->selectionManager.Reset();
+						}
+
+						if (favorite_item.is_directory())
+						{
+							left_double_click(favorite_item);
+						}
 					}
 					if (ImGui::BeginPopupContextItem("favoritesRightClick"))
 					{
@@ -3275,6 +3321,14 @@ void ForestView::draw_tree(Node* node_to_show)
 // Files Navigation Panel
 void ForestView::files_navigation_panel(const float& remainingHeight)
 {
+	if (ImGui::IsKeyPressed(ImGuiKey_Enter, false) && !ImGui::GetIO().WantCaptureKeyboard && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId))
+	{
+		if (!tabs[current_tab]->selected_path.empty() && !tabs[current_tab]->isSelecting)
+		{
+			left_double_click(fs::directory_entry(tabs[current_tab]->selected_path));
+		}
+	}
+
 	if (ImGui::BeginChild("Files##identifier", ImVec2(0, remainingHeight), ImGuiChildFlags_Borders))
 	{
 		ImGui::Text("Files");
@@ -3311,7 +3365,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				{
 					tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectionManager.GetRanges();
 				}
-				else if (m_shiftPressed) 
+				else if (m_shiftPressed)
 				{
 					tabs[current_tab]->selectedEntriesSnapShot = tabs[current_tab]->selectionManager.GetRanges();
 				}
@@ -4275,7 +4329,6 @@ bool ForestView::left_click(const fs::directory_entry& entry)
 	AccessResult check = tabs[current_tab]->fileExplorer->check_access(entry.path());
 	if (check == AccessResult::ACCESS_DENIED || check == AccessResult::LOCKED_OR_IN_USE) 
 	{
-		need_access_denied_popup = true;
 		return false;
 	}
 	if (tabs[current_tab]->selected_path == entry.path())
