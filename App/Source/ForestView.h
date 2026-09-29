@@ -269,6 +269,7 @@ private:
 	Timer m_timer;
 	std::string m_message;
 	ImVec4 m_msgColor = ImVec4(0.0, 0.0, 0.0, 1.0);
+	float m_numberOfSeconds = 2.0;
 
 public:
 
@@ -316,9 +317,9 @@ public:
 
 	void go_forward_helper();
 
-	void call_timed_tooltip(const std::string message, const ImVec4& color);
+	void call_timed_tooltip(const std::string message, const ImVec4& color, const int8_t numberOfseconds);
 
-	void timed_tooltip(const float& secondsNeeded);
+	void timed_tooltip();
 
 	// Popups
 	void view_settings();

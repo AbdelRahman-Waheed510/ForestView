@@ -465,20 +465,18 @@ void ForestView::on_update()
 	{
 		refocus_reload();
 
-		ImVec2 mousePos = ImGui::GetMousePos();
-		// 3. Offset the tooltip so it doesn't obscure the cursor (e.g., +15px, +15px)
-		ImVec2 tooltipPos = ImVec2(mousePos.x + 15.0f, mousePos.y + 15.0f);
-		// 4. Set position and pivot (Always pass ImGuiCond_Always so it updates every frame)
-		ImGui::SetNextWindowPos(tooltipPos, ImGuiCond_Always);
-		// 5. Render custom tooltip window
-		if (ImGui::BeginTooltip())
-		{
-			ImGui::Text("Tracking mouse: (%.0f, %.0f)", mousePos.x, mousePos.y);
-			ImGui::EndTooltip();
-		}
+		//ImVec2 mousePos = ImGui::GetMousePos();
+		//// 3. Offset the tooltip so it doesn't obscure the cursor (e.g., +15px, +15px)
+		//ImVec2 tooltipPos = ImVec2(mousePos.x + 15.0f, mousePos.y + 15.0f);
+		//// 4. Set position and pivot (Always pass ImGuiCond_Always so it updates every frame)
+		//ImGui::SetNextWindowPos(tooltipPos, ImGuiCond_Always);
+		//// 5. Render custom tooltip window
+		//if (ImGui::BeginTooltip())
+		//{
+		//	ImGui::Text("Tracking mouse: (%.0f, %.0f)", mousePos.x, mousePos.y);
+		//	ImGui::EndTooltip();
+		//}
 
-
-		ImGui::GetMousePos();
 
 		tab_bar();
 
@@ -518,13 +516,13 @@ void ForestView::on_update()
 					if (!tabs[current_tab]->current_path.empty())
 					{
 						ImGui::SetClipboardText(tabs[current_tab]->current_path.string().c_str());
-						call_timed_tooltip("Current Path is copied to the clipboard", ImVec4(0.0f, 0.6235f, 0.0392f, 1.0f));
+						call_timed_tooltip("Current Path is copied to the clipboard", ImVec4(0.0f, 0.6235f, 0.0392f, 1.0f), 2.0);
 					}
 				}
 			}
 		}
 
-		timed_tooltip(5.0);
+		timed_tooltip();
 
 		files_navigation_panel(remainingHeight);
 
@@ -1963,18 +1961,19 @@ void ForestView::go_forward_helper()
 	tabs[current_tab]->entries_need_update = true;
 }
 
-void ForestView::call_timed_tooltip(const std::string message, const ImVec4& color)
+void ForestView::call_timed_tooltip(const std::string message, const ImVec4& color, const int8_t numberOfseconds)
 {
 	m_message = message;
 	m_msgColor = color;
+	m_numberOfSeconds = numberOfseconds;
 	m_timer.Restart();
 }
 
-void ForestView::timed_tooltip(const float& secondsNeeded)
+void ForestView::timed_tooltip()
 {
 	if (m_timer.IsRunning()) 
 	{
-		if (m_timer.GetElapsedSeconds() < secondsNeeded) 
+		if (m_timer.GetElapsedSeconds() < m_numberOfSeconds) 
 		{
 			ImGui::BeginTooltip();
 
@@ -1987,6 +1986,7 @@ void ForestView::timed_tooltip(const float& secondsNeeded)
 			m_timer.Stop();
 			m_message.clear();
 			m_msgColor = ImVec4(0.0, 0.0, 0.0, 1.0);
+			m_numberOfSeconds = 2.0;
 		}
 	}
 }
@@ -2454,7 +2454,7 @@ void ForestView::access_denied()
 	if (ImGui::BeginPopupModal("Access Denied", NULL, ImGuiWindowFlags_AlwaysAutoResize))
 	{
 		ImGui::Text("You don't currently have permission to access this folder.");
-		if (ImGui::Button("Ok"))
+		if (ImGui::Button("Ok") || ImGui::IsKeyPressed(ImGuiKey_Enter,false))
 		{
 			ImGui::CloseCurrentPopup();
 		}
@@ -2802,7 +2802,7 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 				{
 					if (newName.empty())
 					{
-						call_timed_tooltip("Can't rename with empty name...", ImVec4(1.0, 0.0, 0.0, 1.0));
+						call_timed_tooltip("Can't rename with empty name...", ImVec4(1.0, 0.0, 0.0, 1.0), 2.5);
 					}
 					else 
 					{
@@ -2847,7 +2847,7 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 						else
 						{
 							tabs[current_tab]->selected_path = "";
-							call_timed_tooltip("This name already exists", ImVec4(1.0, 0.0, 0.0, 1.0));
+							call_timed_tooltip("This name already exists", ImVec4(1.0, 0.0, 0.0, 1.0), 2.5);
 						}
 					}
 					ImGui::CloseCurrentPopup();
@@ -2967,7 +2967,7 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 				{
 					if (newName.empty()) 
 					{
-						call_timed_tooltip("Can't rename with empty name...", ImVec4(1.0, 0.0, 0.0, 1.0));
+						call_timed_tooltip("Can't rename with empty name...", ImVec4(1.0, 0.0, 0.0, 1.0), 2.5);
 					}
 					else 
 					{
@@ -3023,7 +3023,7 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 						else
 						{
 							tabs[current_tab]->selected_path = "";
-							call_timed_tooltip("This name already exists", ImVec4(1.0, 0.0, 0.0, 1.0));
+							call_timed_tooltip("This name already exists", ImVec4(1.0, 0.0, 0.0, 1.0), 2.5);
 						}
 					}
 					ImGui::CloseCurrentPopup();
@@ -3654,7 +3654,7 @@ int ForestView::find_accessible_index(int start, int direction)
 	{
 		if (left_click(entries[i].entry))
 			return i;
-		call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+		call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 3.0);
 	}
 	return -1;
 }
