@@ -14,6 +14,7 @@ class SelectionManager
 private:
 	std::vector<SelectionRange> m_selectedRanges;
 	int m_anchor = -1;
+	int m_cursor = -1;
 public:
 	void AddSingleSelection(const int& ind)
 	{
@@ -296,16 +297,36 @@ public:
 		if (NewAnchor < 0)
 		{
 			m_anchor = -1;
+			m_cursor = m_anchor;
 			return;
 		}
 		m_anchor = NewAnchor;
+		m_cursor = m_anchor;
 	}
 
 	void ResetAnchor() 
 	{
 		m_anchor = -1;
+		m_cursor = -1;
 		std::cout << "anchor reseted" << std::endl;
 	}
+
+	void SetCursor(const int& c) 
+	{
+		m_cursor = c; 
+	}
+
+	int GetCursor() const 
+	{ 
+		return m_cursor; 
+	}
+
+	const bool IsAnchor(const int val) const 
+	{
+		return val == m_anchor;
+	}
+
+	const bool IsCursor(const int val) const { return val == m_cursor; }
 
 	const bool Empty() const
 	{
@@ -358,6 +379,7 @@ public:
 	{
 		m_selectedRanges.clear();
 		m_anchor = -1;
+		m_cursor = -1;
 	}
 
 	void Print() 
