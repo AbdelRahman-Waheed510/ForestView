@@ -352,6 +352,10 @@ public:
 	void need_to_scroll(int selectedIndex);
 
 	int find_accessible_index(int start, int direction);
+	
+	int click_accessible_index_largeTumbnails(int start, int x, int y);
+
+	int find_accessible_index_largeTumbnails(int start, int x, int y, const int factor);
 
 	void handle_entries_mouse_click(const fs::directory_entry& entry, int idx = -1);
 
@@ -366,6 +370,8 @@ public:
 	void left_double_click(const fs::directory_entry& entry);
 
 	bool left_click(const fs::directory_entry& entry);
+
+	bool check_access(const fs::directory_entry& entry);
 
 	// Stats Bar
 	void stats_bar();

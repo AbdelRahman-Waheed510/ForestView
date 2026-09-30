@@ -3393,7 +3393,6 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			tabs[current_tab]->copied_structure = "";
 		}
 
-
 		// Drawing the selection rectagle
 		if (m_isDraggingSelection)
 		{
@@ -3430,7 +3429,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			{
 				m_isDraggingSelection = false;
 			}
-		}
+		}		
 
 		// Ctrl+A | keyboard arrows selcetion 
 		if (!io.WantCaptureKeyboard)
@@ -3447,193 +3446,375 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 					}
 					return -1;
 				};
+			const int entriesCount = static_cast<int>(tabs[current_tab]->entries.size());
+			auto shiftNavigate = [&](int dx, int dy, const int factor) -> int
+					{
+						auto& tab = *tabs[current_tab];
+						auto& sm = tab.selectionManager;
+						std::cout << "anchor=" << sm.GetAnchor() << " cursor=" << sm.GetCursor() << "\n";
 
-			if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow))
-			{
-				if (!tabs[current_tab]->selected_path.empty())
-				{
-					int ind = findInd(tabs[current_tab]->selected_path);
-					if (ind > 0)
-					{
-						tabs[current_tab]->selected_path.clear();
-						tabs[current_tab]->selectionManager.AddSingleSelection(ind);
-						tabs[current_tab]->selectionManager.AddSingleSelection(ind - 1);
-						tabs[current_tab]->selectionManager.SetAnchor(ind);
-					}
-				}
-				else if (tabs[current_tab]->isSelecting) 
-				{
-					int anchor = tabs[current_tab]->selectionManager.GetAnchor();
-					if (anchor == -1) 
-					{
-						int newAnchor = tabs[current_tab]->selectionManager.GetLastInd();
-						tabs[current_tab]->selectionManager.SetAnchor(newAnchor);
-						tabs[current_tab]->selectionManager.Clear();
-						tabs[current_tab]->selectionManager.AddSingleSelection(newAnchor);
-						if (newAnchor > 0) 
+						int anchor = -1;
+						int cursor = -1;
+
+						if (!tab.selected_path.empty())
 						{
-							tabs[current_tab]->selectionManager.AddSingleSelection(newAnchor - 1);
+							anchor = cursor = findInd(tab.selected_path);
+
+							tab.selected_path = "";
+							tab.file_size.size = 0.0;
+							tab.file_size.label = "";
+							tab.last_modified = "";
+
+							tab.isSelecting = true;
+							sm.Reset();
+							sm.SetAnchor(anchor);
+							sm.SelectAnchoredRange(anchor);  
+						}
+						else if (tab.isSelecting)
+						{
+							anchor = sm.GetAnchor();
+							cursor = sm.GetCursor();
+
+							if (anchor < 0) anchor = sm.GetFirstInd();
+							if (cursor < 0) cursor = anchor;
+						}
+						else
+						{
+							if (entriesCount <= 0) return -1;
+							int first = find_accessible_index_largeTumbnails(0, 0, 1, factor);
+							if (first == -1) return -1;
+
+							tab.isSelecting = true;
+							sm.Reset();
+							sm.SetAnchor(first);
+							sm.SelectAnchoredRange(first);
+							return first;
+						}
+
+						if (anchor < 0 || cursor < 0) return -1;
+
+						const int step = (dy != 0) ? dy * factor : dx;
+						const int target = find_accessible_index_largeTumbnails(cursor + step, dx, dy, factor);
+						if (target == -1) return -1;      
+
+						sm.SetAnchor(anchor);
+						sm.SelectAnchoredRange(target);
+						sm.SetCursor(target);
+						return target;
+					};
+
+			if (tabs[current_tab]->view_type == viewType::LARGE_THUMBNAILS) 
+			{
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow)) { int scrollTarget = -1; int t = shiftNavigate(0, -1, columnsCount); if (t != -1) scrollTarget = t; }
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow)) { int scrollTarget = -1;int t = shiftNavigate(0, 1, columnsCount); if (t != -1) scrollTarget = t; }
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_RightArrow)) { int scrollTarget = -1;int t = shiftNavigate(1, 0, columnsCount); if (t != -1) scrollTarget = t; }
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) { int scrollTarget = -1;int t = shiftNavigate(-1, 0, columnsCount); if (t != -1) scrollTarget = t; }
+
+				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow))
+				{
+					int scrollTarget = -1;
+
+					if (!tabs[current_tab]->selected_path.empty())
+					{
+						int selectedInd = findInd(tabs[current_tab]->selected_path);
+						int target = click_accessible_index_largeTumbnails(selectedInd - columnsCount, 0, -1);
+						if (target != -1) 
+						{
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+					else if (tabs[current_tab]->isSelecting)
+					{
+						int anchor = tabs[current_tab]->selectionManager.GetAnchor();
+						if (anchor != -1)
+						{
+							int target = click_accessible_index_largeTumbnails(anchor - columnsCount,0, -1);
+							if (target != -1)
+							{
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
+							}
+						}
+						else
+						{
+							int first = tabs[current_tab]->selectionManager.GetFirstInd();
+							int target = click_accessible_index_largeTumbnails(first - columnsCount, 0, -1);
+							if (target != -1)
+							{
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
+							}
+
 						}
 					}
 					else
 					{
-						auto ranges = tabs[current_tab]->selectionManager.GetRanges();
-						int pos = tabs[current_tab]->selectionManager.Find(anchor);
-						if (pos != -1)
+						if (entriesCount > 0)
 						{
-							if (ranges[pos].first == anchor && ranges[pos].last == anchor)
+							int target = click_accessible_index_largeTumbnails(0, 0, -1);
+							if (target != -1)
 							{
-								if (anchor > 0)
-								{
-									if (ranges[pos].first - 1 >= 0)
-									{
-										tabs[current_tab]->selectionManager.SelectRange(anchor, ranges[pos].first - 1);
-									}
-								}
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
 							}
-							else if (ranges[pos].last == anchor)
+						}							
+					}
+				}
+				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow))
+				{
+					int scrollTarget = -1;
+
+					if (!tabs[current_tab]->selected_path.empty())
+					{
+						int selectedInd = findInd(tabs[current_tab]->selected_path);
+						int target = click_accessible_index_largeTumbnails(selectedInd + columnsCount, 0, 1);
+						if (target != -1)
+						{
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+					else if (tabs[current_tab]->isSelecting)
+					{
+						int anchor = tabs[current_tab]->selectionManager.GetAnchor();
+						if (anchor != -1) 
+						{
+							int target = click_accessible_index_largeTumbnails(anchor + columnsCount, 0, 1);
+							if (target != -1)
 							{
-								if (anchor > 0)
-								{
-									if (ranges[pos].first - 1 >= 0)
-									{
-										tabs[current_tab]->selectionManager.SelectRange(anchor, ranges[pos].first - 1);
-									}
-								}
-							}
-							else if (ranges[pos].first == anchor)
-							{
-								tabs[current_tab]->selectionManager.SelectRange(anchor, ranges[pos].last - 1);
-							}
-							else
-							{
-								if (anchor > 0)
-								{
-									if (ranges[pos].first - 1 >= 0)
-									{
-										tabs[current_tab]->selectionManager.SelectRange(anchor, ranges[pos].first - 1);
-									}
-								}
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
 							}
 						}
-
-					}
-				}
-			}
-			if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow))
-			{
-				if (!tabs[current_tab]->selected_path.empty())
-				{
-					int ind = findInd(tabs[current_tab]->selected_path);
-					tabs[current_tab]->selectionManager.SetAnchor(ind);
-					tabs[current_tab]->selected_path.clear();
-					tabs[current_tab]->selectionManager.AddSingleSelection(ind);
-					if (ind + 1 < tabs[current_tab]->entries.size())
-					{
-						tabs[current_tab]->selectionManager.AddSingleSelection(ind + 1);
-					}
-				}
-				else if (tabs[current_tab]->isSelecting)
-				{
-					int anchor = tabs[current_tab]->selectionManager.GetAnchor();
-					if (anchor == -1)
-					{
-						int newAnchor = tabs[current_tab]->selectionManager.GetFirstInd();
-						tabs[current_tab]->selectionManager.SetAnchor(newAnchor);
-						tabs[current_tab]->selectionManager.Clear();
-						tabs[current_tab]->selectionManager.AddSingleSelection(newAnchor);
-						if (newAnchor + 1 < tabs[current_tab]->entries.size())
+						else
 						{
-							tabs[current_tab]->selectionManager.AddSingleSelection(newAnchor + 1);
+							int first = tabs[current_tab]->selectionManager.GetFirstInd();
+							int target = click_accessible_index_largeTumbnails(first + columnsCount, 0, 1);
+							if (target != -1)
+							{
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
+							}
 						}
 					}
 					else
 					{
-						auto ranges = tabs[current_tab]->selectionManager.GetRanges();
-						int pos = tabs[current_tab]->selectionManager.Find(anchor);
-						if (pos != -1)
+						int target = click_accessible_index_largeTumbnails(0, 0, 1);
+						if (target != -1)
 						{
-							if (ranges[pos].first == anchor && ranges[pos].last == anchor)
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+				}
+				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_RightArrow)) 
+				{
+					int scrollTarget = -1;
+
+					if (!tabs[current_tab]->selected_path.empty())
+					{
+						int selectedInd = findInd(tabs[current_tab]->selected_path);
+						int target = click_accessible_index_largeTumbnails(selectedInd + 1, 1, 0);
+						if (target != -1)
+						{
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+					else if (tabs[current_tab]->isSelecting)
+					{
+						int anchor = tabs[current_tab]->selectionManager.GetAnchor();
+						if (anchor != -1)
+						{
+							int target = click_accessible_index_largeTumbnails(anchor + 1, 1, 0);
+							if (target != -1)
 							{
-								if (anchor < tabs[current_tab]->entries.size() - 1)
-								{
-									if (ranges[pos].last + 1 < tabs[current_tab]->entries.size())
-									{
-										tabs[current_tab]->selectionManager.SelectRange(anchor, ranges[pos].last + 1);
-									}
-								}
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
 							}
-							else if (ranges[pos].last == anchor)
+						}
+						else
+						{
+							int last = tabs[current_tab]->selectionManager.GetFirstInd();
+							int target = click_accessible_index_largeTumbnails(last + 1, 1, 0);
+							if (target != -1)
 							{
-								tabs[current_tab]->selectionManager.SelectRange(anchor, ranges[pos].first + 1);
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
 							}
-							else if (ranges[pos].first == anchor)
+						}
+					}
+					else
+					{
+						int target = click_accessible_index_largeTumbnails(0, 1, 0);
+						if (target != -1)
+						{
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+				}
+				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
+				{
+					int scrollTarget = -1;
+
+					if (!tabs[current_tab]->selected_path.empty())
+					{
+						int selectedInd = findInd(tabs[current_tab]->selected_path);
+						int target = click_accessible_index_largeTumbnails(selectedInd - 1, -1, 0);
+						if (target != -1)
+						{
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+					else if (tabs[current_tab]->isSelecting)
+					{
+						int anchor = tabs[current_tab]->selectionManager.GetAnchor();
+						if (anchor != -1)
+						{
+							int target = click_accessible_index_largeTumbnails(anchor - 1, -1, 0);
+							if (target != -1)
 							{
-								if (anchor < tabs[current_tab]->entries.size() - 1)
-								{
-									if (ranges[pos].last + 1 < tabs[current_tab]->entries.size())
-									{
-										tabs[current_tab]->selectionManager.SelectRange(anchor, ranges[pos].last + 1);
-									}
-								}
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
 							}
-							else 
+						}
+						else
+						{
+							int first = tabs[current_tab]->selectionManager.GetFirstInd();
+							int target = click_accessible_index_largeTumbnails(first - 1, -1, 0);
+							if (target != -1)
 							{
-								if (anchor < tabs[current_tab]->entries.size() - 1)
-								{
-									if (ranges[pos].last + 1 < tabs[current_tab]->entries.size())
-									{
-										tabs[current_tab]->selectionManager.SelectRange(anchor, ranges[pos].last + 1);
-									}
-								}
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
 							}
+						}
+					}
+					else
+					{
+						int target = click_accessible_index_largeTumbnails(0, -1, 0);
+						if (target != -1)
+						{
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+				}
+			}
+			else if (tabs[current_tab]->view_type == viewType::ROWS)
+			{
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow))
+				{
+					int scrollTarget = -1; int t = shiftNavigate(0, -1, 1); if (t != -1) scrollTarget = t; need_to_scroll(scrollTarget);
+				}
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow))
+				{
+					int scrollTarget = -1; int t = shiftNavigate(0, 1, 1); if (t != -1) scrollTarget = t; need_to_scroll(scrollTarget);
+				}
+				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow)) 
+				{
+					int scrollTarget = -1;
+
+					if (!tabs[current_tab]->selected_path.empty() && !tabs[current_tab]->isSelecting)
+					{
+						int ind = findInd(tabs[current_tab]->selected_path);
+						if (ind > 0 && ind < tabs[current_tab]->entries.size()) 
+						{
+							int target = find_accessible_index(ind - 1, -1);
+							if (target != -1)
+							{
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
+							}
+						}
+					}
+					else if (tabs[current_tab]->isSelecting)
+					{
+						int start = (tabs[current_tab]->selectionManager.Size() == 1) ? tabs[current_tab]->selectionManager.GetFirstInd() : 0;
+						int target = find_accessible_index((std::max)(start - (tabs[current_tab]->selectionManager.Size() == 1 ? 1 : 0), 0), -1);
+						if (target != -1)
+						{
+							tabs[current_tab]->selectionManager.Reset();
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+					else if (!tabs[current_tab]->entries.empty())
+					{
+						int target = find_accessible_index(0, 1);
+						if (target != -1)
+						{
+							tabs[current_tab]->selectionManager.Reset();
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
+						}
+					}
+
+					need_to_scroll(scrollTarget);
+				}
+				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow)) 
+				{
+					int scrollTarget = -1;
+
+					if (!tabs[current_tab]->selected_path.empty() && !tabs[current_tab]->isSelecting)
+					{
+						int ind = findInd(tabs[current_tab]->selected_path);
+						if (ind >= 0 && ind + 1 < static_cast<int>(tabs[current_tab]->entries.size()))
+						{
+							int target = find_accessible_index(ind + 1, 1);
+							if (target != -1)
+							{
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
+							}
+						}
+					}
+					else if (tabs[current_tab]->isSelecting) 
+					{
+						int start;
+						if (tabs[current_tab]->selectionManager.Size() == 1)
+						{
+							int lastInd = tabs[current_tab]->selectionManager.GetLastInd();
+							start = (lastInd + 1 < static_cast<int>(tabs[current_tab]->entries.size())) ? lastInd + 1 : lastInd;
+						}
+						else
+						{
+							start = 0;
 						}
 
-					}
-				}
-			}
-			if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow)) 
-			{
-				if (!tabs[current_tab]->selected_path.empty()) 
-				{
-					int ind = findInd(tabs[current_tab]->selected_path);
-					if (ind > 0 && ind < tabs[current_tab]->entries.size()) 
-					{
-						if (left_click(tabs[current_tab]->entries[ind - 1].entry))
+						if (!tabs[current_tab]->entries.empty())
 						{
-							tabs[current_tab]->selectionManager.SetAnchor(ind - 1);
+							int target = find_accessible_index(start, 1);
+							if (target != -1)
+							{
+								tabs[current_tab]->selectionManager.Reset();
+								tabs[current_tab]->selectionManager.SetAnchor(target);
+								scrollTarget = target;
+							}
 						}
 					}
-				}
-				else 
-				{
-					tabs[current_tab]->selectionManager.Reset();
-					if (left_click(tabs[current_tab]->entries[0].entry)) 
+					else if (!tabs[current_tab]->entries.empty())
 					{
-						tabs[current_tab]->selectionManager.SetAnchor(0);
-					}
-				}
-			}
-			if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow)) 
-			{
-				if (!tabs[current_tab]->selected_path.empty())
-				{
-					int ind = findInd(tabs[current_tab]->selected_path);
-					if (ind + 1 < tabs[current_tab]->entries.size() && ind >= 0)
-					{
-						if (left_click(tabs[current_tab]->entries[ind + 1].entry)) 
+						int target = find_accessible_index(0, 1);
+						if (target != -1)
 						{
-							tabs[current_tab]->selectionManager.SetAnchor(ind + 1);
+							tabs[current_tab]->selectionManager.Reset();
+							tabs[current_tab]->selectionManager.SetAnchor(target);
+							scrollTarget = target;
 						}
 					}
-				}
-				else
-				{
-					tabs[current_tab]->selectionManager.Reset();
-					if (left_click(tabs[current_tab]->entries[0].entry))
-					{
-						tabs[current_tab]->selectionManager.SetAnchor(0);
-					}
+					need_to_scroll(scrollTarget);
 				}
 			}
 			if (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_A, false))
@@ -3643,6 +3824,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 				tabs[current_tab]->selectionManager.SelectRange(0, static_cast<int>(tabs[current_tab]->entries.size() - 1));
 			}
 		}
+
 		ImGui::EndChild();
 	}
 }
@@ -3656,6 +3838,106 @@ int ForestView::find_accessible_index(int start, int direction)
 			return i;
 		call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 3.0);
 	}
+	return -1;
+}
+
+int ForestView::click_accessible_index_largeTumbnails(int start, int x, int y)
+{
+	auto& entries = tabs[current_tab]->entries;
+	// Going Up
+	if (x == 0 && y == -1) 
+	{
+		for (int i = start; i >= 0 && i < static_cast<int>(entries.size()); i -= columnsCount)
+		{
+			if (left_click(entries[i].entry))
+				return i;
+			call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 3.0);
+		}
+	}
+	// Going Down
+	else if (x == 0 && y == 1) 
+	{
+		for (int i = start; i >= 0 && i < static_cast<int>(entries.size()); i += columnsCount)
+		{
+			if (left_click(entries[i].entry))
+				return i;
+			call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 3.0);
+		}
+	}
+	// Going Left
+	else if (x == -1 && y == 0)
+	{
+		int calledFrom = start + 1;
+		int selectedColumn = (calledFrom % columnsCount) + 1;
+
+		for (int i = start; i >= 0 && i < static_cast<int>(entries.size()) && i >= calledFrom - (selectedColumn - 1) && i <= calledFrom + (columnsCount - selectedColumn); i -= 1)
+		{
+			if (left_click(entries[i].entry))
+				return i;
+			call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 3.0);
+		}
+	}
+	// Going Right
+	else if (x == 1 && y == 0)
+	{
+		int calledFrom = start - 1;
+		int selectedColumn = (calledFrom % columnsCount) + 1;
+
+		for (int i = start; i >= 0 && i < static_cast<int>(entries.size()) && i >= calledFrom - (selectedColumn - 1) && i <= calledFrom + (columnsCount - selectedColumn); i += 1)
+		{
+			if (left_click(entries[i].entry))
+				return i;
+			call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0f, 0.0f, 0.0f, 1.0f), 3.0);
+		}
+
+	}
+
+	return -1;
+}
+
+int ForestView::find_accessible_index_largeTumbnails(int start, int x, int y, const int factor)
+{
+	auto& entries = tabs[current_tab]->entries;
+	// Going Up
+	if (x == 0 && y == -1)
+	{
+		for (int i = start; i >= 0 && i < static_cast<int>(entries.size()); i -= factor)
+		{
+			return i;
+		}
+	}
+	// Going Down
+	else if (x == 0 && y == 1)
+	{
+		for (int i = start; i >= 0 && i < static_cast<int>(entries.size()); i += factor)
+		{
+			return i;
+		}
+	}
+	// Going Left
+	else if (x == -1 && y == 0)
+	{
+		int calledFrom = start + 1;
+		int selectedColumn = (calledFrom % columnsCount) + 1;
+
+		for (int i = start; i >= 0 && i < static_cast<int>(entries.size()) && i >= calledFrom - (selectedColumn - 1) && i <= calledFrom + (columnsCount - selectedColumn); i -= 1)
+		{
+			return i;
+		}
+	}
+	// Going Right
+	else if (x == 1 && y == 0)
+	{
+		int calledFrom = start - 1;
+		int selectedColumn = (calledFrom % columnsCount) + 1;
+
+		for (int i = start; i >= 0 && i < static_cast<int>(entries.size()) && i >= calledFrom - (selectedColumn - 1) && i <= calledFrom + (columnsCount - selectedColumn); i += 1)
+		{
+			return i;
+		}
+
+	}
+
 	return -1;
 }
 
@@ -3773,7 +4055,7 @@ void ForestView::render_entries()
 
 			ImGui::PopStyleColor(1);
 
-			handle_entries_mouse_click(tabs[current_tab]->entries[i].entry);
+			handle_entries_mouse_click(tabs[current_tab]->entries[i].entry, i);
 
 			float cursorPosX = ImGui::GetCursorPos().x;
 			float cursorPosY = ImGui::GetCursorPos().y;
@@ -4200,11 +4482,17 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 					{
 						tabs[current_tab]->selectionManager.Clear();
 					}
-					if (idx != -1) 
+					if (left_click(entry)) 
 					{
-						tabs[current_tab]->selectionManager.SetAnchor(idx);
+						if (idx != -1) 
+						{
+							tabs[current_tab]->selectionManager.SetAnchor(idx);
+						}
 					}
-					left_click(entry);
+					else 
+					{
+						call_timed_tooltip("You don't currently have permission to access this folder", ImVec4(1.0, 0.0, 0.0, 1.0), 3.0);
+					}
 				}
 			}
 		}
@@ -4317,17 +4605,27 @@ void ForestView::left_double_click(const fs::directory_entry& entry)
 			tabs[current_tab]->globalKeyWord = "";
 			tabs[current_tab]->recents.visit(entry);
 			tabs[current_tab]->fileExplorer->navigate_to(entry.path(), tabs[current_tab]->current_path);
+			tabs[current_tab]->selected_path.clear();	
 			tabs[current_tab]->entries_need_update = true;
-
 			tabs[current_tab]->current_path = entry.path();
 		}
 	}
 }
 
-bool ForestView::left_click(const fs::directory_entry& entry)
+bool ForestView::check_access(const fs::directory_entry& entry)
 {
 	AccessResult check = tabs[current_tab]->fileExplorer->check_access(entry.path());
-	if (check == AccessResult::ACCESS_DENIED || check == AccessResult::LOCKED_OR_IN_USE) 
+	if (check == AccessResult::ACCESS_DENIED || check == AccessResult::LOCKED_OR_IN_USE)
+	{
+		return false;
+	}
+	return true;
+}
+
+bool ForestView::left_click(const fs::directory_entry& entry)
+{
+	bool check = check_access(entry);
+	if (check == false) 
 	{
 		return false;
 	}
