@@ -191,6 +191,7 @@ protected:
 	ImFont* arabic_font = nullptr;
 
 	const ImVec4 unique_color = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
+	const ImVec4 unique_color_2 = ImVec4(1.000f, 0.624f, 0.000f, 1.000f);
 
 	void Shut_Down();
 public:
@@ -271,6 +272,11 @@ private:
 	ImVec4 m_msgColor = ImVec4(0.0, 0.0, 0.0, 1.0);
 	float m_numberOfSeconds = 2.0;
 
+	float actualWidth;
+	int columnsCount;
+
+	bool m_showSelectionCursor = false;
+	bool m_showSelectionAnchor = true;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)

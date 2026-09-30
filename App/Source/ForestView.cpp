@@ -477,6 +477,7 @@ void ForestView::on_update()
 		//	ImGui::EndTooltip();
 		//}
 
+		//ImGui::GetMousePos();
 
 		tab_bar();
 
@@ -2021,12 +2022,17 @@ void ForestView::view_settings()
 		ImGui::SameLine();
 		ImGui::Text("Light Mode");
 
-		/*if (ImGui::Selectable("Test Mode", false, ImGuiSelectableFlags_SpanAllColumns))
+		// Toggle Anchor 
+		if (ImGui::Selectable("Toggle Anchor"))
 		{
-			change_theme(Theme::TEST);
-			ImGui::CloseCurrentPopup();
-		}*/
+			m_showSelectionAnchor = !m_showSelectionAnchor;
+		}
 
+		// Toggle Cursor 
+		if (ImGui::Selectable("Toggle Cursor")) 
+		{
+			m_showSelectionCursor = !m_showSelectionCursor;
+		}
 		// icons size slider
 		if (!show_icons_slider)
 		{
@@ -3996,7 +4002,10 @@ void ForestView::render_entries()
 	if (tabs[current_tab]->view_type == LARGE_THUMBNAILS)
 	{
 		float avalWidth = ImGui::GetContentRegionAvail().x;
+		actualWidth = avalWidth;
 		int columnscount = (int)(avalWidth / (tabs[current_tab]->icons_width + tabs[current_tab]->padding));
+		columnsCount = columnscount;
+
 		if (columnscount < 1) columnscount = 1;
 		ImGui::Columns(columnscount, 0, false);
 
@@ -4051,8 +4060,35 @@ void ForestView::render_entries()
 				ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 			}
 
+
+			int pushedColors = 0;
+			int pushedVars = 0;
+			if (m_showSelectionCursor) 
+			{
+				bool is_cursor = tabs[current_tab]->selectionManager.IsCursor(i);
+				if (is_cursor) 
+				{
+					ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+					ImGui::PushStyleColor(ImGuiCol_Border, unique_color_2);
+					++pushedVars; ++pushedColors;
+				}
+			}
+			if (m_showSelectionAnchor) 
+			{
+				bool is_anchor = tabs[current_tab]->selectionManager.IsAnchor(i);
+				if (is_anchor) 
+				{
+					ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
+					ImGui::PushStyleColor(ImGuiCol_Border, unique_color);
+					++pushedVars; ++pushedColors;
+				}
+			}
+
 			ImGui::ImageButton(tabs[current_tab]->entries[i].name.c_str(), tabs[current_tab]->entries[i].textureId, ImVec2(tabs[current_tab]->icons_width, tabs[current_tab]->icons_height));
 
+			if (pushedColors) ImGui::PopStyleColor(pushedColors);
+			if (pushedVars)   ImGui::PopStyleVar(pushedVars);
+		
 			ImGui::PopStyleColor(1);
 
 			handle_entries_mouse_click(tabs[current_tab]->entries[i].entry, i);
@@ -4084,6 +4120,7 @@ void ForestView::render_entries()
 
 			ImGuiListClipper Clipper;
 			Clipper.Begin(tabs[current_tab]->entries.size());
+
 			if (m_isDraggingSelection)
 			{
 				const float tableTopContentY = ImGui::GetCursorScreenPos().y + ImGui::GetScrollY();
@@ -4141,6 +4178,10 @@ void ForestView::render_entries()
 			}
 			while (Clipper.Step()) 
 			{
+				tabs[current_tab]->m_minVisibleIndex = Clipper.DisplayStart;
+
+				tabs[current_tab]->m_maxVisibleIndex = Clipper.DisplayEnd;
+
 				for (size_t i = Clipper.DisplayStart; i < Clipper.DisplayEnd; ++i)
 				{
 					ImGui::TableNextRow();
@@ -4169,7 +4210,45 @@ void ForestView::render_entries()
 
 					ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.005f, 0.5f));
 
+					
 					ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, icon_height));
+					
+					if (m_showSelectionCursor) 
+					{
+						bool is_cursor = tabs[current_tab]->selectionManager.IsCursor(i);
+						if (is_cursor)
+						{
+							ImVec2 p_min = ImGui::GetItemRectMin();
+							ImVec2 p_max = ImGui::GetItemRectMax();
+
+							ImGui::GetWindowDrawList()->AddRect(
+								p_min,
+								p_max,
+								ImGui::ColorConvertFloat4ToU32(unique_color_2),
+								0.0f,
+								0,
+								1.0f
+							);
+						}
+					}
+					if (m_showSelectionAnchor)
+					{
+						bool is_anchor = tabs[current_tab]->selectionManager.IsAnchor(i);
+						if (is_anchor)
+						{
+							ImVec2 p_min = ImGui::GetItemRectMin();
+							ImVec2 p_max = ImGui::GetItemRectMax();
+
+							ImGui::GetWindowDrawList()->AddRect(
+								p_min,
+								p_max,
+								ImGui::ColorConvertFloat4ToU32(unique_color),
+								0.0f,
+								0,
+								1.0f
+							);
+						}
+					}
 					handle_entries_mouse_click(tabs[current_tab]->entries[i].entry, i);
 					// ========================================== Last Modified ================================================
 					ImGui::TableNextColumn();
@@ -4503,7 +4582,10 @@ void ForestView::render_debug_panel()
 {
 	if (ImGui::Begin("Debug Panel")) 
 	{
-	
+		ImGui::Text(std::format("Width of the table: {}, number of entries per row: {}", actualWidth, columnsCount).c_str());
+
+		ImGui::Text(std::format("m_minVisibleIndex: {}" ,std::to_string(tabs[current_tab]->m_minVisibleIndex)).c_str());
+		ImGui::Text(std::format("m_maxVisibleIndex: {}", std::to_string(tabs[current_tab]->m_maxVisibleIndex)).c_str());
 		auto u8 = tabs[current_tab]->current_path.u8string();
 		std::string current_path_string_to_show(u8.begin(), u8.end());
 
@@ -4569,6 +4651,11 @@ void ForestView::render_debug_panel()
 		ImGui::Text("shift Pressed Flag: "); ImGui::SameLine();
 		ImGui::Text(flag6.c_str());
 
+		std::string flag7 = (m_altPressed) ? "True" : "False";
+		ImGui::Text("alt Pressed Flag: "); ImGui::SameLine();
+		ImGui::Text(flag7.c_str());
+
+		ImGui::SeparatorText("Selected Entries");
 		for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
 		{
 			for (int i = range.first; i <= range.last; i++)
@@ -4576,6 +4663,14 @@ void ForestView::render_debug_panel()
 				const fs::path& path = tabs[current_tab]->entries[i].entry.path();
 				ImGui::Text(path.string().c_str());
 			}
+		}
+
+		ImGui::SeparatorText("Copied Path");
+		ImGui::Text(tabs[current_tab]->copied_path.string().c_str());
+		ImGui::SeparatorText("Copied Paths");
+		for (const auto& copy : tabs[current_tab]->copied_paths)
+		{
+			ImGui::Text(copy.string().c_str());
 		}
 		ImGui::Separator();
 	}
