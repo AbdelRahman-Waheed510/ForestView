@@ -4167,14 +4167,15 @@ void ForestView::render_entries()
 	else if (tabs[current_tab]->view_type == ROWS)
 	{
 		const float tableTopContentX = ImGui::GetCursorScreenPos().x;
-		if (ImGui::BeginTable("entries", 4, ImGuiTableFlags_Resizable, ImVec2(1000.0f, 0.0f)))
+		const float tableWidth = 1000.0f;
+		if (ImGui::BeginTable("entries", 4, ImGuiTableFlags_Resizable, ImVec2(tableWidth, 0.0f)))
 		{
 			ImGui::TableSetupColumn("Name");
 			ImGui::TableSetupColumn("Last Modified");
 			ImGui::TableSetupColumn("Type");
 			ImGui::TableSetupColumn("Size");
 			ImGui::TableHeadersRow();
-
+			tabs[current_tab]->entriesContentStartY = ImGui::GetCursorPosY();
 
 			ImGuiListClipper Clipper;
 			Clipper.Begin(tabs[current_tab]->entries.size());
@@ -4266,43 +4267,9 @@ void ForestView::render_entries()
 
 					
 					ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, icon_height));
-					
-					if (m_showSelectionCursor) 
-					{
-						bool is_cursor = tabs[current_tab]->selectionManager.IsCursor(i);
-						if (is_cursor)
-						{
-							ImVec2 p_min = ImGui::GetItemRectMin();
-							ImVec2 p_max = ImGui::GetItemRectMax();
-
-							ImGui::GetWindowDrawList()->AddRect(
-								p_min,
-								p_max,
-								ImGui::ColorConvertFloat4ToU32(unique_color_2),
-								0.0f,
-								0,
-								1.0f
-							);
-						}
-					}
-					if (m_showSelectionAnchor)
-					{
-						bool is_anchor = tabs[current_tab]->selectionManager.IsAnchor(i);
-						if (is_anchor)
-						{
-							ImVec2 p_min = ImGui::GetItemRectMin();
-							ImVec2 p_max = ImGui::GetItemRectMax();
-
-							ImGui::GetWindowDrawList()->AddRect(
-								p_min,
-								p_max,
-								ImGui::ColorConvertFloat4ToU32(unique_color),
-								0.0f,
-								0,
-								1.0f
-							);
-						}
-					}
+					ImVec2 p_min = ImGui::GetItemRectMin();
+					ImVec2 p_max = ImGui::GetItemRectMax();
+			
 					handle_entries_mouse_click(tabs[current_tab]->entries[i].entry, i);
 					// ========================================== Last Modified ================================================
 					ImGui::TableNextColumn();
@@ -4333,6 +4300,38 @@ void ForestView::render_entries()
 					}
 					ImGui::PopStyleVar(1);
 
+
+					// Drawing the anchor and the Cursor
+					if (m_showSelectionCursor)
+					{
+						bool is_cursor = tabs[current_tab]->selectionManager.IsCursor(i);
+						if (is_cursor)
+						{
+							ImGui::GetWindowDrawList()->AddRect(
+								p_min,
+								p_max,
+								ImGui::ColorConvertFloat4ToU32(unique_color_2),
+								0.0f,
+								0,
+								1.0f
+							);
+						}
+					}
+					if (m_showSelectionAnchor)
+					{
+						bool is_anchor = tabs[current_tab]->selectionManager.IsAnchor(i);
+						if (is_anchor)
+						{
+							ImGui::GetWindowDrawList()->AddRect(
+								p_min,
+								p_max,
+								ImGui::ColorConvertFloat4ToU32(unique_color),
+								0.0f,
+								0,
+								1.0f
+							);
+						}
+					}
 #ifdef _DEBUG
 					ImGui::SameLine();
 					ImGui::Text(std::format("  [ {} ]", std::to_string(tabs[current_tab]->entries[i].id)).c_str());
@@ -4603,7 +4602,22 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 				}
 				else 
 				{
-					if (idx != -1) tabs[current_tab]->selectionManager.SelectAnchoredRange(idx);
+					if (idx != -1)
+					{
+						if (tabs[current_tab]->selectionManager.GetAnchor() < 0) 
+						{
+							tabs[current_tab]->selectionManager.SetAnchor(tabs[current_tab]->selectionManager.GetFirstInd());
+							tabs[current_tab]->selectionManager.SetCursor(idx);
+							tabs[current_tab]->selectionManager.SelectAnchoredRange(idx);
+							tabs[current_tab]->selected_path.clear();
+						}
+						else 
+						{
+							tabs[current_tab]->selectionManager.SetCursor(idx);
+							tabs[current_tab]->selectionManager.SelectAnchoredRange(idx);
+							tabs[current_tab]->selected_path.clear();
+						}
+					}
 				}
 			}
 			else
