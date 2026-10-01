@@ -3511,10 +3511,34 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 
 			if (tabs[current_tab]->view_type == viewType::LARGE_THUMBNAILS) 
 			{
-				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow)) { int scrollTarget = -1; int t = shiftNavigate(0, -1, columnsCount); if (t != -1) scrollTarget = t; }
-				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow)) { int scrollTarget = -1;int t = shiftNavigate(0, 1, columnsCount); if (t != -1) scrollTarget = t; }
-				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_RightArrow)) { int scrollTarget = -1;int t = shiftNavigate(1, 0, columnsCount); if (t != -1) scrollTarget = t; }
-				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) { int scrollTarget = -1;int t = shiftNavigate(-1, 0, columnsCount); if (t != -1) scrollTarget = t; }
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow)) 
+				{
+					int scrollTarget = -1;
+					int t = shiftNavigate(0, -1, columnsCount); 
+					if (t != -1) scrollTarget = t;
+					need_to_scroll(scrollTarget);
+				}
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow)) 
+				{ 
+					int scrollTarget = -1;
+					int t = shiftNavigate(0, 1, columnsCount);
+					if (t != -1) scrollTarget = t;
+					need_to_scroll(scrollTarget);
+				}
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_RightArrow))
+				{ 
+					int scrollTarget = -1;
+					int t = shiftNavigate(1, 0, columnsCount);
+					if (t != -1) scrollTarget = t;
+					need_to_scroll(scrollTarget);
+				}
+				if (m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) 
+				{ 
+					int scrollTarget = -1;
+					int t = shiftNavigate(-1, 0, columnsCount); 
+					if (t != -1) scrollTarget = t;
+					need_to_scroll(scrollTarget);
+				}
 
 				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_UpArrow))
 				{
@@ -3569,6 +3593,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 							}
 						}							
 					}
+
+					need_to_scroll(scrollTarget);
 				}
 				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_DownArrow))
 				{
@@ -3618,6 +3644,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 							scrollTarget = target;
 						}
 					}
+
+					need_to_scroll(scrollTarget);
 				}
 				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_RightArrow)) 
 				{
@@ -3667,6 +3695,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 							scrollTarget = target;
 						}
 					}
+				
+					need_to_scroll(scrollTarget);
 				}
 				if (!m_shiftPressed && ImGui::IsKeyPressed(ImGuiKey_LeftArrow))
 				{
@@ -3716,6 +3746,8 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 							scrollTarget = target;
 						}
 					}
+				
+					need_to_scroll(scrollTarget);
 				}
 			}
 			else if (tabs[current_tab]->view_type == viewType::ROWS)
