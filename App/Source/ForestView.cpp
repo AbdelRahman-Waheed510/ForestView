@@ -3981,26 +3981,43 @@ int ForestView::find_accessible_index_largeTumbnails(int start, int x, int y, co
 
 void ForestView::need_to_scroll(int selectedIndex)
 {
-	if (selectedIndex == -1)
-		return;
+	if (selectedIndex == -1) return;
 
 	auto& tab = *tabs[current_tab];
-	const float rowHeight = tab.icons_height + ImGui::GetStyle().CellPadding.y * 2.0f;
 
-	if (selectedIndex == 0)
+	const float scrollY = ImGui::GetScrollY();
+	const float visibleHeight = ImGui::GetWindowHeight();
+
+	float rowHeight;
+	int   rowIndex;
+
+	if (tab.view_type == LARGE_THUMBNAILS)
 	{
+		const int itemsPerRow = (std::max)(columnsCount, 1);
+
+		rowHeight = (tab.measuredRowHeight > 0.0f)
+			? tab.measuredRowHeight
+			: (tab.icons_height + ImGui::GetTextLineHeightWithSpacing()); // fallback if <1 full row exists yet
+
+		rowIndex = selectedIndex / itemsPerRow;
+	}
+	else // ROWS
+	{
+		rowHeight = tab.icons_height + ImGui::GetStyle().CellPadding.y * 2.0f;
+		rowIndex = selectedIndex;
+	}
+
+	if (rowHeight <= 0.0f) return;
+
+	const float targetTop = tab.entriesContentStartY + rowIndex * rowHeight;
+	const float targetBottom = targetTop + rowHeight;
+
+	if (rowIndex == 0)
 		ImGui::SetScrollY(0.0f);
-	}
-	else if (selectedIndex < tab.m_minVisibleIndex)
-	{
-		const float scrollY = ImGui::GetScrollY();
-		ImGui::SetScrollY(scrollY - (tab.m_minVisibleIndex - selectedIndex) * rowHeight);
-	}
-	else if (selectedIndex >= tab.m_maxVisibleIndex)
-	{
-		const float scrollY = ImGui::GetScrollY();
-		ImGui::SetScrollY(scrollY + (selectedIndex + 1 - tab.m_maxVisibleIndex) * rowHeight);
-	}
+	else if (targetTop < scrollY)
+		ImGui::SetScrollY(targetTop);
+	else if (targetBottom > scrollY + visibleHeight)
+		ImGui::SetScrollY(targetBottom - visibleHeight);
 }
 
 void ForestView::render_entries()
