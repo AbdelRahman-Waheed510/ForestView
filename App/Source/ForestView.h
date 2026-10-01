@@ -127,11 +127,8 @@ struct State
 	std::vector<SelectionRange> selectedEntriesSnapShot;
 	bool isSelecting = false;
 
-	int lastPress = -1;
-	int m_minVisibleIndex = 0;
-	int m_maxVisibleIndex = 0;
-	bool m_needToScroll = false;
-
+	float entriesContentStartY = 0.0f;
+	float measuredRowHeight = 0.0f;
 	State() 
 	{
 		tabID = id;

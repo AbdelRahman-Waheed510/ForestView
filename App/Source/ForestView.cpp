@@ -4004,13 +4004,19 @@ void ForestView::render_entries()
 		float avalWidth = ImGui::GetContentRegionAvail().x;
 		actualWidth = avalWidth;
 		int columnscount = (int)(avalWidth / (tabs[current_tab]->icons_width + tabs[current_tab]->padding));
+		if (columnscount < 1) columnscount = 1;
 		columnsCount = columnscount;
 
-		if (columnscount < 1) columnscount = 1;
 		ImGui::Columns(columnscount, 0, false);
+
+		tabs[current_tab]->entriesContentStartY = ImGui::GetCursorPosY();
+
+		float firstRowY = -1.0f, secondRowY = -1.0f;
 
 		for (size_t i = 0; i < tabs[current_tab]->entries.size(); ++i)
 		{
+			if (static_cast<int>(i) == 0) firstRowY = ImGui::GetCursorPosY();
+			if (static_cast<int>(i) == columnscount) secondRowY = ImGui::GetCursorPosY();
 			ImGui::PushID(i);
 
 			bool overlaps = false;
@@ -4102,7 +4108,10 @@ void ForestView::render_entries()
 
 			ImGui::PopID();
 		}
-
+		if (firstRowY >= 0.0f && secondRowY >= 0.0f)
+		{
+			tabs[current_tab]->measuredRowHeight = secondRowY - firstRowY;
+		}
 		ImGui::Columns(1);
 	}
 
@@ -4178,10 +4187,6 @@ void ForestView::render_entries()
 			}
 			while (Clipper.Step()) 
 			{
-				tabs[current_tab]->m_minVisibleIndex = Clipper.DisplayStart;
-
-				tabs[current_tab]->m_maxVisibleIndex = Clipper.DisplayEnd;
-
 				for (size_t i = Clipper.DisplayStart; i < Clipper.DisplayEnd; ++i)
 				{
 					ImGui::TableNextRow();
@@ -4584,8 +4589,6 @@ void ForestView::render_debug_panel()
 	{
 		ImGui::Text(std::format("Width of the table: {}, number of entries per row: {}", actualWidth, columnsCount).c_str());
 
-		ImGui::Text(std::format("m_minVisibleIndex: {}" ,std::to_string(tabs[current_tab]->m_minVisibleIndex)).c_str());
-		ImGui::Text(std::format("m_maxVisibleIndex: {}", std::to_string(tabs[current_tab]->m_maxVisibleIndex)).c_str());
 		auto u8 = tabs[current_tab]->current_path.u8string();
 		std::string current_path_string_to_show(u8.begin(), u8.end());
 
