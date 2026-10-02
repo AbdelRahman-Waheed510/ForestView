@@ -3,45 +3,50 @@
 #include "FileExplorer.h"
 
 
-std::string Utils::generate_new_folder_name(const fs::path& path, const std::string& name, const NewType& type)
 inline fs::path Utils::utf8_to_path(const std::string& s)
 {
-    int count = 1;
-    if (!fs::exists(path / name)) return name;
 	return fs::path(std::u8string(s.begin(), s.end()));
 }
 
-    if (type == NewType::FOLDER)
-    {
-        std::string res_name = name;
-        while (fs::exists(path / fs::path(res_name)))
-        {
-            res_name = name + " (" + std::to_string(count) + ")";
-            count++;
-        }
-        return res_name;
-    }
-    else if (type == NewType::REG_FILE)
-    {
-        fs::path file_path(name);
-        std::string stem = file_path.stem().string();
-        std::string extension = file_path.extension().string();
 inline std::string Utils::path_to_utf8(const fs::path& p)
 {
 	auto s = p.u8string();
 	return std::string(s.begin(), s.end());
 }
 
-        std::string res_name = std::format("{} ({}){}", stem, count++, extension);
-        while (fs::exists(path / fs::path(res_name)))
-        {
-            res_name = std::format("{} ({}){}", stem, count, extension);
-            count++;
-        }
-        return res_name;
-    }
-    return name;
+std::string Utils::generate_new_folder_name(const fs::path& dir, const std::string& name, const NewType& type)
+{
+	std::error_code ec;
+	if (!fs::exists(dir / utf8_to_path(name), ec)) return name;
+
+	std::string stem = name;
+	std::string ext;
+
+	if (type == NewType::REG_FILE)
+	{
+		const fs::path namePath = utf8_to_path(name);
+		stem = path_to_utf8(namePath.stem());
+		ext = path_to_utf8(namePath.extension());
+	}
+
+	for (int count = 1;; ++count)
+	{
+		std::string candidate = std::format("{} ({}){}", stem, count, ext);
+		if (!fs::exists(dir / utf8_to_path(candidate), ec))
+			return candidate;
+	}
 }
+std::string Utils::to_lower(std::string str)
+{
+    {
+        for (char& x : str)
+        {
+            x = std::tolower(x);
+        }
+        return str;
+    }
+}
+
 std::string Utils::reform_string(const std::string& str, const int& count)
 {
     if (count > str.size()) return str;

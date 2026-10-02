@@ -716,46 +716,49 @@ public:
 
 	RenameReturn rename_file(fs::path& to_rename, fs::path new_name)
 	{
-		if (new_name.empty()) return { RenameReturn("",false) };
+		if (new_name.empty()) return RenameReturn("", false);
 
-		if (fs::is_regular_file(to_rename)) 
+		std::error_code ec;
+
+		if (fs::is_regular_file(to_rename, ec))
 		{
 			if (new_name.has_extension())
 			{
 				if (new_name.extension() != to_rename.extension())
-				{
-					return { RenameReturn("",false) };
-				}
+					return RenameReturn("", false);
 			}
-			else 
+			else
 			{
 				new_name.replace_extension(to_rename.extension());
 			}
 		}
-		fs::path delted_path = to_rename;
-		delted_path.remove_filename();
-		
-		if (fs::is_directory(delted_path / new_name))
+
+		const fs::path parent = to_rename.parent_path();
+		const fs::path target = parent / new_name;
+
+		// Renaming to the exact same path is a no-op (also avoids creating "name (1)")
+		if (target == to_rename) return RenameReturn(to_rename, true);
+
+		if (fs::is_directory(target, ec))
 		{
-			new_name = Utils::generate_new_folder_name(to_rename.parent_path(), new_name.filename().string(), NewType::FOLDER);
+			new_name = Utils::utf8_to_path(Utils::generate_new_folder_name(
+				parent, Utils::path_to_utf8(new_name.filename()), NewType::FOLDER));
 		}
-		else if (fs::is_regular_file(delted_path / new_name))
+		else if (fs::is_regular_file(target, ec))
 		{
-			new_name = Utils::generate_new_folder_name(to_rename.parent_path(), new_name.filename().string(), NewType::REG_FILE);
+			new_name = Utils::utf8_to_path(Utils::generate_new_folder_name(
+				parent, Utils::path_to_utf8(new_name.filename()), NewType::REG_FILE));
 		}
 
-		fs::path newPath = delted_path / new_name;
-
-		std::error_code ec;
+		fs::path newPath = parent / new_name;
 
 		fs::rename(to_rename, newPath, ec);
-
-		if (ec) 
+		if (ec)
 		{
-			std::cerr << "Error when renaming the file " << to_rename.filename().string() << std::endl;
-			return { RenameReturn("",false) };
+			std::cerr << "Error when renaming: " << ec.message() << std::endl;
+			return RenameReturn("", false);
 		}
-		return { RenameReturn(newPath,true) };
+		return RenameReturn(newPath, true);
 	}
 
 	void back(fs::path& current_path) 
@@ -842,8 +845,11 @@ public:
 		// If the copied directory is a folder 
 		if (fs::is_directory(source))
 		{
-			name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), NewType::FOLDER);
-			dest = destination / name_of_the_folder;
+			auto u8_str1 = source.filename().u8string();
+			std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+
+			name_of_the_folder = Utils::generate_new_folder_name(destination, utf8_path1, NewType::FOLDER);
+			dest = destination / Utils::utf8_to_path(name_of_the_folder);
 			std::error_code ec_longPath;
 
 			fs::create_directories(dest, ec_longPath);
@@ -889,8 +895,11 @@ public:
 		// If the copied directory is a regular file so it does not need the access to the for loop
 		else if (fs::is_regular_file(source))
 		{
-			name_of_the_folder = Utils::generate_new_folder_name(destination, source.filename().string(), NewType::REG_FILE);
-			dest = destination / name_of_the_folder;
+			auto u8_str1 = source.filename().u8string();
+			std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+
+			name_of_the_folder = Utils::generate_new_folder_name(destination, utf8_path1, NewType::REG_FILE);
+			dest = destination / Utils::utf8_to_path(name_of_the_folder);
 
 			copy_in_chuncks(source, dest, Sizeprogress, filesCountProgress, cancel_request);
 		}
