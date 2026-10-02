@@ -661,7 +661,7 @@ void ForestView::on_update()
 						case TaskType::_DELETE: 
 						{
 							ImGui::SeparatorText("Delete Task");
-							ImGui::Text(std::format("Delete: {}", task->source.string()).c_str());
+							ImGui::Text(std::format("Delete: {}", task->sourceName).c_str());
 							break;
 						}
 						case TaskType::FIND_EMPTY_DIRECTORIES:
@@ -1900,8 +1900,15 @@ void ForestView::paste_helper()
 			copyTask->totalfilesCount = data.filesCount;
 			copyTask->source = src;
 			copyTask->destination = dest;
-			copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
-			copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
+
+			auto u8_str1 = src.filename().u8string();
+			std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+
+			auto u8_str2 = dest.filename().u8string();
+			std::string utf8_path2(u8_str2.begin(), u8_str2.end());
+
+			copyTask->sourceName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path1), 25);
+			copyTask->destinationName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path2), 25);
 
 			m_queuedTasks.emplace_back(std::move(copyTask));
 		}
@@ -1919,8 +1926,15 @@ void ForestView::paste_helper()
 		copyTask->totalfilesCount = data.filesCount;
 		copyTask->source = src;
 		copyTask->destination = dest;
-		copyTask->sourceName = Utils::reform_string(src.filename().string(), 10);
-		copyTask->destinationName = Utils::reform_string(dest.filename().string(), 10);
+
+		auto u8_str1 = src.filename().u8string();
+		std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+
+		auto u8_str2 = dest.filename().u8string();
+		std::string utf8_path2(u8_str2.begin(), u8_str2.end());
+
+		copyTask->sourceName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path1), 25);
+		copyTask->destinationName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path2), 25);
 
 		m_queuedTasks.emplace_back(std::move(copyTask));
 
@@ -2407,7 +2421,11 @@ void ForestView::delete_warning()
 						const fs::path& path = tabs[current_tab]->entries[i].entry.path();
 						std::unique_ptr<Task> deleteTask = std::make_unique<Task>(TaskType::_DELETE);
 						deleteTask->source = path;
-						deleteTask->sourceName = Utils::reform_string(path.filename().string(), 10);
+
+						auto u8_str1 = path.filename().u8string();
+						std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+
+						deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path1), 25);
 
 						m_queuedTasks.emplace_back(std::move(deleteTask));
 					}
@@ -2419,7 +2437,11 @@ void ForestView::delete_warning()
 
 				std::unique_ptr<Task> deleteTask = std::make_unique<Task>(TaskType::_DELETE);
 				deleteTask->source = tabs[current_tab]->deleted_path;
-				deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->deleted_path.filename().string(), 10);
+
+				auto u8_str1 = tabs[current_tab]->deleted_path.filename().u8string();
+				std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+
+				deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path1), 25);
 
 				m_queuedTasks.emplace_back(std::move(deleteTask));
 			}
@@ -2795,7 +2817,10 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 
 				if (ImGui::IsWindowAppearing())
 				{
-					newName = FolderEntry.path().filename().string();
+					auto u8_str = FolderEntry.path().filename().u8string();
+					std::string utf8_path(u8_str.begin(), u8_str.end());
+
+					newName = tabs[current_tab]->fileExplorer->to_display_sring(utf8_path);
 					ImGui::SetKeyboardFocusHere();
 				}
 
@@ -2812,7 +2837,8 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 					}
 					else 
 					{
-						RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, newName);
+						
+						RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, fs::path(std::u8string(newName.begin(), newName.end())));
 						if (rename.success)
 						{
 							if (is_searching_for_empty_folders && fs::is_directory(rename.finalPath))
@@ -2881,8 +2907,10 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 		if (ImGui::Selectable("Copy Path"))
 		{
 			tabs[current_tab]->show_rename_file = false;
-			ImGui::SetClipboardText(tabs[current_tab]->selected_path.string().c_str());
+			auto u8_str = tabs[current_tab]->selected_path.u8string();
+			std::string utf8_path(u8_str.begin(), u8_str.end());
 
+			ImGui::SetClipboardText(utf8_path.c_str());
 
 			tabs[current_tab]->selected_path = "";
 			ImGui::CloseCurrentPopup();
@@ -2959,7 +2987,10 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 
 				if (ImGui::IsWindowAppearing()) 
 				{
-					newName = FileEntry.path().filename().string();
+					auto u8_str = FileEntry.path().filename().u8string();
+					std::string utf8_path(u8_str.begin(), u8_str.end());
+
+					newName = tabs[current_tab]->fileExplorer->to_display_sring(utf8_path);
 					ImGui::SetKeyboardFocusHere();
 				}
 
@@ -2977,7 +3008,7 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 					}
 					else 
 					{
-						RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, newName);
+						RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, fs::path(std::u8string(newName.begin(), newName.end())));
 						if (rename.success)
 						{
 							if (is_searching_for_duplicates_files)
@@ -4061,6 +4092,25 @@ void ForestView::render_entries()
 
 	if (tabs[current_tab]->view_type == LARGE_THUMBNAILS)
 	{
+		auto truncate_to_width = [](const std::string& text, float maxWidth) -> std::string
+			{
+				if (ImGui::CalcTextSize(text.c_str()).x <= maxWidth)
+					return text;
+
+				const std::string ellipsis = "...";
+				const float ellipsisWidth = ImGui::CalcTextSize(ellipsis.c_str()).x;
+
+				std::string result;
+				for (size_t i = 0; i < text.size(); ++i)
+				{
+					std::string candidate = text.substr(0, i + 1);
+					if (ImGui::CalcTextSize(candidate.c_str()).x + ellipsisWidth > maxWidth)
+						break;
+					result = candidate;
+				}
+				return result + ellipsis;
+			};
+
 		float avalWidth = ImGui::GetContentRegionAvail().x;
 		actualWidth = avalWidth;
 		int columnscount = (int)(avalWidth / (tabs[current_tab]->icons_width + tabs[current_tab]->padding));
@@ -4162,7 +4212,14 @@ void ForestView::render_entries()
 			float cursorPosX = ImGui::GetCursorPos().x;
 			float cursorPosY = ImGui::GetCursorPos().y;
 			ImGui::SetCursorPos(ImVec2(cursorPosX + folder_icons_horizontel_indent, cursorPosY));
-			ImGui::TextWrapped(tabs[current_tab]->entries[i].name.c_str());
+
+			const float availTextWidth = tabs[current_tab]->icons_width;
+			std::string displayName = truncate_to_width(tabs[current_tab]->entries[i].name, availTextWidth);
+			ImGui::Text(displayName.c_str());
+			if (displayName != tabs[current_tab]->entries[i].name && ImGui::IsItemHovered())
+			{
+				ImGui::SetTooltip(tabs[current_tab]->entries[i].name.c_str());
+			}
 
 			ImGui::NextColumn();
 
