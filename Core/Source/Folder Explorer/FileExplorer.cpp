@@ -4,9 +4,12 @@
 
 
 std::string Utils::generate_new_folder_name(const fs::path& path, const std::string& name, const NewType& type)
+inline fs::path Utils::utf8_to_path(const std::string& s)
 {
     int count = 1;
     if (!fs::exists(path / name)) return name;
+	return fs::path(std::u8string(s.begin(), s.end()));
+}
 
     if (type == NewType::FOLDER)
     {
@@ -23,6 +26,11 @@ std::string Utils::generate_new_folder_name(const fs::path& path, const std::str
         fs::path file_path(name);
         std::string stem = file_path.stem().string();
         std::string extension = file_path.extension().string();
+inline std::string Utils::path_to_utf8(const fs::path& p)
+{
+	auto s = p.u8string();
+	return std::string(s.begin(), s.end());
+}
 
         std::string res_name = std::format("{} ({}){}", stem, count++, extension);
         while (fs::exists(path / fs::path(res_name)))

@@ -39,8 +39,8 @@ void App::initialize_ImGui()
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.BackendRendererName = "Task++";
-	default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 16.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
 	arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 24.0f, nullptr);
+	default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 16.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
 
 	switch (m_activeTheme)
 	{
@@ -3060,8 +3060,11 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 		if (ImGui::Selectable("Copy Path##Duplicate"))
 		{
 			tabs[current_tab]->show_rename_file = false;
-			ImGui::SetClipboardText(tabs[current_tab]->selected_path.string().c_str());
 
+			auto u8_str = tabs[current_tab]->selected_path.u8string();
+			std::string utf8_path(u8_str.begin(), u8_str.end());
+
+			ImGui::SetClipboardText(utf8_path.c_str());
 
 			tabs[current_tab]->selected_path = "";
 			ImGui::CloseCurrentPopup();
@@ -3181,8 +3184,11 @@ void ForestView::folders_tree(const float& remainingHeight)
 				{
 					ImGui::PushID(favorite_item.path().c_str());
 
-					auto u8_str = (favorite_item.path() == favorite_item.path().root_path()) ? favorite_item.path().u8string() : favorite_item.path().filename().u8string();
-					std::string favorite_to_show(u8_str.begin(), u8_str.end());
+
+
+					const auto u8_str = (favorite_item.path() == favorite_item.path().root_path()) ? favorite_item.path().u8string() : favorite_item.path().filename().u8string();
+					const std::string utf8_path(u8_str.begin(), u8_str.end());
+					std::string favorite_to_show = tabs[current_tab]->fileExplorer->to_display_sring(utf8_path);
 
 					if (ImGui::Selectable(favorite_to_show.c_str()))
 					{
@@ -3231,8 +3237,10 @@ void ForestView::folders_tree(const float& remainingHeight)
 				{
 					ImGui::PushID(recent_item.path().c_str());
 
-					auto u8_str = (recent_item.path() == recent_item.path().root_path()) ? recent_item.path().u8string() : recent_item.path().filename().u8string();
-					std::string recent_to_show(u8_str.begin(), u8_str.end());
+					const auto u8_str = (recent_item.path() == recent_item.path().root_path()) ? recent_item.path().u8string() : recent_item.path().filename().u8string();
+					const std::string utf8_path(u8_str.begin(), u8_str.end());
+
+					std::string recent_to_show = tabs[current_tab]->fileExplorer->to_display_sring(utf8_path);
 
 					ImGui::Selectable(recent_to_show.c_str());
 
@@ -3282,7 +3290,8 @@ void ForestView::draw_tree(Node* node_to_show)
 	else
 	{
 		auto u8 = (node_to_show->path == node_to_show->path.root_path()) ? node_to_show->path.u8string() : node_to_show->path.filename().u8string();
-		node_to_show_path_string_to_show.assign(u8.begin(), u8.end());
+		std::string utf8_path(u8.begin(), u8.end());
+		node_to_show_path_string_to_show.assign(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path));
 	}
 
 
@@ -3348,7 +3357,9 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			tabs[current_tab]->fileExplorer->refresh(tabs[current_tab]->current_path);
 			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
 			auto u8_str = (tabs[current_tab]->current_path == tabs[current_tab]->current_path.root_path()) ? tabs[current_tab]->current_path.u8string() : tabs[current_tab]->current_path.filename().u8string();
-			tabs[current_tab]->utf8_search_bar_hint.assign(u8_str.begin(), u8_str.end());
+			std::string utf8_path(u8_str.begin(), u8_str.end());
+
+			tabs[current_tab]->utf8_search_bar_hint.assign(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path));
 			if (tabs[current_tab]->utf8_search_bar_hint.empty()) tabs[current_tab]->utf8_search_bar_hint = "This PC";
 			tabs[current_tab]->entries_need_update = false;
 		}

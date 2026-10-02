@@ -2,6 +2,7 @@
 #include "tree.h"
 #include "Texture.h"
 #include "SHA256.h"
+#include <fribidi/fribidi.h>
 
 namespace fs = std::filesystem;
 
@@ -150,6 +151,9 @@ namespace Utils
 	
 	const std::string file_type_to_string(const fs::file_type& type);
 
+	inline fs::path utf8_to_path(const std::string& s);
+
+	inline std::string path_to_utf8(const fs::path& p);
 };
 
 struct RenameReturn 
@@ -504,6 +508,38 @@ public:
 		return;
 	}
 
+	std::string to_display_sring(const std::string& utf8)
+	{
+		if (utf8.empty()) return utf8;
+
+		std::vector<FriBidiChar> str(utf8.size() + 1);
+		FriBidiStrIndex len = fribidi_charset_to_unicode(
+			FRIBIDI_CHAR_SET_UTF8, utf8.c_str(), (FriBidiStrIndex)utf8.size(), str.data());
+
+		std::vector<FriBidiCharType>    types(len);
+		std::vector<FriBidiBracketType> brackets(len);
+		std::vector<FriBidiLevel>       levels(len);
+		std::vector<FriBidiArabicProp>  props(len);
+
+		fribidi_get_bidi_types(str.data(), len, types.data());
+		fribidi_get_bracket_types(str.data(), len, types.data(), brackets.data());
+
+		FriBidiParType base = FRIBIDI_PAR_ON;   // auto-detect direction
+		fribidi_get_par_embedding_levels_ex(types.data(), brackets.data(), len, &base, levels.data());
+
+		fribidi_get_joining_types(str.data(), len, props.data());
+		fribidi_join_arabic(types.data(), len, levels.data(), props.data());
+
+		const FriBidiFlags flags = FRIBIDI_FLAGS_DEFAULT | FRIBIDI_FLAGS_ARABIC;
+		fribidi_shape(flags, levels.data(), len, props.data(), str.data());
+		fribidi_reorder_line(flags, types.data(), len, 0, base, levels.data(), str.data(), nullptr);
+
+		std::string out(len * 4 + 1, '\0');
+		int n = fribidi_unicode_to_charset(FRIBIDI_CHAR_SET_UTF8, str.data(), len, out.data());
+		out.resize(n);
+		return out;
+	}
+
 	Entry setup_entry(const fs::directory_entry& entry) 
 	{
 		Entry e;
@@ -512,7 +548,7 @@ public:
 		e.id = ID++;
 		auto u8_str = (entry.path() == entry.path().root_path()) ? entry.path().u8string() : entry.path().filename().u8string();
 		std::string utf8_path(u8_str.begin(), u8_str.end());
-		e.name = utf8_path;
+		e.name = to_display_sring(utf8_path);
 		return e;
 	}
 
@@ -1000,15 +1036,21 @@ public:
 	std::string form_breadcrumb_navigation_string(const fs::path& path_to_format) 
 	{
 		std::string result = "";
-	
+
 		for (const auto& part : path_to_format) 
 		{
 			if (result.empty()) 
 			{
-				result += part.string();
+				auto u8_str = part.u8string();
+				std::string utf8_path(u8_str.begin(), u8_str.end());
+
+				result += to_display_sring(utf8_path);
 				continue;
 			}
-			result += part.string();
+			auto u8_str = part.u8string();
+			std::string utf8_path(u8_str.begin(), u8_str.end());
+
+			result += to_display_sring(utf8_path);
 			result += " > ";
 		}
 		if ((int)result.size() > 50) 
