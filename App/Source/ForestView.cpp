@@ -4662,8 +4662,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 				}
 				else // if i double click on a file that is in the current path (current directory)
 				{
-					std::wstring parameters = L"/c start \"\" \"" + entry.path().wstring() + L"\"";
-					HINSTANCE result = ShellExecuteW(nullptr, L"open", L"cmd.exe", parameters.c_str(), nullptr, SW_HIDE);
+					run_file(entry.path());
 				}
 			}
 		}
