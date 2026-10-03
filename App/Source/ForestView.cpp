@@ -39,8 +39,27 @@ void App::initialize_ImGui()
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
 	io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
 	io.BackendRendererName = "Task++";
-	arabic_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-SemiBold.ttf", 24.0f, nullptr);
+
 	default_font = io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSans-SemiBold.ttf", 16.0f, nullptr, io.Fonts->GetGlyphRangesDefault());
+
+	ImFontConfig config;
+	config.MergeMode = true;
+	config.PixelSnapH = true;
+
+	static const ImWchar arabic_ranges[] = {
+	0x0020, 0x00FF,
+	0x0600, 0x06FF, 
+	0x0750, 0x077F,
+	0x08A0, 0x08FF,
+	0xFB50, 0xFDFF, 
+	0xFE70, 0xFEFE,
+	0,
+	};
+
+	io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansArabic-Bold.ttf", 22.0f, &config, arabic_ranges);
+	io.Fonts->AddFontFromFileTTF("assets/fonts/NotoSansJP-SemiBold.ttf", 16.0f, &config);
+
+
 
 	switch (m_activeTheme)
 	{
