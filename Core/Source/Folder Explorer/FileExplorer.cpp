@@ -36,6 +36,7 @@ std::string Utils::generate_new_folder_name(const fs::path& dir, const std::stri
 			return candidate;
 	}
 }
+
 std::string Utils::to_lower(std::string str)
 {
     {
@@ -46,6 +47,14 @@ std::string Utils::to_lower(std::string str)
         return str;
     }
 }
+
+std::wstring Utils::to_lowerW(std::wstring s)
+{
+	if (!s.empty())
+		CharLowerBuffW(s.data(), (DWORD)s.size());
+	return s;
+}
+
 
 std::string Utils::reform_string(const std::string& str, const int& count)
 {

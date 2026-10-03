@@ -147,6 +147,8 @@ namespace Utils
 
 	std::string to_lower(std::string str);
 
+	std::wstring to_lowerW(std::wstring s);
+
 	std::string reform_string(const std::string& str, const int& count);
 	
 	const std::string file_type_to_string(const fs::file_type& type);
@@ -600,18 +602,26 @@ public:
 		return;
 	}
 
-	std::vector<Entry>& search(const fs::path& path, std::string keyword)
+	void search(const fs::path& path, std::string keyword)
 	{
 		if (path.empty())
 		{
-			return entries;
+			return ;
 		}
-		if (!entries.empty())
+			
+		entries.clear();
+
+		const std::wstring needle = Utils::to_lowerW(Utils::utf8_to_path(keyword).wstring());
+
+		std::error_code ec;
+		fs::directory_iterator it(path, fs::directory_options::skip_permission_denied, ec);
+		if (ec) return ;
+		for (; it != fs::directory_iterator(); it.increment(ec))
 		{
-			entries.clear();
-		}
-		for (const auto& entry : fs::directory_iterator(path))
-		{
+			if (ec) break;
+
+			const fs::directory_entry& entry = *it;
+
 			DWORD attr = GetFileAttributesW(entry.path().c_str());
 
 			if (attr == INVALID_FILE_ATTRIBUTES)
@@ -620,23 +630,15 @@ public:
 			if (attr & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))
 				continue; // skip hidden/system
 
-			std::string entrypath = entry.path().filename().string();
+			const std::wstring name = Utils::to_lowerW(entry.path().filename().wstring());;
 
-			to_lower(entrypath);
-			to_lower(keyword);
-
-			if (entrypath.find(keyword) != std::string::npos)
+			if (name.find(needle) != std::wstring::npos)
 			{
-				Entry e;
-				e.entry = entry;
-				e.textureId = M_texturesManager.decide_icon(entry);
-				auto u8_str = (entry.path() == entry.path().root_path()) ? entry.path().u8string() : entry.path().filename().u8string();
-				std::string utf8_path(u8_str.begin(), u8_str.end());
-				e.name = utf8_path;
-				entries.emplace_back(std::move(e));	
+				Entry e = setup_entry(entry);
+				entries.emplace_back(std::move(e));
 			}
 		}
-		return entries;
+		return;
 	}
 
 	const std::vector<Entry>& get_entries()
@@ -1078,7 +1080,6 @@ public:
 		}
 		return result;
 	}
-
 
 	void find_empty_folders(const fs::path& source, std::vector<fs::path>& empty_folders, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{

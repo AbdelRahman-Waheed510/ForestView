@@ -1127,7 +1127,8 @@ void ForestView::refocus_reload()
 	{
 		if (tabs[current_tab]->is_searching)
 		{
-			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
+			tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
+			tabs[current_tab]->entries_need_update = true;
 		}
 		else 
 		{
@@ -1458,9 +1459,12 @@ void ForestView::search_bar()
 
 		// Normal search bar
 		ImGui::BeginDisabled(tabs[current_tab]->current_path.empty());
-		if (ImGui::InputTextWithHint("##Search Bar", std::format("Search {}", tabs[current_tab]->utf8_search_bar_hint).c_str(), &tabs[current_tab]->ThisDirectoryKeyWord) || !tabs[current_tab]->ThisDirectoryKeyWord.empty())
+
+		bool changed = ImGui::InputTextWithHint("##Search Bar", std::format("Search {}", tabs[current_tab]->utf8_search_bar_hint).c_str(), &tabs[current_tab]->ThisDirectoryKeyWord);
+		if (changed)
 		{
-			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
+			tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
+			tabs[current_tab]->entries_need_update = true;
 			tabs[current_tab]->globalKeyWord = "";
 		}
 		ImGui::EndDisabled();
@@ -3405,12 +3409,22 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			tabs[current_tab]->selectionManager.Reset();
 
 			tabs[current_tab]->fileExplorer->refresh(tabs[current_tab]->current_path);
+
+			if (!tabs[current_tab]->ThisDirectoryKeyWord.empty())
+			{
+				tabs[current_tab]->fileExplorer->search(tabs[current_tab]->current_path, tabs[current_tab]->ThisDirectoryKeyWord);
+				tabs[current_tab]->globalKeyWord = "";
+			}
+
 			tabs[current_tab]->entries = tabs[current_tab]->fileExplorer->get_entries();
+
 			auto u8_str = (tabs[current_tab]->current_path == tabs[current_tab]->current_path.root_path()) ? tabs[current_tab]->current_path.u8string() : tabs[current_tab]->current_path.filename().u8string();
 			std::string utf8_path(u8_str.begin(), u8_str.end());
 
 			tabs[current_tab]->utf8_search_bar_hint.assign(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path));
 			if (tabs[current_tab]->utf8_search_bar_hint.empty()) tabs[current_tab]->utf8_search_bar_hint = "This PC";
+
+
 			tabs[current_tab]->entries_need_update = false;
 		}
 
