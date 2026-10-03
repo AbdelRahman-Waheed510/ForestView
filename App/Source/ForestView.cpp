@@ -1398,7 +1398,8 @@ void ForestView::search_bar()
 		static int ids = 0;
 		if (tabs[current_tab]->global_key_need_update)
 		{
-			tabs[current_tab]->globalKeyWord = tabs[current_tab]->current_path.string();
+			std::string current = Utils::path_to_utf8(tabs[current_tab]->current_path);
+			tabs[current_tab]->globalKeyWord = tabs[current_tab]->fileExplorer->to_display_sring(current);
 			tabs[current_tab]->global_key_need_update = false;
 			ids++;
 			ImGui::SetKeyboardFocusHere();
@@ -1407,52 +1408,74 @@ void ForestView::search_bar()
 
 		ImGui::PushID(ids);
 		
-		if (ImGui::InputTextWithHint("##Global Search Bar", tabs[current_tab]->fileExplorer->form_breadcrumb_navigation_string(tabs[current_tab]->current_path).c_str(), &tabs[current_tab]->globalKeyWord) || !tabs[current_tab]->globalKeyWord.empty())
+		const std::string breadCrumbed = tabs[current_tab]->fileExplorer->form_breadcrumb_navigation_string(tabs[current_tab]->current_path);
+
+		bool enterPressed = ImGui::InputTextWithHint("##Global Search Bar", breadCrumbed.c_str(), &tabs[current_tab]->globalKeyWord, ImGuiInputTextFlags_EnterReturnsTrue);
+		
+		if (ImGui::IsItemActivated())
 		{
-			tabs[current_tab]->ThisDirectoryKeyWord = "";
-			tabs[current_tab]->fileExplorer->refresh(tabs[current_tab]->current_path);
-			if (ImGui::IsKeyReleased(ImGuiKey_Enter))
+			if (!tabs[current_tab]->ThisDirectoryKeyWord.empty()) 
 			{
-				fs::path path_(tabs[current_tab]->globalKeyWord);
-				if (fs::is_directory(path_) && fs::exists(path_))
+				tabs[current_tab]->ThisDirectoryKeyWord.clear();
+				tabs[current_tab]->entries_need_update = true;
+			}
+			if (tabs[current_tab]->globalKeyWord.empty()) 
+			{
+				if (!tabs[current_tab]->current_path.empty())
 				{
-					AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(path_);
-					if (checkAccess == AccessResult::ACCESS_DENIED)
-					{
-						need_access_denied_popup = true;
-						tabs[current_tab]->entries_need_update = true;
-						tabs[current_tab]->globalKeyWord = "";
-					}
-					else 
+					tabs[current_tab]->global_key_need_update = true;
+				}
+			}
+		}
+		
+		if (enterPressed) 
+		{
+			fs::path path_ = Utils::utf8_to_path(tabs[current_tab]->globalKeyWord);
+
+			if (fs::exists(path_))
+			{
+				AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(path_);
+				if (checkAccess == AccessResult::ACCESS_DENIED)
+				{
+					need_access_denied_popup = true;
+					tabs[current_tab]->entries_need_update = true;
+					tabs[current_tab]->globalKeyWord = "";
+				}
+				else
+				{
+					if (fs::is_directory(path_))
 					{
 						tabs[current_tab]->fileExplorer->navigate_to(path_, tabs[current_tab]->current_path);
 						tabs[current_tab]->entries_need_update = true;
 						tabs[current_tab]->current_path = path_;
 						tabs[current_tab]->globalKeyWord = "";
 					}
-
-				}
-				else
-				{
-					tabs[current_tab]->globalKeyWord = "";
+					else
+					{
+						run_file(path_);
+						tabs[current_tab]->globalKeyWord = "";
+					}
 				}
 			}
-		}
-
-		ImGui::PopID();
-
-		if (ImGui::IsItemActivated() && tabs[current_tab]->globalKeyWord.empty())
-		{
-			if (!tabs[current_tab]->current_path.empty())
+			else
 			{
-				tabs[current_tab]->global_key_need_update = true;
+				tabs[current_tab]->globalKeyWord = "";
 			}
 
 		}
-		if (ImGui::IsItemDeactivated() && tabs[current_tab]->globalKeyWord == tabs[current_tab]->current_path.string())
+		else if (ImGui::IsItemDeactivated())
 		{
 			tabs[current_tab]->globalKeyWord = "";
 		}
+		ImGui::PopID();
+
+		if (ImGui::IsItemHovered() && !tabs[current_tab]->current_path.empty())
+		{
+			std::string current = Utils::path_to_utf8(tabs[current_tab]->current_path);
+			current = tabs[current_tab]->fileExplorer->to_display_sring(current);
+			ImGui::SetTooltip(current.c_str());
+		}
+	
 
 		ImGui::SameLine();
 		ImGui::SetNextItemWidth(-1.0f);

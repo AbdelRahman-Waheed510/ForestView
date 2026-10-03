@@ -422,4 +422,10 @@ public:
 
 	ImVec2 GetSelectionStartScreenPos() const;
 
+	void run_file(const fs::path& path) const 
+	{
+		std::wstring parameters = L"/c start \"\" \"" + path.wstring() + L"\"";
+		HINSTANCE result = ShellExecuteW(nullptr, L"open", L"cmd.exe", parameters.c_str(), nullptr, SW_HIDE);
+	}
+
 };
