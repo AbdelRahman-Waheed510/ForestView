@@ -1399,7 +1399,7 @@ void ForestView::search_bar()
 		if (tabs[current_tab]->global_key_need_update)
 		{
 			std::string current = Utils::path_to_utf8(tabs[current_tab]->current_path);
-			tabs[current_tab]->globalKeyWord = tabs[current_tab]->fileExplorer->to_display_sring(current);
+			tabs[current_tab]->globalKeyWord = Utils::to_display_sring(current);
 			tabs[current_tab]->global_key_need_update = false;
 			ids++;
 			ImGui::SetKeyboardFocusHere();
@@ -1472,7 +1472,7 @@ void ForestView::search_bar()
 		if (ImGui::IsItemHovered() && !tabs[current_tab]->current_path.empty())
 		{
 			std::string current = Utils::path_to_utf8(tabs[current_tab]->current_path);
-			current = tabs[current_tab]->fileExplorer->to_display_sring(current);
+			current = Utils::to_display_sring(current);
 			ImGui::SetTooltip(current.c_str());
 		}
 	
@@ -1953,8 +1953,8 @@ void ForestView::paste_helper()
 			auto u8_str2 = dest.filename().u8string();
 			std::string utf8_path2(u8_str2.begin(), u8_str2.end());
 
-			copyTask->sourceName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path1), 25);
-			copyTask->destinationName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path2), 25);
+			copyTask->sourceName = Utils::reform_string(Utils::to_display_sring(utf8_path1), 25);
+			copyTask->destinationName = Utils::reform_string(Utils::to_display_sring(utf8_path2), 25);
 
 			m_queuedTasks.emplace_back(std::move(copyTask));
 		}
@@ -1979,8 +1979,8 @@ void ForestView::paste_helper()
 		auto u8_str2 = dest.filename().u8string();
 		std::string utf8_path2(u8_str2.begin(), u8_str2.end());
 
-		copyTask->sourceName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path1), 25);
-		copyTask->destinationName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path2), 25);
+		copyTask->sourceName = Utils::reform_string(Utils::to_display_sring(utf8_path1), 25);
+		copyTask->destinationName = Utils::reform_string(Utils::to_display_sring(utf8_path2), 25);
 
 		m_queuedTasks.emplace_back(std::move(copyTask));
 
@@ -3265,7 +3265,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 
 					const auto u8_str = (favorite_item.path() == favorite_item.path().root_path()) ? favorite_item.path().u8string() : favorite_item.path().filename().u8string();
 					const std::string utf8_path(u8_str.begin(), u8_str.end());
-					std::string favorite_to_show = tabs[current_tab]->fileExplorer->to_display_sring(utf8_path);
+					std::string favorite_to_show = Utils::to_display_sring(utf8_path);
 
 					if (ImGui::Selectable(favorite_to_show.c_str()))
 					{
@@ -3317,7 +3317,7 @@ void ForestView::folders_tree(const float& remainingHeight)
 					const auto u8_str = (recent_item.path() == recent_item.path().root_path()) ? recent_item.path().u8string() : recent_item.path().filename().u8string();
 					const std::string utf8_path(u8_str.begin(), u8_str.end());
 
-					std::string recent_to_show = tabs[current_tab]->fileExplorer->to_display_sring(utf8_path);
+					std::string recent_to_show = Utils::to_display_sring(utf8_path);
 
 					ImGui::Selectable(recent_to_show.c_str());
 
@@ -3368,7 +3368,7 @@ void ForestView::draw_tree(Node* node_to_show)
 	{
 		auto u8 = (node_to_show->path == node_to_show->path.root_path()) ? node_to_show->path.u8string() : node_to_show->path.filename().u8string();
 		std::string utf8_path(u8.begin(), u8.end());
-		node_to_show_path_string_to_show.assign(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path));
+		node_to_show_path_string_to_show.assign(Utils::to_display_sring(utf8_path));
 	}
 
 
@@ -3444,7 +3444,7 @@ void ForestView::files_navigation_panel(const float& remainingHeight)
 			auto u8_str = (tabs[current_tab]->current_path == tabs[current_tab]->current_path.root_path()) ? tabs[current_tab]->current_path.u8string() : tabs[current_tab]->current_path.filename().u8string();
 			std::string utf8_path(u8_str.begin(), u8_str.end());
 
-			tabs[current_tab]->utf8_search_bar_hint.assign(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path));
+			tabs[current_tab]->utf8_search_bar_hint.assign(Utils::to_display_sring(utf8_path));
 			if (tabs[current_tab]->utf8_search_bar_hint.empty()) tabs[current_tab]->utf8_search_bar_hint = "This PC";
 
 

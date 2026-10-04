@@ -14,6 +14,38 @@ inline std::string Utils::path_to_utf8(const fs::path& p)
 	return std::string(s.begin(), s.end());
 }
 
+std::string Utils::to_display_sring(const std::string& utf8)
+{
+	if (utf8.empty()) return utf8;
+
+	std::vector<FriBidiChar> str(utf8.size() + 1);
+	FriBidiStrIndex len = fribidi_charset_to_unicode(
+		FRIBIDI_CHAR_SET_UTF8, utf8.c_str(), (FriBidiStrIndex)utf8.size(), str.data());
+
+	std::vector<FriBidiCharType>    types(len);
+	std::vector<FriBidiBracketType> brackets(len);
+	std::vector<FriBidiLevel>       levels(len);
+	std::vector<FriBidiArabicProp>  props(len);
+
+	fribidi_get_bidi_types(str.data(), len, types.data());
+	fribidi_get_bracket_types(str.data(), len, types.data(), brackets.data());
+
+	FriBidiParType base = FRIBIDI_PAR_ON;   // auto-detect direction
+	fribidi_get_par_embedding_levels_ex(types.data(), brackets.data(), len, &base, levels.data());
+
+	fribidi_get_joining_types(str.data(), len, props.data());
+	fribidi_join_arabic(types.data(), len, levels.data(), props.data());
+
+	const FriBidiFlags flags = FRIBIDI_FLAGS_DEFAULT | FRIBIDI_FLAGS_ARABIC;
+	fribidi_shape(flags, levels.data(), len, props.data(), str.data());
+	fribidi_reorder_line(flags, types.data(), len, 0, base, levels.data(), str.data(), nullptr);
+
+	std::string out(len * 4 + 1, '\0');
+	int n = fribidi_unicode_to_charset(FRIBIDI_CHAR_SET_UTF8, str.data(), len, out.data());
+	out.resize(n);
+	return out;
+}
+
 std::string Utils::generate_new_folder_name(const fs::path& dir, const std::string& name, const NewType& type)
 {
 	std::error_code ec;
