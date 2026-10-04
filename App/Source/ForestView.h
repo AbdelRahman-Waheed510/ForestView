@@ -240,7 +240,7 @@ private:
 	std::deque<std::unique_ptr<Task>> m_queuedTasks;
 
 	std::unique_ptr<Task> m_emptyFoldersTask;
-	std::vector<fs::path> m_emptyFolders;
+	std::vector<EmptyFolder> m_emptyFolders;
 	bool is_searching_for_empty_folders = false;
 
 	std::unique_ptr<Task> m_duplicateFilesTask;
@@ -248,7 +248,7 @@ private:
 	bool is_searching_for_duplicates_files = false;
 
 	std::unique_ptr<Task> m_largestFilesTask;
-	std::vector<fs::directory_entry> m_largestFiles;
+	std::vector<LargestFile> m_largestFiles;
 	bool is_searching_for_largest_files = false;
 
 	std::vector<fs::path> m_founds;
@@ -401,7 +401,6 @@ public:
 		return converter.to_bytes(wstr);
 	}
 
-	// Convert UTF-8 std::string to std::wstring
 	std::wstring UTF8ToWString(const std::string& str) {
 		if (str.empty()) return L"";
 		std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;

@@ -156,6 +156,8 @@ namespace Utils
 	inline fs::path utf8_to_path(const std::string& s);
 
 	inline std::string path_to_utf8(const fs::path& p);
+
+	std::string to_display_sring(const std::string& utf8);
 };
 
 struct RenameReturn 
@@ -180,8 +182,78 @@ ALL
 
 struct Duplicate 
 {
-	fs::directory_entry duplicateEntry;
+	fs::path path;
+	std::uintmax_t size;
+	std::string name;
 	int groupId = 0;
+
+	Duplicate(const fs::path& path, const std::uintmax_t sze, const int gid)
+	{
+		update_path(path);
+		size = sze;
+		groupId = gid;
+	}
+
+	void update_path(const fs::path& pa)
+	{
+		path = pa;
+		name = Utils::to_display_sring(Utils::path_to_utf8(pa));
+	}
+
+	bool operator==(const Duplicate& other) const = default;
+
+	bool operator==(const fs::path& otherPath) const {
+		return path == otherPath;
+	}
+
+};
+
+struct EmptyFolder 
+{
+	fs::path path;
+	std::string name;
+
+	EmptyFolder(const fs::path& path) 
+	{
+		update_path(path);
+	}
+
+	void update_path(const fs::path& pa) 
+	{
+		path = pa;
+		name = Utils::to_display_sring(Utils::path_to_utf8(pa));
+	}
+
+	bool operator==(const EmptyFolder& other) const = default;
+
+	bool operator==(const fs::path& otherPath) const {
+		return path == otherPath;
+	}
+};
+
+struct LargestFile 
+{
+	fs::path path;
+	std::uintmax_t size;
+	std::string name;
+
+	LargestFile(const fs::path& path, const std::uintmax_t sze)
+	{
+		update_path(path);
+		size = sze;
+	}
+
+	void update_path(const fs::path& pa)
+	{
+		path = pa;
+		name = Utils::to_display_sring(Utils::path_to_utf8(pa));
+	}
+
+	bool operator==(const LargestFile& other) const = default;
+
+	bool operator==(const fs::path& otherPath) const {
+		return path == otherPath;
+	}
 };
 
 enum class SearchBy 
@@ -1023,13 +1095,13 @@ public:
 				auto u8_str = part.u8string();
 				std::string utf8_path(u8_str.begin(), u8_str.end());
 
-				result += to_display_sring(utf8_path);
+				result += Utils::to_display_sring(utf8_path);
 				continue;
 			}
 			auto u8_str = part.u8string();
 			std::string utf8_path(u8_str.begin(), u8_str.end());
 
-			result += to_display_sring(utf8_path);
+			result += Utils::to_display_sring(utf8_path);
 			result += " > ";
 		}
 		if ((int)result.size() > 50) 
@@ -1049,7 +1121,7 @@ public:
 		return result;
 	}
 
-	void find_empty_folders(const fs::path& source, std::vector<fs::path>& empty_folders, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	void find_empty_folders(const fs::path& source, std::vector<EmptyFolder>& empty_folders, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{
 		Guard guard(finished);
 		if (!empty_folders.empty()) empty_folders.clear();
@@ -1058,18 +1130,38 @@ public:
 		
 		if (fs::is_empty(source, ec) && !ec) 
 		{
-			empty_folders.emplace_back(source);
+			empty_folders.emplace_back(EmptyFolder(source));
 			return;
 		}
 		
-		for (const fs::directory_entry& entry : fs::recursive_directory_iterator(source, fs::directory_options::skip_permission_denied, ec))
+		for (fs::recursive_directory_iterator it(
+			source,
+			fs::directory_options::skip_permission_denied,
+			ec);
+			it != fs::recursive_directory_iterator();
+			it.increment(ec))
 		{
-			if (cancel_request == true) break;
-			if (entry.is_directory(ec) && !ec) 
+			if (cancel_request)
+				break;
+
+			const auto& entry = *it;
+
+			if (entry.is_directory(ec) && !ec)
 			{
+				DWORD attributes = GetFileAttributesW(entry.path().c_str());
+
+				if (attributes != INVALID_FILE_ATTRIBUTES)
+				{
+					if (attributes & (FILE_ATTRIBUTE_HIDDEN | FILE_ATTRIBUTE_SYSTEM))
+					{
+						it.disable_recursion_pending();
+						continue;
+					}
+				}
+
 				if (fs::is_empty(entry.path(), ec) && !ec) 
 				{
-					empty_folders.emplace_back(entry.path());
+					empty_folders.emplace_back(EmptyFolder(entry.path()));
 				}
 			}
 		}
@@ -1244,10 +1336,7 @@ public:
 
 			for (const fs::directory_entry& entry : value) 
 			{
-				Duplicate duplicate;
-				duplicate.duplicateEntry = entry;
-				duplicate.groupId = groupIdTemp;
-				duplicates.emplace_back(duplicate);
+				duplicates.emplace_back(Duplicate(entry.path(),entry.file_size(), groupIdTemp));
 			}
 			groupIdTemp++;
 		}
@@ -1255,7 +1344,7 @@ public:
 	}
 
 	// Find Largerst files 
-	void find_largest_files(std::vector<fs::directory_entry>& largest_files, const fs::path& target, std::atomic<bool>&cancel_request, std::atomic<bool>& finished, const double& MaxSize = 10.0)
+	void find_largest_files(std::vector<LargestFile>& largest_files, const fs::path& target, std::atomic<bool>&cancel_request, std::atomic<bool>& finished, const double& MaxSize = 10.0)
 	{
 		Guard guard(finished);
 	
@@ -1275,17 +1364,14 @@ public:
 				auto size = entry.file_size(entry_ec);
 				if (!entry_ec && size >= MaxSize * 1024 * 1024)
 				{
-					largest_files.emplace_back(entry);
-
+					largest_files.emplace_back(LargestFile(entry.path(), size));
 					
-					fs::directory_entry key = largest_files.back();
+				    LargestFile key = largest_files.back();
 					int j = largest_files.size() - 1;
 
-					std::error_code err_key, err_prev;
 					
-					while (j > 0 && key.file_size(err_key) > largest_files[j - 1].file_size(err_prev))
+					while (j > 0 && key.size > largest_files[j - 1].size)
 					{
-						if (err_key || err_prev) break;
 						largest_files[j] = largest_files[j - 1];
 						j--;
 					}

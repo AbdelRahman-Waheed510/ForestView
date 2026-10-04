@@ -900,10 +900,10 @@ void ForestView::on_update()
 								ImGui::TableNextRow();
 								
 								ImGui::TableNextColumn();
+                               
+								ImGui::Selectable(m_emptyFolders[j].name.c_str());
 
-								ImGui::Selectable(m_emptyFolders[j].string().c_str());
-
-								handle_entries_mouse_click(fs::directory_entry(m_emptyFolders[j]));
+								handle_entries_mouse_click(fs::directory_entry(m_emptyFolders[j].path));
 								ImGui::PopID();
 							}
 						}
@@ -968,27 +968,20 @@ void ForestView::on_update()
 								ImGui::PushID(i);
 								ImGui::TableNextRow();
 
-								const fs::directory_entry& duplicate = m_duplicateFiles[i].duplicateEntry;
+								const Duplicate& duplicate = m_duplicateFiles[i];
 
-								bool is_duplicate_selected = (duplicate.path() == tabs[current_tab]->selected_path) ? true : false;
+								bool is_duplicate_selected = (duplicate.path == tabs[current_tab]->selected_path) ? true : false;
 
 								ImGui::TableNextColumn();
-								std::u8string utf8_path = duplicate.path().u8string();
-#if defined(__cpp_lib_char8_t)
-								std::string display_path(utf8_path.begin(), utf8_path.end());
-#else
-								std::string display_path = utf8_path;
-#endif
-								std::string label = display_path + "##" + std::to_string(i);
 
-								ImGui::Selectable(label.c_str(), &is_duplicate_selected);
+								ImGui::Selectable(duplicate.name.c_str(), &is_duplicate_selected);
 
 								// The mouse clicks behaviour ================================================================
-								handle_entries_mouse_click(duplicate);
+								handle_entries_mouse_click(fs::directory_entry(duplicate.path));
 
 								// To add a seprator after the last duplicate in the group ===================================
 								ImGui::TableNextColumn();
-								const fileSize DuplicateSizeInfo = tabs[current_tab]->fileExplorer->decide_file_size_format(duplicate.file_size());
+								const fileSize DuplicateSizeInfo = tabs[current_tab]->fileExplorer->decide_file_size_format(duplicate.size);
 								ImGui::Text(std::format("{:.2f} {}", DuplicateSizeInfo.size, DuplicateSizeInfo.label).c_str());
 
 								if (i + 1 < m_duplicateFiles.size() && m_duplicateFiles[i + 1].groupId != m_duplicateFiles[i].groupId)
@@ -1062,21 +1055,22 @@ void ForestView::on_update()
 
 								// File path ================================
 								ImGui::TableNextColumn();
-								std::u8string utf8_path = m_largestFiles[i].path().u8string();
-#if defined(__cpp_lib_char8_t)
-								std::string display_path(utf8_path.begin(), utf8_path.end());
-#else
-								std::string display_path = utf8_path;
-#endif
-								std::string label = display_path + "##" + std::to_string(i);
-								ImGui::Selectable(label.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
+							
+								ImGui::Selectable(m_largestFiles[i].name.c_str(), false, ImGuiSelectableFlags_SpanAllColumns);
 
 								// The mouse clicks behaviour ================================================================
-								handle_entries_mouse_click(m_largestFiles[i]);
-
+								if (ImGui::IsItemHovered() && (ImGui::IsMouseClicked(ImGuiMouseButton_Right) || ImGui::IsMouseReleased(ImGuiMouseButton_Left) || ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)))
+								{
+									std::error_code ec;
+									fs::directory_entry en(m_largestFiles[i].path, ec);
+									if (!ec)
+									{
+										handle_entries_mouse_click(en);
+									}
+								}
 								// File Size =================================
 								ImGui::TableNextColumn();
-								fileSize fileDataInfo = tabs[current_tab]->fileExplorer->decide_file_size_format(m_largestFiles[i].file_size());
+								fileSize fileDataInfo = tabs[current_tab]->fileExplorer->decide_file_size_format(m_largestFiles[i].size);
 								ImGui::Text(std::format("{:.2f} {}", fileDataInfo.size, fileDataInfo.label).c_str());
 
 								ImGui::PopID();
@@ -1767,7 +1761,7 @@ void ForestView::tool_bar()
 			if (tabs[current_tab]->selected_path.empty()) 
 			{
 				m_emptyFoldersTask = std::make_unique<Task>(TaskType::FIND_EMPTY_DIRECTORIES);
-				m_emptyFoldersTask->sourceName = Utils::reform_string(tabs[current_tab]->current_path.string(), 32);
+				m_emptyFoldersTask->sourceName = Utils::reform_string(Utils::to_display_sring(Utils::path_to_utf8(tabs[current_tab]->current_path)), 32);
 
 				Task* task = m_emptyFoldersTask.get();
 
@@ -1779,8 +1773,7 @@ void ForestView::tool_bar()
 			else if (!tabs[current_tab]->selected_path.empty()) 
 			{
 				m_emptyFoldersTask = std::make_unique<Task>(TaskType::FIND_EMPTY_DIRECTORIES);
-				m_emptyFoldersTask->sourceName = Utils::reform_string(tabs[current_tab]->selected_path.string(), 32);
-
+				m_emptyFoldersTask->sourceName = Utils::reform_string(Utils::to_display_sring(Utils::path_to_utf8(tabs[current_tab]->selected_path)), 32);
 				Task* task = m_emptyFoldersTask.get();
 
 				m_emptyFoldersTask->worker = std::thread([this, task]()
@@ -2350,7 +2343,7 @@ void ForestView::delete_warning()
 						{
 							if (fs::is_directory(path))
 							{
-								std::erase(m_emptyFolders, path);
+								std::erase_if(m_emptyFolders, [path](const EmptyFolder& em) { return path == em.path;});
 							}
 						}
 						if (is_searching_for_duplicates_files)
@@ -2359,13 +2352,13 @@ void ForestView::delete_warning()
 							{
 								auto targetIt = std::find_if(m_duplicateFiles.begin(), m_duplicateFiles.end(),
 									[&path](const Duplicate& duplicateObj) {
-										return path == duplicateObj.duplicateEntry.path();
+										return path == duplicateObj.path;
 									});
 
 								int tempId = 0;
 								size_t count_deleted = std::erase_if(m_duplicateFiles, [&path, &tempId](const Duplicate& duplicateObj)
 									{
-										if (path == duplicateObj.duplicateEntry.path())
+										if (path == duplicateObj.path)
 										{
 											tempId = duplicateObj.groupId;
 											return true;
@@ -2412,13 +2405,13 @@ void ForestView::delete_warning()
 					{
 						auto targetIt = std::find_if(m_duplicateFiles.begin(), m_duplicateFiles.end(),
 							[this](const Duplicate& duplicateObj) {
-								return tabs[current_tab]->deleted_path == duplicateObj.duplicateEntry.path();
+								return tabs[current_tab]->deleted_path == duplicateObj.path;
 							});
 
 						int tempId = 0;
 						size_t count_deleted = std::erase_if(m_duplicateFiles, [this, &tempId](const Duplicate& duplicateObj)
 							{
-								if (tabs[current_tab]->deleted_path == duplicateObj.duplicateEntry.path())
+								if (tabs[current_tab]->deleted_path == duplicateObj.path)
 								{
 									tempId = duplicateObj.groupId;
 									return true;
@@ -2471,7 +2464,7 @@ void ForestView::delete_warning()
 						auto u8_str1 = path.filename().u8string();
 						std::string utf8_path1(u8_str1.begin(), u8_str1.end());
 
-						deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path1), 25);
+						deleteTask->sourceName = Utils::reform_string(Utils::to_display_sring(utf8_path1), 25);
 
 						m_queuedTasks.emplace_back(std::move(deleteTask));
 					}
@@ -2487,7 +2480,7 @@ void ForestView::delete_warning()
 				auto u8_str1 = tabs[current_tab]->deleted_path.filename().u8string();
 				std::string utf8_path1(u8_str1.begin(), u8_str1.end());
 
-				deleteTask->sourceName = Utils::reform_string(tabs[current_tab]->fileExplorer->to_display_sring(utf8_path1), 25);
+				deleteTask->sourceName = Utils::reform_string(Utils::to_display_sring(utf8_path1), 25);
 
 				m_queuedTasks.emplace_back(std::move(deleteTask));
 			}
@@ -2866,7 +2859,7 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 					auto u8_str = FolderEntry.path().filename().u8string();
 					std::string utf8_path(u8_str.begin(), u8_str.end());
 
-					newName = tabs[current_tab]->fileExplorer->to_display_sring(utf8_path);
+					newName = Utils::to_display_sring(utf8_path);
 					ImGui::SetKeyboardFocusHere();
 				}
 
@@ -2887,13 +2880,13 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 						RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, fs::path(std::u8string(newName.begin(), newName.end())));
 						if (rename.success)
 						{
-							if (is_searching_for_empty_folders && fs::is_directory(rename.finalPath))
+							if (is_searching_for_empty_folders && fs::is_directory(*rename.finalPath))
 							{
-								for (auto& path : m_emptyFolders)
+								for (auto& folder : m_emptyFolders)
 								{
-									if (path == tabs[current_tab]->selected_path)
+									if (folder.path == tabs[current_tab]->selected_path)
 									{
-										path = rename.finalPath;
+										folder.update_path(*rename.finalPath);
 									}
 								}
 							}
@@ -3036,7 +3029,7 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 					auto u8_str = FileEntry.path().filename().u8string();
 					std::string utf8_path(u8_str.begin(), u8_str.end());
 
-					newName = tabs[current_tab]->fileExplorer->to_display_sring(utf8_path);
+					newName = Utils::to_display_sring(utf8_path);
 					ImGui::SetKeyboardFocusHere();
 				}
 
@@ -3061,20 +3054,20 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 							{
 								for (Duplicate& DuplicateObject : m_duplicateFiles)
 								{
-									if (DuplicateObject.duplicateEntry.path() == tabs[current_tab]->selected_path)
+									if (DuplicateObject.path == tabs[current_tab]->selected_path)
 									{
-										DuplicateObject.duplicateEntry.assign(rename.finalPath);
+										DuplicateObject.update_path(*rename.finalPath);
 										break;
 									}
 								}
 							}
 							if (is_searching_for_largest_files)
 							{
-								for (fs::directory_entry& largeEntry : m_largestFiles)
+								for (LargestFile& largeEntry : m_largestFiles)
 								{
-									if (largeEntry.path() == tabs[current_tab]->selected_path)
+									if (largeEntry.path == tabs[current_tab]->selected_path)
 									{
-										largeEntry.assign(rename.finalPath);
+										largeEntry.update_path(*rename.finalPath);
 										break;
 									}
 								}
