@@ -567,8 +567,12 @@ void ForestView::on_update()
 						m_activeCopyingTasks++;
 						m_queuedTasks[i]->worker = std::thread([this, task]()
 							{
-								fs::path finalPath = tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
-								m_index.addRecuirselyToDataBase(finalPath);
+								CopyReturn result = tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+								if (result.msg.has_value()) 
+								{
+									call_timed_tooltip(*result.msg, ImVec4(1.0, 0.0, 0.0, 1.0), (*result.msg).size() * 0.05);
+								}
+								//m_index.addRecuirselyToDataBase(finalPath);
 								m_activeCopyingTasks--;
 							});
 
@@ -2896,18 +2900,18 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 								{
 									if (path == tabs[current_tab]->selected_path)
 									{
-										path = rename.finalPath;
+										path = *rename.finalPath;
 									}
 								}
 							}
 
-							m_index.renameFromDataBase(tabs[current_tab]->selected_path, rename.finalPath);
+							m_index.renameFromDataBase(tabs[current_tab]->selected_path, *rename.finalPath);
 
 							if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 							{
-								tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
+								tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), *rename.finalPath);
 							}
-							if (tabs[current_tab]->recents.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath))
+							if (tabs[current_tab]->recents.update_name(fs::directory_entry(tabs[current_tab]->selected_path), *rename.finalPath))
 							{
 							}
 							tabs[current_tab]->entries_need_update = true;
@@ -2918,7 +2922,7 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 						else
 						{
 							tabs[current_tab]->selected_path = "";
-							call_timed_tooltip("This name already exists", ImVec4(1.0, 0.0, 0.0, 1.0), 2.5);
+							call_timed_tooltip(*rename.msg, ImVec4(1.0, 0.0, 0.0, 1.0), 3.5);
 						}
 					}
 					ImGui::CloseCurrentPopup();
@@ -3078,17 +3082,17 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 								{
 									if (path == tabs[current_tab]->selected_path)
 									{
-										path = rename.finalPath;
+										path = *rename.finalPath;
 									}
 								}
 							}
-							m_index.renameFromDataBase(tabs[current_tab]->selected_path, rename.finalPath);
+							m_index.renameFromDataBase(tabs[current_tab]->selected_path, *rename.finalPath);
 
 							if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 							{
-								tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath);
+								tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), *rename.finalPath);
 							}
-							if (tabs[current_tab]->recents.update_name(fs::directory_entry(tabs[current_tab]->selected_path), rename.finalPath))
+							if (tabs[current_tab]->recents.update_name(fs::directory_entry(tabs[current_tab]->selected_path), *rename.finalPath))
 							{
 							}
 							tabs[current_tab]->entries_need_update = true;
@@ -3099,7 +3103,7 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 						else
 						{
 							tabs[current_tab]->selected_path = "";
-							call_timed_tooltip("This name already exists", ImVec4(1.0, 0.0, 0.0, 1.0), 2.5);
+							call_timed_tooltip(*rename.msg, ImVec4(1.0, 0.0, 0.0, 1.0), 3.5);
 						}
 					}
 					ImGui::CloseCurrentPopup();

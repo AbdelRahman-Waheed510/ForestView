@@ -162,8 +162,15 @@ namespace Utils
 
 struct RenameReturn 
 {
-	fs::path finalPath;
+	std::optional<fs::path> finalPath;
 	bool success;
+	std::optional<std::string> msg;
+};
+
+struct CopyReturn 
+{
+	std::optional<fs::path> finalPath;
+	std::optional<std::string> msg;
 };
 
 struct EntryDataReturn 
@@ -758,7 +765,7 @@ public:
 
 	RenameReturn rename_file(fs::path& to_rename, fs::path new_name)
 	{
-		if (new_name.empty()) return RenameReturn("", false);
+		if (new_name.empty()) return RenameReturn(std::nullopt, false, "New name cannot be empty.");
 
 		std::error_code ec;
 
@@ -766,8 +773,7 @@ public:
 		{
 			if (new_name.has_extension())
 			{
-				if (new_name.extension() != to_rename.extension())
-					return RenameReturn("", false);
+				if (new_name.extension() != to_rename.extension()) return RenameReturn(std::nullopt, false, "File extension cannot be changed during rename.");
 			}
 			else
 			{
@@ -779,7 +785,7 @@ public:
 		const fs::path target = parent / new_name;
 
 		// Renaming to the exact same path is a no-op (also avoids creating "name (1)")
-		if (target == to_rename) return RenameReturn(to_rename, true);
+		if (target == to_rename) return RenameReturn(std::nullopt, false, "New name is the same as the current name.");
 
 		if (fs::is_directory(target, ec))
 		{
@@ -797,10 +803,10 @@ public:
 		fs::rename(to_rename, newPath, ec);
 		if (ec)
 		{
-			std::cerr << "Error when renaming: " << ec.message() << std::endl;
-			return RenameReturn("", false);
+			const std::string error = "Failed to rename file: " + ec.message();
+			return RenameReturn(std::nullopt, false, error);
 		}
-		return RenameReturn(newPath, true);
+		return RenameReturn(newPath, true, std::nullopt);
 	}
 
 	void back(fs::path& current_path) 
@@ -871,14 +877,29 @@ public:
 		}
 	}
 
-	const fs::path copy_paste(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	bool is_subpath(const fs::path& child, const fs::path& parent)
+	{
+		std::error_code ec;
+
+		auto childPath = fs::weakly_canonical(child, ec);
+		if (ec) return false;
+
+		auto parentPath = fs::weakly_canonical(parent, ec);
+		if (ec) return false;
+
+		auto [parentIt, childIt] = std::mismatch(parentPath.begin(), parentPath.end(), childPath.begin(), childPath.end());
+
+		return parentIt == parentPath.end();
+	}
+
+	const CopyReturn copy_paste(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{
 		Guard guard(finished);
 
 		if (!fs::exists(source))
 		{
-			std::cerr << "Error: source path doesnot exist: " << source << std::endl;
-			return "";
+			std::string e = std::format("Source path [{}] does not exist.", Utils::to_display_sring(Utils::path_to_utf8(source)));
+			return CopyReturn(std::nullopt, e);
 		}
 		std::error_code ec;
 
@@ -887,6 +908,14 @@ public:
 		// If the copied directory is a folder 
 		if (fs::is_directory(source))
 		{
+			if (is_subpath(destination, source))
+			{
+				std::string e = std::format("Cannot copy [{}] \ninto its own subfolder [{}].", 
+					Utils::to_display_sring(Utils::path_to_utf8(source)), 
+					Utils::to_display_sring(Utils::path_to_utf8(destination)));
+				return CopyReturn(std::nullopt, e);
+			}
+
 			auto u8_str1 = source.filename().u8string();
 			std::string utf8_path1(u8_str1.begin(), u8_str1.end());
 
@@ -898,14 +927,15 @@ public:
 
 			if (ec_longPath) 
 			{
-				std::cerr << "Failed to Create" << dest << std::endl;
+				std::string e = std::format("Failed to create target directory [{}]: {}", Utils::to_display_sring(Utils::path_to_utf8(dest)), ec_longPath.message());
+				return CopyReturn(std::nullopt, e);
 			}
 
 			for (auto entry = fs::recursive_directory_iterator(source, fs::directory_options::skip_permission_denied, ec); entry != fs::recursive_directory_iterator(); entry.increment(ec))
 			{
 				if (cancel_request)
 				{
-					return dest;
+					return CopyReturn(dest, std::nullopt);
 				}
 				fs::path relativePath = fs::relative(entry->path(), source);
 				fs::path targetPath = dest / relativePath;
@@ -916,14 +946,14 @@ public:
 					fs::create_directories(targetPath,ec_longPath);
 					if (ec_longPath)
 					{
-						std::cerr << "Failed to Create" << targetPath << std::endl;
+						std::string e = std::format("Failed to create target directory [{}]: {}", Utils::to_display_sring(Utils::path_to_utf8(targetPath)), ec_longPath.message());
 					}
 				}
 
 				else if (entry->is_regular_file())
 				{
 					copy_in_chuncks(entry->path(), targetPath, Sizeprogress, filesCountProgress, cancel_request);
-					if (cancel_request) return dest;
+					if (cancel_request) return CopyReturn(dest, std::nullopt);
 
 				}
 
@@ -946,12 +976,12 @@ public:
 			copy_in_chuncks(source, dest, Sizeprogress, filesCountProgress, cancel_request);
 		}
 
-		if (ec) 
+		if (ec)
 		{
-			std::cerr << "Copy failed: " << ec.message() << '\n';
+			return CopyReturn(dest, std::format("Copy completed with errors: {}", ec.message()));
 		}
 		
-		return dest;
+		return CopyReturn(dest, std::nullopt);
 	}
 
 	void copy_in_chuncks(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request)
@@ -1086,6 +1116,7 @@ public:
 
 	std::string form_breadcrumb_navigation_string(const fs::path& path_to_format) 
 	{
+		const int LIMIT = 100;
 		std::string result = "";
 
 		for (const auto& part : path_to_format) 
@@ -1104,9 +1135,9 @@ public:
 			result += Utils::to_display_sring(utf8_path);
 			result += " > ";
 		}
-		if ((int)result.size() > 50) 
+		if ((int)result.size() > LIMIT)
 		{
-			int max = (int)result.size() - 50;
+			int max = (int)result.size() - LIMIT;
 			int index_pos = 0;
 			for (size_t i = max - 1; i < (int)result.size(); ++i) 
 			{
