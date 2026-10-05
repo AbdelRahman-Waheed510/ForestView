@@ -4632,36 +4632,7 @@ void ForestView::handle_entries_mouse_click(const fs::directory_entry& entry, in
 	{
 		if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
-			AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(entry.path());
-			if (checkAccess == AccessResult::ACCESS_DENIED || checkAccess == AccessResult::LOCKED_OR_IN_USE)
-			{
-				need_access_denied_popup = true;
-				return;
-			}
-			
-			// Clear the selected Items
-			if (tabs[current_tab]->isSelecting)
-			{
-				tabs[current_tab]->selectionManager.Reset();
-			}
-
-			if (entry.is_directory())
-			{
-				left_double_click(entry);
-			}
-			else if (entry.is_regular_file())
-			{
-				const fs::path& parent_path = entry.path().parent_path();
-				if (tabs[current_tab]->current_path != parent_path) // If i double click on a file that is not in the current path (curret directory)
-				{
-					const fs::directory_entry parent = fs::directory_entry(parent_path);
-					left_double_click(parent);
-				}
-				else // if i double click on a file that is in the current path (current directory)
-				{
-					run_file(entry.path());
-				}
-			}
+			left_double_click(entry);
 		}
 		else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right))
 		{
@@ -4872,25 +4843,42 @@ void ForestView::decide_correct_rightClick_popup()
 
 void ForestView::left_double_click(const fs::directory_entry& entry)
 {
+	AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(entry.path());
+	if (checkAccess == AccessResult::ACCESS_DENIED || checkAccess == AccessResult::LOCKED_OR_IN_USE)
+	{
+		need_access_denied_popup = true;
+		return;
+	}
+		
+	if (tabs[current_tab]->isSelecting)
+	{
+		tabs[current_tab]->selectionManager.Reset();
+	}
+
 	if (entry.is_directory())
 	{
-		AccessResult checkAccess = tabs[current_tab]->fileExplorer->check_access(entry.path());
-		if (checkAccess == AccessResult::ACCESS_DENIED || checkAccess == AccessResult::LOCKED_OR_IN_USE)
+		tabs[current_tab]->ThisDirectoryKeyWord = "";
+		tabs[current_tab]->globalKeyWord = "";
+		tabs[current_tab]->recents.visit(entry);
+		tabs[current_tab]->fileExplorer->navigate_to(entry.path(), tabs[current_tab]->current_path);
+		tabs[current_tab]->selected_path.clear();
+		tabs[current_tab]->entries_need_update = true;
+		tabs[current_tab]->current_path = entry.path();
+	}
+	else if (entry.is_regular_file())
+	{
+		const fs::path& parent_path = entry.path().parent_path();
+		if (tabs[current_tab]->current_path != parent_path) // If i double click on a file that is not in the current path (curret directory)
 		{
-			need_access_denied_popup = true;
-			return;
+			const fs::directory_entry parent = fs::directory_entry(parent_path);
+			left_double_click(parent);
 		}
-		else
+		else // if i double click on a file that is in the current path (current directory)
 		{
-			tabs[current_tab]->ThisDirectoryKeyWord = "";
-			tabs[current_tab]->globalKeyWord = "";
-			tabs[current_tab]->recents.visit(entry);
-			tabs[current_tab]->fileExplorer->navigate_to(entry.path(), tabs[current_tab]->current_path);
-			tabs[current_tab]->selected_path.clear();	
-			tabs[current_tab]->entries_need_update = true;
-			tabs[current_tab]->current_path = entry.path();
+			run_file(entry.path());
 		}
 	}
+	
 }
 
 bool ForestView::check_access(const fs::directory_entry& entry)
