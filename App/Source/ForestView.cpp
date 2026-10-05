@@ -572,7 +572,15 @@ void ForestView::on_update()
 								{
 									call_timed_tooltip(*result.msg, ImVec4(1.0, 0.0, 0.0, 1.0), (*result.msg).size() * 0.05);
 								}
-								//m_index.addRecuirselyToDataBase(finalPath);
+								Timer t(true);
+								m_index.addRecuirselyToDataBase(*result.finalPath);
+								t.Stop();
+								std::cout << "time taken by the add to database: " << t.GetElapsedSeconds() << std::endl;
+								if (m_isSearcing) 
+								{
+									std::cout << "Triggerd\n";
+									m_search_need_update = true;
+								}
 								m_activeCopyingTasks--;
 							});
 
@@ -591,26 +599,17 @@ void ForestView::on_update()
 						m_activeDeleteTasks++;
 						m_queuedTasks[i]->worker = std::thread([this, task]()
 							{
+								Timer t(true);
 								tabs[current_tab]->fileExplorer->recycleBin_delete(task->source);
-								const fs::path& root = task->source;
+								std::cout << "time taken by delete: " << t.GetElapsedSeconds() << std::endl;
+
+								t.Restart();
+								m_index.removeFromDataBase(task->source); // TODO: i think it an be more optimized but it is way better for now
+								std::cout << "time taken by delete from the database: " << t.GetElapsedSeconds() << std::endl;
 								if (m_isSearcing) 
 								{
-									if (fs::is_directory(task->source))
-									{
-										std::erase_if(m_founds, [&root](const fs::path& path)
-											{
-												auto [root_it, path_it] = std::mismatch(root.begin(), root.end(), path.begin(), path.end());
-												return root_it == root.end();
-											}
-										);
-									}
-									else 
-									{
-										std::erase(m_founds, root);
-									}
+									m_search_need_update = true;
 								}
-								// Remove from the index
-								m_index.removeFromDataBase(task->source);
 								task->finished = true;
 								m_activeDeleteTasks--;
 							});
@@ -2620,6 +2619,7 @@ void ForestView::advanced_search()
 	{
 		if (ImGui::Begin("Advanced Search Window")) 
 		{
+			m_isSearcing = true;
 			static std::wstring FileNameSearch = L"";
 
 			// Search Window Tool Bar
@@ -2698,7 +2698,7 @@ void ForestView::advanced_search()
 			// Search By Name =====================================================
 			case SearchBy::NAME: 
 			{
-				if (InputTextWString("File/Folder Name", FileNameSearch))
+				if (InputTextWString("File/Folder Name", FileNameSearch) || m_search_need_update)
 				{
 					if (FileNameSearch.size() >= 2)
 					{
@@ -2710,19 +2710,12 @@ void ForestView::advanced_search()
 						{
 							m_index.fastNameLookUp(m_founds, FileNameSearch);
 						}
-						if (!m_founds.empty()) 
-						{
-							m_founds.erase(
-								std::remove_if(m_founds.begin(), m_founds.end(),
-									[](const fs::path& p) { return p.empty() || !fs::exists(p); }),
-								m_founds.end()
-							);
-						}
 					}
 					else
 					{
 						m_founds.clear();
 					}
+					m_search_need_update = false;
 				}
 
 				break;
@@ -2740,6 +2733,7 @@ void ForestView::advanced_search()
 					{
 						m_index.searchForExtention(m_founds, FileNameSearch);
 					}
+					m_search_need_update = false;
 				}
 
 				break;
@@ -2753,7 +2747,6 @@ void ForestView::advanced_search()
 			// Founds Table =========================================================
 			if (!m_founds.empty())
 			{
-				m_isSearcing = true;
 				if (ImGui::BeginTable("FoundsTable", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable))
 				{
 					ImGui::TableSetupColumn("Path");
@@ -2827,10 +2820,10 @@ void ForestView::advanced_search()
 			}
 			else 
 			{
-				m_isSearcing = false;
 				ImGui::Text("Nothing Found");
 			}
 		}
+		else m_isSearcing = false;
 		ImGui::End();
 
 	}

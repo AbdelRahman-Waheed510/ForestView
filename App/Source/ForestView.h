@@ -254,6 +254,7 @@ private:
 	std::vector<fs::path> m_founds;
 	bool m_showSearchWindow = false;
 	bool m_isSearcing = false;
+	bool m_search_need_update = false;
 
 	std::atomic<int> m_activeCopyingTasks{ 0 };
 	std::atomic<int> m_activeDeleteTasks{ 0 };
