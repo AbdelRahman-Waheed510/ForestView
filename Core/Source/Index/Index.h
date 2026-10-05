@@ -186,11 +186,10 @@ public:
 		{
 			if (file.isDeleted || file.path.empty()) continue;
 
-			fs::path fileNorm = file.path.lexically_normal();
 
 			auto [it1, it2] = std::mismatch(
 				targetNorm.begin(), targetNorm.end(),
-				fileNorm.begin(), fileNorm.end()
+				file.path.begin(), file.path.end()
 			);
 
 			if (it1 == targetNorm.end())
@@ -216,8 +215,9 @@ public:
 	void addToDataBase(const fs::path& newItem) 
 	{
 		FileInfo f;
-		f.path = newItem;
-		f.size = fs::file_size(newItem);
+		f.path = newItem.lexically_normal();
+		std::error_code ec;
+		f.size = fs::file_size(newItem, ec);
 		if (!m_indexingDone) 
 		{
 			std::lock_guard<std::mutex> lock(m_lock);

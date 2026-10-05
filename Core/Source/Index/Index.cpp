@@ -203,7 +203,7 @@ void Index::indexPartition(const fs::directory_entry& Partition)
 		else if (!(Entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && !(Entry.dwFileAttributes & FILE_ATTRIBUTE_DEVICE))
 		{
 			FileInfo info;
-			info.path = path;
+			info.path = path.lexically_normal();
 			info.size = (static_cast<uint64_t>(Entry.nFileSizeHigh) << 32) | Entry.nFileSizeLow;
 
 			auto t0 = std::chrono::steady_clock::now();
@@ -243,7 +243,7 @@ void Index::indexFolder(const fs::path& Folder)
 	// 1. Index the current root folder entry
 	{
 		FileInfo info;
-		info.path = Folder;
+		info.path = Folder.lexically_normal();
 		auto t0 = std::chrono::steady_clock::now();
 		std::lock_guard<std::mutex> lock(m_lock);
 		auto t1 = std::chrono::steady_clock::now();
@@ -333,7 +333,7 @@ void Index::indexFolder(const fs::path& Folder)
 					if (shouldSkip(attr)) continue;
 
 					FileInfo info;
-					info.path = childPath;
+					info.path = childPath.lexically_normal();
 					foldersBuffer[localFoldersCount++] = std::move(info);
 
 					if (localFoldersCount >= s_bufferSize || localFilesCount >= s_bufferSize)
@@ -351,7 +351,7 @@ void Index::indexFolder(const fs::path& Folder)
 				else if (!(attr & FILE_ATTRIBUTE_DEVICE))
 				{
 					FileInfo info;
-					info.path = childPath;
+					info.path = childPath.lexically_normal();
 					info.size = (static_cast<uint64_t>(entry.nFileSizeHigh) << 32) | entry.nFileSizeLow;
 
 					filesBuffer[localFilesCount++] = std::move(info);
