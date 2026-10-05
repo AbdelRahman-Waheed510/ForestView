@@ -1511,14 +1511,14 @@ void ForestView::tool_bar()
 
 		const bool& canGoBack = tabs[current_tab]->fileExplorer->can_go_back();
 		ImGui::BeginDisabled(!canGoBack);
-		if (ImGui::ImageButton("##<--", M_texturesManager.get_backwards_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
+		if (ImGui::ImageButton("##<--", M_texturesManager.get_backwards_button_icon_texture_id(), ImVec2(15.0f, 15.0f)))
 		{
 			go_back_helper();
 		}
 		ImGui::EndDisabled();
 		if (canGoBack)
 		{
-			if (ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || (m_altPressed && ImGui::IsKeyPressed(ImGuiKey_LeftArrow))) 
+			if (ImGui::IsKeyPressed(ImGuiKey_Backspace, false) || (m_altPressed && ImGui::IsKeyPressed(ImGuiKey_LeftArrow)) || ImGui::IsKeyPressed(ImGuiKey_MouseX1, false))
 			{
 				if (!ImGui::GetIO().WantCaptureKeyboard) 
 				{
@@ -1531,14 +1531,14 @@ void ForestView::tool_bar()
 
 		const bool& canGoForward = tabs[current_tab]->fileExplorer->can_go_forward();
 		ImGui::BeginDisabled(!canGoForward);
-		if (ImGui::ImageButton("##-->", M_texturesManager.get_forward_button_icon_texture_id(), ImVec2(15.0f, 15.0f)) || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
+		if (ImGui::ImageButton("##-->", M_texturesManager.get_forward_button_icon_texture_id(), ImVec2(15.0f, 15.0f)))
 		{
 			go_forward_helper();
 		}
 		ImGui::EndDisabled();
 		if (canGoForward) 
 		{
-			if (m_altPressed && ImGui::IsKeyPressed(ImGuiKey_RightArrow))
+			if ((m_altPressed && ImGui::IsKeyPressed(ImGuiKey_RightArrow)) || ImGui::IsKeyPressed(ImGuiKey_MouseX2, false))
 			{
 				if (!ImGui::GetIO().WantCaptureKeyboard)
 				{
