@@ -104,8 +104,9 @@ private:
 	Trie trie;
 	std::vector<FileInfo> m_dataBase;
 	std::unordered_map<std::wstring, std::vector<uint32_t>> m_extentionsIndex;
-	std::unordered_map<std::wstring, std::vector<uint32_t>> m_filenameIndex;
-	std::unordered_map<std::wstring, std::vector<uint32_t>> m_foldersIndex;
+	std::unordered_map<fs::path, uint32_t> m_pathsIndex;
+	//std::unordered_map<std::wstring, std::vector<uint32_t>> m_filenameIndex;
+	//std::unordered_map<std::wstring, std::vector<uint32_t>> m_foldersIndex;
 	std::atomic<bool> m_indexingDone{ false };
 	std::atomic<uint32_t> m_filesCount{ 0 };
 	std::atomic<uint32_t> m_directoriesCount = { 0 };
@@ -180,22 +181,37 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		fs::path targetNorm = path_to_delete.lexically_normal();
+		fs::path target = path_to_delete.lexically_normal();
 
-		for (FileInfo& file : m_dataBase)
+		auto it = m_pathsIndex.find(target);
+		if (it == m_pathsIndex.end()) 
 		{
+			return;
+		}
+
+		const uint32_t startIndex = it->second;
+
+		for (uint32_t i = startIndex; i < m_dataBase.size(); ++i)
+		{
+			FileInfo& file = m_dataBase[i];
+
 			if (file.isDeleted || file.path.empty()) continue;
 
+			const auto [targetIt, fileIt] =
+				std::mismatch(
+					target.begin(),
+					target.end(),
+					file.path.begin(),
+					file.path.end()
+				);
 
-			auto [it1, it2] = std::mismatch(
-				targetNorm.begin(), targetNorm.end(),
-				file.path.begin(), file.path.end()
-			);
-
-			if (it1 == targetNorm.end())
+			if (targetIt != target.end())
 			{
-				file.isDeleted = true; 
+				break;
 			}
+
+			file.isDeleted = true;
+			m_pathsIndex.erase(file.path.native());
 		}
 	}
 
@@ -227,7 +243,7 @@ public:
 			{
 				if (m_dataBase.size() == m_dataBase.capacity())
 					m_dataBase.reserve(m_dataBase.capacity() + 50);
-				m_foldersIndex[f.path.filename().wstring()].emplace_back(Id);
+				//m_foldersIndex[f.path.filename().wstring()].emplace_back(Id);
 				m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
 				trie.Insert(f.path.filename().wstring(), Id);
 			}
@@ -235,7 +251,7 @@ public:
 			{
 				if (m_dataBase.size() == m_dataBase.capacity())
 					m_dataBase.reserve(m_dataBase.capacity() + 50);
-				m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
+			//	m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
 				m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
 				m_filesCount.fetch_add(1, std::memory_order_relaxed);
 				trie.Insert(f.path.filename().wstring(), Id);
@@ -250,7 +266,7 @@ public:
 			{
 				if (m_dataBase.size() == m_dataBase.capacity())
 					m_dataBase.reserve(m_dataBase.capacity() + 50);
-				m_foldersIndex[f.path.filename().wstring()].emplace_back(Id);
+				//m_foldersIndex[f.path.filename().wstring()].emplace_back(Id);
 				m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
 				trie.Insert(f.path.filename().wstring(), Id);
 			}
@@ -258,7 +274,7 @@ public:
 			{
 				if (m_dataBase.size() == m_dataBase.capacity())
 					m_dataBase.reserve(m_dataBase.capacity() + 50);
-				m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
+				//m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
 				m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
 				m_filesCount.fetch_add(1, std::memory_order_relaxed);
 				trie.Insert(f.path.filename().wstring(), Id);

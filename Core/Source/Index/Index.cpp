@@ -203,7 +203,8 @@ void Index::indexPartition(const fs::directory_entry& Partition)
 		else if (!(Entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) && !(Entry.dwFileAttributes & FILE_ATTRIBUTE_DEVICE))
 		{
 			FileInfo info;
-			info.path = path.lexically_normal();
+			const fs::path p = path.lexically_normal();
+			info.path = p;
 			info.size = (static_cast<uint64_t>(Entry.nFileSizeHigh) << 32) | Entry.nFileSizeLow;
 
 			auto t0 = std::chrono::steady_clock::now();
@@ -217,7 +218,8 @@ void Index::indexPartition(const fs::directory_entry& Partition)
 				m_dataBase.reserve(m_dataBase.capacity() + 100000);
 			m_dataBase.emplace_back(info);
 			m_extentionsIndex[path.extension().wstring()].emplace_back(Id);
-			m_filenameIndex[path.filename().wstring()].emplace_back(Id);
+			m_pathsIndex[p] = Id;
+			//m_filenameIndex[path.filename().wstring()].emplace_back(Id);
 			trie.Insert(path.filename().wstring(), Id);
 			m_filesCount.fetch_add(1, std::memory_order_relaxed);
 			Id++;
@@ -243,7 +245,8 @@ void Index::indexFolder(const fs::path& Folder)
 	// 1. Index the current root folder entry
 	{
 		FileInfo info;
-		info.path = Folder.lexically_normal();
+		const fs::path p = Folder.lexically_normal();
+		info.path = p;
 		auto t0 = std::chrono::steady_clock::now();
 		std::lock_guard<std::mutex> lock(m_lock);
 		auto t1 = std::chrono::steady_clock::now();
@@ -255,7 +258,8 @@ void Index::indexFolder(const fs::path& Folder)
 			m_dataBase.reserve(m_dataBase.capacity() + 100000);
 
 		m_dataBase.emplace_back(info);
-		m_foldersIndex[Folder.filename().wstring()].emplace_back(Id);
+		m_pathsIndex[p] = Id;
+		//m_foldersIndex[Folder.filename().wstring()].emplace_back(Id);
 		trie.Insert(Folder.filename().wstring(), Id);
 		m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
 		Id++;
@@ -281,8 +285,9 @@ void Index::indexFolder(const fs::path& Folder)
 				m_dataBase.reserve(m_dataBase.capacity() + 100000);
 
 			m_dataBase.emplace_back(f);
+			m_pathsIndex[f.path] = Id;
 			m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
-			m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
+			//m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
 			m_filesCount.fetch_add(1, std::memory_order_relaxed);
 			trie.Insert(f.path.filename().wstring(), Id);
 			Id++;
@@ -295,7 +300,8 @@ void Index::indexFolder(const fs::path& Folder)
 				m_dataBase.reserve(m_dataBase.capacity() + 100000);
 
 			m_dataBase.emplace_back(d);
-			m_foldersIndex[d.path.filename().wstring()].emplace_back(Id);
+			m_pathsIndex[d.path] = Id;
+			//m_foldersIndex[d.path.filename().wstring()].emplace_back(Id);
 			m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
 			trie.Insert(d.path.filename().wstring(), Id);
 			Id++;
@@ -428,7 +434,7 @@ void Index::index()
 					m_filesCount++;
 
 					m_extentionsIndex[path.extension().wstring()].emplace_back(Id);
-					m_filenameIndex[path.filename().wstring()].emplace_back(Id);
+					//m_filenameIndex[path.filename().wstring()].emplace_back(Id);
 					Id++;
 				}
 				else if (entry.is_directory(dirEc) && !dirEc)
@@ -447,7 +453,7 @@ void Index::index()
 					m_dataBase.emplace_back(info);
 					m_directoriesCount++;
 
-					m_foldersIndex[path.filename().wstring()].emplace_back(Id);
+					//m_foldersIndex[path.filename().wstring()].emplace_back(Id);
 					Id++;
 				}
 			}
@@ -472,8 +478,21 @@ void Index::printIndexStats()
 		<< ", Directories Scanned: " << m_directoriesCount.load() << "\n";
 
 	std::cout << "Unique extensions: " << m_extentionsIndex.size() << "\n";
-	std::cout << "Unique filenames: " << m_filenameIndex.size() << "\n";
-	std::cout << "Unique folder names: " << m_foldersIndex.size() << "\n";
+	//std::cout << "Unique filenames: " << m_filenameIndex.size() << "\n";
+//	std::cout << "Unique folder names: " << m_foldersIndex.size() << "\n";
+
+	std::cout
+		<< "Database capacity: "
+		<< m_dataBase.capacity()
+		<< '\n';
+
+	std::cout
+		<< "Database object storage: "
+		<< m_dataBase.capacity() * sizeof(FileInfo)
+		<< " bytes\n";
+
+	std::cout << m_pathsIndex.size() << std::endl;
+
 
 	// top 10 most common extensions, e.g., useful sanity check
 	std::vector<std::pair<std::wstring, size_t>> extCounts;
@@ -524,7 +543,7 @@ void Index::printIndex()
 			}
 			write << "\n";
 		}
-		for (const auto& [key, value] : m_filenameIndex)
+	/*	for (const auto& [key, value] : m_filenameIndex)
 		{
 			write << "\n" << to_utf8(key) << "\n==============================================\n";
 
@@ -549,7 +568,7 @@ void Index::printIndex()
 				first = false;
 			}
 			write << "\n";
-		}
+		}*/
 	}
 }
 
@@ -568,7 +587,7 @@ void Index::searchForExtention(std::vector<fs::path>& founds, const std::wstring
 		{
 			founds.reserve(m_extentionsIndex[extentionToSearchFor].size());
 
-			for (const int& idx : m_extentionsIndex[extentionToSearchFor])
+			for (const uint32_t idx : m_extentionsIndex[extentionToSearchFor])
 			{
 				founds.emplace_back(m_dataBase[idx].path);
 			}
@@ -591,7 +610,7 @@ void Index::searchForExtention(std::vector<fs::path>& founds, const std::wstring
 		{
 			founds.reserve(m_extentionsIndex[extentionToSearchFor].size());
 
-			for (const int& idx : m_extentionsIndex[extentionToSearchFor])
+			for (const uint32_t idx : m_extentionsIndex[extentionToSearchFor])
 			{
 				const fs::path& candidate = m_dataBase[idx].path;
 
@@ -617,7 +636,12 @@ void Index::fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& fi
 
 	for (const auto& idx : indexes)
 	{
-		founds.emplace_back(m_dataBase[idx].path);
+		const FileInfo& file = m_dataBase[idx];
+
+		if (file.isDeleted || file.path.empty())
+			continue;
+
+		founds.emplace_back(file.path);
 	}
 }
 
