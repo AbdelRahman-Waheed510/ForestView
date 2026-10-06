@@ -606,10 +606,7 @@ void ForestView::on_update()
 								t.Restart();
 								m_index.removeFromDataBase(task->source); // TODO: i think it an be more optimized but it is way better for now
 								std::cout << "time taken by delete from the database: " << t.GetElapsedSeconds() << std::endl;
-								if (m_isSearcing) 
-								{
-									m_search_need_update = true;
-								}
+								m_search_need_update.store(true, std::memory_order_release);
 								task->finished = true;
 								m_activeDeleteTasks--;
 							});
@@ -2665,14 +2662,6 @@ void ForestView::advanced_search()
 						{
 							m_index.fastNameLookUp(m_founds, FileNameSearch);
 						}
-						if (!m_founds.empty())
-						{
-							m_founds.erase(
-								std::remove_if(m_founds.begin(), m_founds.end(),
-									[](const fs::path& p) { return p.empty() || !fs::exists(p); }),
-								m_founds.end()
-							);
-						}
 					}
 				}
 				else if (current_searchBy_filter == SearchBy::EXTENTION) 
@@ -2698,7 +2687,7 @@ void ForestView::advanced_search()
 			// Search By Name =====================================================
 			case SearchBy::NAME: 
 			{
-				if (InputTextWString("File/Folder Name", FileNameSearch) || m_search_need_update)
+				if (InputTextWString("File/Folder Name", FileNameSearch) || m_search_need_update.load(std::memory_order_acquire))
 				{
 					if (FileNameSearch.size() >= 2)
 					{
@@ -2715,7 +2704,7 @@ void ForestView::advanced_search()
 					{
 						m_founds.clear();
 					}
-					m_search_need_update = false;
+					m_search_need_update.store(false, std::memory_order_release);
 				}
 
 				break;
