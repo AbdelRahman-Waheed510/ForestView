@@ -321,7 +321,7 @@ public:
 
 	void go_forward_helper();
 
-	void call_timed_tooltip(const std::string message, const ImVec4& color, const int8_t numberOfseconds);
+	void call_timed_tooltip(const std::string message, const ImVec4& color, const float numberOfseconds);
 
 	void timed_tooltip();
 

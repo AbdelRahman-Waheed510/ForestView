@@ -535,7 +535,7 @@ void ForestView::on_update()
 				{
 					if (!tabs[current_tab]->current_path.empty())
 					{
-						ImGui::SetClipboardText(tabs[current_tab]->current_path.string().c_str());
+						ImGui::SetClipboardText(Utils::path_to_utf8(tabs[current_tab]->current_path).c_str());
 						call_timed_tooltip("Current Path is copied to the clipboard", ImVec4(0.0f, 0.6235f, 0.0392f, 1.0f), 2.0);
 					}
 				}
@@ -2015,11 +2015,11 @@ void ForestView::go_forward_helper()
 	tabs[current_tab]->entries_need_update = true;
 }
 
-void ForestView::call_timed_tooltip(const std::string message, const ImVec4& color, const int8_t numberOfseconds)
+void ForestView::call_timed_tooltip(const std::string message, const ImVec4& color, const float numberOfseconds)
 {
 	m_message = message;
 	m_msgColor = color;
-	m_numberOfSeconds = numberOfseconds;
+	m_numberOfSeconds = std::clamp(numberOfseconds, 0.0f, 8.0f);
 	m_timer.Restart();
 }
 
