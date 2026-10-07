@@ -2165,10 +2165,12 @@ void ForestView::create_new_folder_helper()
 
 	if (!finalNewPath.empty())
 	{
+		Timer t(true);
 		m_index.addToDataBase(finalNewPath);
+		std::cout << "Time Taken to add to the database : " << t.GetElapsedSeconds() << std::endl;
 		if (m_isSearcing)
 		{
-			m_founds.emplace_back(finalNewPath);
+			m_search_need_update = true;
 		}
 	}
 
@@ -2186,55 +2188,55 @@ void ForestView::create_new_file_helper(const NewType& type)
 	case NewType::TEXT_DOCUMENT:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Text Document.txt", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::TEXT_DOCUMENT);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::TEXT_DOCUMENT);
 		break;
 	}     
 	case NewType::POWER_POINT:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft PowerPoint Presentation.pptx", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::POWER_POINT);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::POWER_POINT);
 		break;
 	}  
 	case NewType::WORD:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft Word Document.docx", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::WORD);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::WORD);
 		break;
 	}  
 	case NewType::RAR:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New WinRAR archive.rar", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::RAR);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::RAR);
 		break;
 	}  
 	case NewType::ZIP:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New WinRAR ZIP archive.zip", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::ZIP);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::ZIP);
 		break;
 	}  
 	case NewType::EXCEL:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft Excel Worksheet.xlsx", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::EXCEL);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::EXCEL);
 		break;
 	}  
 	case NewType::BITMAP:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Bitmap image.bmp", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::BITMAP);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::BITMAP);
 		break;
 	}  
 	case NewType::PUBLISHER_DOCUMENT:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft Publisher Document.pub", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::PUBLISHER_DOCUMENT);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::PUBLISHER_DOCUMENT);
 		break;
 	}  
 	case NewType::ACCESS_DATABASE:
 	{
 		name_of_the_file = Utils::generate_new_folder_name(tabs[current_tab]->current_path, "New Microsoft Access Database.accdb", NewType::REG_FILE);
-		fs::path finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::ACCESS_DATABASE);
+		finalNewPath = tabs[current_tab]->fileExplorer->create_folder(tabs[current_tab]->current_path, name_of_the_file, NewType::ACCESS_DATABASE);
 		break;
 	} 
 	default:
@@ -2243,10 +2245,12 @@ void ForestView::create_new_file_helper(const NewType& type)
 
 	if (!finalNewPath.empty())
 	{
+		Timer t(true);
 		m_index.addToDataBase(finalNewPath);
+		std::cout << "Time Taken to add to the database : " << t.GetElapsedSeconds() << std::endl;
 		if (m_isSearcing)
 		{
-			m_founds.emplace_back(finalNewPath);
+			m_search_need_update = true;
 		}
 	}
 
@@ -2840,6 +2844,8 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 			{
 				static std::string newName;
 
+				Timer debugTimer;
+
 				if (ImGui::IsWindowAppearing())
 				{
 					auto u8_str = FolderEntry.path().filename().u8string();
@@ -2862,10 +2868,14 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 					}
 					else 
 					{
-						
+						debugTimer.Restart();
 						RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, fs::path(std::u8string(newName.begin(), newName.end())));
+						debugTimer.Stop();
+						std::cout << "Timer taken to rename: " << debugTimer.GetElapsedSeconds() << std::endl;
+
 						if (rename.success)
 						{
+							
 							if (is_searching_for_empty_folders && fs::is_directory(*rename.finalPath))
 							{
 								for (auto& folder : m_emptyFolders)
@@ -2876,19 +2886,13 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 									}
 								}
 							}
-							if (m_isSearcing)
-							{
-								for (auto& path : m_founds)
-								{
-									if (path == tabs[current_tab]->selected_path)
-									{
-										path = *rename.finalPath;
-									}
-								}
-							}
-
+							
+							debugTimer.Restart();
 							m_index.renameFromDataBase(tabs[current_tab]->selected_path, *rename.finalPath);
+							debugTimer.Stop();
+							std::cout << "Renaming the index took: " << debugTimer.GetElapsedSeconds() << std::endl;
 
+							m_search_need_update.store(true, std::memory_order_release);
 							if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 							{
 								tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), *rename.finalPath);
@@ -3010,6 +3014,8 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 			{
 				static std::string newName;
 
+				Timer debugTimer;
+
 				if (ImGui::IsWindowAppearing()) 
 				{
 					auto u8_str = FileEntry.path().filename().u8string();
@@ -3033,7 +3039,10 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 					}
 					else 
 					{
+						debugTimer.Restart();
 						RenameReturn rename = tabs[current_tab]->fileExplorer->rename_file(tabs[current_tab]->selected_path, fs::path(std::u8string(newName.begin(), newName.end())));
+						debugTimer.Stop();
+						std::cout << "Timer taken to rename: " << debugTimer.GetElapsedSeconds() << std::endl;
 						if (rename.success)
 						{
 							if (is_searching_for_duplicates_files)
@@ -3058,18 +3067,13 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 									}
 								}
 							}
-							if (m_isSearcing)
-							{
-								for (auto& path : m_founds)
-								{
-									if (path == tabs[current_tab]->selected_path)
-									{
-										path = *rename.finalPath;
-									}
-								}
-							}
+							
+							debugTimer.Restart();
 							m_index.renameFromDataBase(tabs[current_tab]->selected_path, *rename.finalPath);
+							debugTimer.Stop();
+							std::cout << "Renaming the index took: " << debugTimer.GetElapsedSeconds() << std::endl;
 
+							m_search_need_update.store(true, std::memory_order_release);
 							if (tabs[current_tab]->fav.is_exist(fs::directory_entry(tabs[current_tab]->selected_path)))
 							{
 								tabs[current_tab]->fav.update_name(fs::directory_entry(tabs[current_tab]->selected_path), *rename.finalPath);
@@ -4107,7 +4111,6 @@ void ForestView::render_entries()
 	{
 		tabs[current_tab]->isSelecting = true;
 	}
-
 
 	if (m_isDraggingSelection) 
 	{
