@@ -803,6 +803,14 @@ public:
 		fs::rename(to_rename, newPath, ec);
 		if (ec)
 		{
+			if (ec == std::errc::permission_denied ||
+				ec == std::errc::device_or_resource_busy ||
+				ec.value() == 5 /* ERROR_ACCESS_DENIED */ ||
+				ec.value() == 32 /* ERROR_SHARING_VIOLATION */)
+			{
+				const std::string error = "The folder is currently being used by another program";
+				return RenameReturn(std::nullopt, false, error);
+			}
 			const std::string error = "Failed to rename file: " + ec.message();
 			return RenameReturn(std::nullopt, false, error);
 		}
