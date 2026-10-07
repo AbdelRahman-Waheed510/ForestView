@@ -110,6 +110,61 @@
 		return result;
 	}
 
+	bool Trie::Remove(const std::wstring& word, uint32_t path)
+	{
+		if (m_root == nullptr || word.empty())
+			return false;
+
+		std::wstring key = ToLowerW(word);
+
+		return RemoveHelper(m_root, key, 0, path);
+	}
+
+	bool Trie::RemoveHelper(Node* curr, const std::wstring& word, size_t depth, uint32_t path)
+	{
+		if (curr == nullptr)
+			return false;
+
+		if (depth == word.length())
+		{
+			auto it = std::find(curr->Paths.begin(), curr->Paths.end(), path);
+
+			if (it == curr->Paths.end())
+				return false;
+
+			curr->Paths.erase(it);
+
+			// Only this word is no longer associated with this path.
+			if (curr->Paths.empty())
+				curr->isLeaf = false;
+
+			// Tell parent whether this node can be deleted.
+			return !curr->isLeaf && curr->children.empty();
+		}
+
+		wchar_t ch = word[depth];
+
+		auto it = curr->children.find(ch);
+
+		if (it == curr->children.end())
+			return false;
+
+		bool shouldDeleteChild =
+			RemoveHelper(it->second, word, depth + 1, path);
+
+		if (shouldDeleteChild)
+		{
+			Node* childToDelete = it->second;
+
+			curr->children.erase(it);
+			delete childToDelete;
+
+			return !curr->isLeaf && curr->children.empty();
+		}
+
+		return false;
+	}
+
 // ##################################################################################################################
 //                                                 Index Class
 // ##################################################################################################################

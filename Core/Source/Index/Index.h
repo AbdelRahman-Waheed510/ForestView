@@ -18,6 +18,22 @@ inline fs::path ToLongPath(const fs::path& p)
 	return fs::path(LR"(\\?\)" + abs.wstring());
 }
 
+inline std::wstring pathKey(const fs::path& p)
+{
+	std::wstring s = p.lexically_normal().native();
+	while (s.size() > 3 && (s.back() == L'\\' || s.back() == L'/'))
+		s.pop_back();
+	return s;
+}
+
+inline bool isSameOrDescendant(const std::wstring& pathToCheck, const std::wstring& root)
+{
+	if (root.empty() || pathToCheck.size() < root.size()) return false; // to see if the root is empty or the pathToCheck is smaller than the root 
+	if (_wcsnicmp(pathToCheck.c_str(), root.c_str(), root.size()) != 0) return false; // compare the 2 paths till the end of the root 
+	if (pathToCheck.size() == root.size()) return true; // compare the sizes after the last comparison if they equal so return true if not continue to the rest of the func
+	return root.back() == L'\\' || pathToCheck[root.size()] == L'\\'; // return if the pathToCheck has \\ after the last part of the root
+}
+
 struct FileInfo 
 {
 	fs::path path;
@@ -63,6 +79,7 @@ private:
 
 	void CollectPaths(Node* node, std::vector<uint32_t>& results, const std::vector<FileInfo>& m_database) const;
 
+	bool RemoveHelper(Node* curr, const std::wstring& word, size_t depth, uint32_t path);
 public:
 
 	Trie()
@@ -92,6 +109,8 @@ public:
 
 	bool Remove(const std::wstring& word);
 
+	bool Remove(const std::wstring& word, uint32_t path);
+
 	std::vector<uint32_t> SearchPrefix(const std::wstring& prefix, const std::vector<FileInfo>& m_database) const;
 };
 
@@ -116,6 +135,7 @@ private:
 	std::thread m_indexingWorker;
 
 	std::atomic<uint64_t> m_lockWaitNs{ 0 };
+
 public:
 	Index() = default;
 
@@ -181,51 +201,58 @@ public:
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
 
-		fs::path target = path_to_delete.lexically_normal();
+		const std::wstring key = pathKey(path_to_delete);
+		if (key.empty()) return;
 
-		auto it = m_pathsIndex.find(target);
-		if (it == m_pathsIndex.end()) 
+		size_t hits = 0;
+		for (FileInfo& f : m_dataBase)
 		{
-			return;
+			if (f.isDeleted || !isSameOrDescendant(f.path.native(), key)) continue;
+
+			f.isDeleted = true;
+			m_pathsIndex.erase(f.path);
+			++hits;
 		}
 
-		const uint32_t startIndex = it->second;
-
-		for (uint32_t i = startIndex; i < m_dataBase.size(); ++i)
-		{
-			FileInfo& file = m_dataBase[i];
-
-			if (file.isDeleted || file.path.empty()) continue;
-
-			const auto [targetIt, fileIt] =
-				std::mismatch(
-					target.begin(),
-					target.end(),
-					file.path.begin(),
-					file.path.end()
-				);
-
-			if (targetIt != target.end())
-			{
-				break;
-			}
-
-			file.isDeleted = true;
-			m_pathsIndex.erase(file.path.native());
-		}
+		if (hits == 0)
+			std::wcerr << L"[Index] removeFromDataBase matched nothing for: " << key << L"\n";
 	}
 
-	void renameFromDataBase(const fs::path& current_name, const fs::path& new_name) 
+	void renameFromDataBase(const fs::path& current_name, const fs::path& new_name)
 	{
 		std::lock_guard<std::mutex> lock(m_lock);
-		for (FileInfo& file : m_dataBase)
+
+		const std::wstring oldKey = pathKey(current_name);
+		const std::wstring newKey = pathKey(new_name);
+		if (oldKey.empty() || newKey.empty()) return;
+
+		for (uint32_t i = 0; i < m_dataBase.size(); ++i)
 		{
-			if (file.path == current_name)
+			FileInfo& f = m_dataBase[i];
+			if (f.isDeleted || !isSameOrDescendant(f.path.native(), oldKey)) continue;
+
+			const bool isRenamedItem = (f.path.native().size() == oldKey.size());
+			const std::wstring oldExt = f.path.extension().wstring();
+
+			const std::wstring oldFilename = f.path.filename().wstring();
+
+			m_pathsIndex.erase(f.path);
+			f.path = fs::path(newKey + f.path.native().substr(oldKey.size()));
+			m_pathsIndex[f.path] = i;
+
+			if (isRenamedItem)   // descendants keep their own filename/extension; only the renamed item changes keys
 			{
-				file.path = new_name;
-				break;
+				trie.Remove(oldFilename, i);
+				trie.Insert(f.path.filename().wstring(), i);
+
+				bool wasFile = false;
+				if (auto it = m_extentionsIndex.find(oldExt); it != m_extentionsIndex.end())
+					wasFile = std::find(it->second.begin(), it->second.end(), i) != it->second.end();
+				if (wasFile)
+					m_extentionsIndex[f.path.extension().wstring()].emplace_back(i);
 			}
 		}
+
 	}
 
 	void addToDataBase(const fs::path& newItem) 
