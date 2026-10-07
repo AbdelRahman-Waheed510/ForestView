@@ -644,7 +644,11 @@ void Index::searchForExtention(std::vector<fs::path>& founds, const std::wstring
 
 			for (const uint32_t idx : m_extentionsIndex[extentionToSearchFor])
 			{
-				founds.emplace_back(m_dataBase[idx].path);
+				const auto& candidate = m_dataBase[idx];
+
+				if (candidate.isDeleted) continue;
+
+				founds.emplace_back(candidate.path);
 			}
 		}
 	}
@@ -667,10 +671,12 @@ void Index::searchForExtention(std::vector<fs::path>& founds, const std::wstring
 
 			for (const uint32_t idx : m_extentionsIndex[extentionToSearchFor])
 			{
-				const fs::path& candidate = m_dataBase[idx].path;
+				const auto& candidate = m_dataBase[idx];
+
+				if (candidate.isDeleted) continue;
 
 				const auto x = std::mismatch(
-					candidate.begin(), candidate.end(),
+					candidate.path.begin(), candidate.path.end(),
 					root_path.begin(), root_path.end()
 				);
 
