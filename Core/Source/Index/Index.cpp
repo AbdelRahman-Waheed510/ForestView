@@ -1,6 +1,8 @@
 #include "pchCore.h"
 #include "Index.h"
 
+#define WIN32_INDEXING 1
+
 // ##################################################################################################################
 //                                                 Trie Class
 // ##################################################################################################################
@@ -207,12 +209,14 @@ void Index::paralaizedIndex()
 
 	auto end = std::chrono::steady_clock::now();
 	auto seconds = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-	//std::cout << "Indexing took: " << seconds << "s\n";
+	std::cout << "Indexing took: " << seconds << "s\n";
 
-	//std::cout << "Time Taken by look [m_lockWaitNs.load() / 1000000]" << m_lockWaitNs.load() / 1000000 << std::endl;
+	std::cout << "Time Taken by look [m_lockWaitNs.load() / 1000000]" << m_lockWaitNs.load() / 1000000 << std::endl;
 
 	m_indexingDone.store(true);
 }
+
+#if WIN32_INDEXING
 
 void Index::indexPartition(const fs::directory_entry& Partition)
 {
@@ -273,7 +277,7 @@ void Index::indexPartition(const fs::directory_entry& Partition)
 				m_dataBase.reserve(m_dataBase.capacity() + 100000);
 			m_dataBase.emplace_back(info);
 			m_extentionsIndex[path.extension().wstring()].emplace_back(Id);
-			m_pathsIndex[p] = Id;
+			//m_pathsIndex[p] = Id;
 			//m_filenameIndex[path.filename().wstring()].emplace_back(Id);
 			trie.Insert(path.filename().wstring(), Id);
 			m_filesCount.fetch_add(1, std::memory_order_relaxed);
@@ -313,7 +317,7 @@ void Index::indexFolder(const fs::path& Folder)
 			m_dataBase.reserve(m_dataBase.capacity() + 100000);
 
 		m_dataBase.emplace_back(info);
-		m_pathsIndex[p] = Id;
+		//m_pathsIndex[p] = Id;
 		//m_foldersIndex[Folder.filename().wstring()].emplace_back(Id);
 		trie.Insert(Folder.filename().wstring(), Id);
 		m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
@@ -340,7 +344,7 @@ void Index::indexFolder(const fs::path& Folder)
 				m_dataBase.reserve(m_dataBase.capacity() + 100000);
 
 			m_dataBase.emplace_back(f);
-			m_pathsIndex[f.path] = Id;
+		//	m_pathsIndex[f.path] = Id;
 			m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
 			//m_filenameIndex[f.path.filename().wstring()].emplace_back(Id);
 			m_filesCount.fetch_add(1, std::memory_order_relaxed);
@@ -355,7 +359,7 @@ void Index::indexFolder(const fs::path& Folder)
 				m_dataBase.reserve(m_dataBase.capacity() + 100000);
 
 			m_dataBase.emplace_back(d);
-			m_pathsIndex[d.path] = Id;
+			//m_pathsIndex[d.path] = Id;
 			//m_foldersIndex[d.path.filename().wstring()].emplace_back(Id);
 			m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
 			trie.Insert(d.path.filename().wstring(), Id);
@@ -437,6 +441,272 @@ void Index::indexFolder(const fs::path& Folder)
 	/*if (ms > 100)
 		std::wcout << Folder.wstring() << L": " << ms << L"ms\n";*/
 }
+
+// Utils
+constexpr bool Index::shouldSkip(DWORD attrs)
+{
+	if (attrs == INVALID_FILE_ATTRIBUTES)
+		return true;
+
+	return (attrs & FILE_ATTRIBUTE_HIDDEN) || (attrs & FILE_ATTRIBUTE_SYSTEM);
+}
+
+#else
+
+void Index::indexPartition(const fs::directory_entry& Partition)
+{
+	auto start = std::chrono::steady_clock::now();
+	std::vector<std::future<void>> FoldersFuture;
+	std::error_code ec;
+	for (const auto& entry : fs::directory_iterator(Partition.path(), fs::directory_options::skip_permission_denied, ec))
+	{
+		if (m_cancel_request.load(std::memory_order_relaxed))
+		{
+			auto end = std::chrono::steady_clock::now();
+			///*	std::wcout << Partition.path().wstring() << L": "
+			//		<< std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count()
+			//		<< L"ms\n";*/
+			break;
+		}
+		if (ec)
+		{
+			ec.clear();
+			continue;
+		}
+		const fs::path path = entry.path(); 
+		std::error_code entryEc;
+
+		const bool isDirectory = entry.is_directory(entryEc);
+
+		if (entryEc) continue;
+
+		if (isDirectory)
+		{
+			FoldersFuture.emplace_back(
+				std::async(
+					std::launch::async,
+					[this, path]()
+					{
+						indexFolder(path);
+					}
+				)
+			);
+		}
+		else if (!isDirectory)
+		{
+			FileInfo info;
+
+			const fs::path p = path.lexically_normal();
+
+			info.path = p;
+
+			std::error_code sizeEc;
+
+			info.size = entry.file_size(sizeEc);
+
+			if (sizeEc) info.size = 0;
+
+			auto t0 = std::chrono::steady_clock::now();
+
+			std::lock_guard<std::mutex> lock(m_lock);
+
+			auto t1 = std::chrono::steady_clock::now();
+
+			m_lockWaitNs.fetch_add(
+				std::chrono::duration_cast<std::chrono::nanoseconds>(
+					t1 - t0
+				).count(),
+				std::memory_order_relaxed
+			);
+
+			if (m_dataBase.size() == m_dataBase.capacity())
+				m_dataBase.reserve(
+					m_dataBase.capacity() + 100000
+				);
+
+			m_dataBase.emplace_back(info);
+
+			m_extentionsIndex[path.extension().wstring()].emplace_back(Id);
+
+			m_pathsIndex[p] = Id;
+
+			trie.Insert(path.filename().wstring(), Id);
+
+			m_filesCount.fetch_add(1, std::memory_order_relaxed);
+
+			Id++;
+		}
+	}
+
+	for (auto& f : FoldersFuture) f.get();
+}
+
+void Index::indexFolder(const fs::path& Folder)
+{
+	auto start = std::chrono::steady_clock::now();
+
+	// Index current root folder entry
+	{
+		FileInfo info;
+		const fs::path p = Folder.lexically_normal();
+
+		info.path = p;
+
+		auto t0 = std::chrono::steady_clock::now();
+		std::lock_guard<std::mutex> lock(m_lock);
+		auto t1 = std::chrono::steady_clock::now();
+
+		m_lockWaitNs.fetch_add(
+			std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
+			std::memory_order_relaxed
+		);
+
+		if (m_dataBase.size() == m_dataBase.capacity())
+			m_dataBase.reserve(m_dataBase.capacity() + 100000);
+
+		m_dataBase.emplace_back(info);
+		m_pathsIndex[p] = Id;
+		trie.Insert(Folder.filename().wstring(), Id);
+
+		m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
+		Id++;
+	}
+
+	std::array<FileInfo, s_bufferSize> filesBuffer;
+	std::array<FileInfo, s_bufferSize> foldersBuffer;
+
+	size_t localFilesCount = 0;
+	size_t localFoldersCount = 0;
+
+	auto flush = [&]()
+		{
+			auto t0 = std::chrono::steady_clock::now();
+			std::lock_guard<std::mutex> lock(m_lock);
+			auto t1 = std::chrono::steady_clock::now();
+
+			m_lockWaitNs.fetch_add(
+				std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count(),
+				std::memory_order_relaxed
+			);
+
+			for (size_t i = 0; i < localFilesCount; ++i)
+			{
+				auto& f = filesBuffer[i];
+
+				if (m_dataBase.size() == m_dataBase.capacity())
+					m_dataBase.reserve(m_dataBase.capacity() + 100000);
+
+				m_dataBase.emplace_back(f);
+				m_pathsIndex[f.path] = Id;
+				m_extentionsIndex[f.path.extension().wstring()].emplace_back(Id);
+
+				m_filesCount.fetch_add(1, std::memory_order_relaxed);
+				trie.Insert(f.path.filename().wstring(), Id);
+
+				Id++;
+			}
+
+			for (size_t i = 0; i < localFoldersCount; ++i)
+			{
+				auto& d = foldersBuffer[i];
+
+				if (m_dataBase.size() == m_dataBase.capacity())
+					m_dataBase.reserve(m_dataBase.capacity() + 100000);
+
+				m_dataBase.emplace_back(d);
+				m_pathsIndex[d.path] = Id;
+
+				m_directoriesCount.fetch_add(1, std::memory_order_relaxed);
+				trie.Insert(d.path.filename().wstring(), Id);
+
+				Id++;
+			}
+
+			localFilesCount = 0;
+			localFoldersCount = 0;
+		};
+
+	std::error_code ec;
+
+	fs::recursive_directory_iterator iterator(Folder, fs::directory_options::skip_permission_denied, ec);
+
+	fs::recursive_directory_iterator end;
+
+	while (iterator != end)
+	{
+		if (m_cancel_request.load(std::memory_order_relaxed))
+			break;
+
+		if (ec)
+		{
+			ec.clear();
+			iterator.increment(ec);
+			continue;
+		}
+
+		const auto& entry = *iterator;
+
+		std::error_code entryEc;
+		const bool isDirectory = entry.is_directory(entryEc);
+
+		if (entryEc)
+		{
+			iterator.increment(ec);
+			continue;
+		}
+
+		if (isDirectory)
+		{
+			// Don't recurse into symbolic links.
+			if (entry.is_symlink()) iterator.disable_recursion_pending();
+
+			FileInfo info;
+			info.path = entry.path().lexically_normal();
+
+			foldersBuffer[localFoldersCount++] = std::move(info);
+
+			if (localFoldersCount >= s_bufferSize ||
+				localFilesCount >= s_bufferSize)
+			{
+				flush();
+			}
+		}
+		else
+		{
+			FileInfo info;
+			info.path = entry.path().lexically_normal();
+
+			std::error_code sizeEc;
+			info.size = entry.file_size(sizeEc);
+
+			if (sizeEc)
+				info.size = 0;
+
+			filesBuffer[localFilesCount++] = std::move(info);
+
+			if (localFoldersCount >= s_bufferSize ||
+				localFilesCount >= s_bufferSize)
+			{
+				flush();
+			}
+		}
+
+		iterator.increment(ec);
+	}
+
+	flush();
+}
+
+// Utils
+constexpr bool Index::shouldSkip(DWORD attrs)
+{
+	if (attrs == INVALID_FILE_ATTRIBUTES)
+		return true;
+
+	return (attrs & FILE_ATTRIBUTE_HIDDEN) || (attrs & FILE_ATTRIBUTE_SYSTEM);
+}
+
+#endif
 
 void Index::index()
 {
@@ -546,7 +816,7 @@ void Index::printIndexStats()
 		<< m_dataBase.capacity() * sizeof(FileInfo)
 		<< " bytes\n";
 
-	std::cout << m_pathsIndex.size() << std::endl;
+//	std::cout << m_pathsIndex.size() << std::endl;
 
 
 	// top 10 most common extensions, e.g., useful sanity check
@@ -730,14 +1000,7 @@ void Index::fastNameLookUp(std::vector<fs::path>& founds, const std::wstring& fi
 	}
 }
 
-// Utils
-constexpr bool Index::shouldSkip(DWORD attrs)
-{
-	if (attrs == INVALID_FILE_ATTRIBUTES)
-		return true;
 
-	return (attrs & FILE_ATTRIBUTE_HIDDEN) || (attrs & FILE_ATTRIBUTE_SYSTEM);
-}
 
 std::string Index::to_utf8(const std::wstring& wstr) {
 	if (wstr.empty()) return {};

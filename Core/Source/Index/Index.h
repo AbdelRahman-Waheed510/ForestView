@@ -123,7 +123,7 @@ private:
 	Trie trie;
 	std::vector<FileInfo> m_dataBase;
 	std::unordered_map<std::wstring, std::vector<uint32_t>> m_extentionsIndex;
-	std::unordered_map<fs::path, uint32_t> m_pathsIndex;
+	//std::unordered_map<fs::path, uint32_t> m_pathsIndex;
 	//std::unordered_map<std::wstring, std::vector<uint32_t>> m_filenameIndex;
 	//std::unordered_map<std::wstring, std::vector<uint32_t>> m_foldersIndex;
 	std::atomic<bool> m_indexingDone{ false };
@@ -210,7 +210,7 @@ public:
 			if (f.isDeleted || !isSameOrDescendant(f.path.native(), key)) continue;
 
 			f.isDeleted = true;
-			m_pathsIndex.erase(f.path);
+			//m_pathsIndex.erase(f.path);
 			++hits;
 		}
 
@@ -236,9 +236,9 @@ public:
 
 			const std::wstring oldFilename = f.path.filename().wstring();
 
-			m_pathsIndex.erase(f.path);
+			//m_pathsIndex.erase(f.path);
 			f.path = fs::path(newKey + f.path.native().substr(oldKey.size()));
-			m_pathsIndex[f.path] = i;
+			//m_pathsIndex[f.path] = i;
 
 			if (isRenamedItem)   // descendants keep their own filename/extension; only the renamed item changes keys
 			{
