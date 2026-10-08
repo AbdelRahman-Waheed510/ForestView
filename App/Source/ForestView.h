@@ -100,8 +100,8 @@ struct State
 
 	fs::path selected_path;
 	fs::path current_path;
-	std::vector<fs::path> copied_paths;
-	fs::path copied_path;
+	std::pair<TaskType, std::vector<fs::path>> copied_paths;
+	std::pair<TaskType, fs::path> copied_path;
 	std::string copied_structure = "";
 	fs::path deleted_path;
 
@@ -284,6 +284,7 @@ public:
 		current_tab = 0;
 		size_count.size = 0.0;
 
+
 		m_index.startIdexing();
 	}
 
@@ -310,6 +311,8 @@ public:
 	void tool_bar();
 
 	void copy_helper();
+
+	void cut_helper();
 
 	void create_new_folder_helper();
 

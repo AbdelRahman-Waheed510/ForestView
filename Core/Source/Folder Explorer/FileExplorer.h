@@ -306,6 +306,96 @@ private:
 
 	void sort_entries();
 
+	CopyReturn copy_paste_helper(const fs::path& source,const fs::path& destination,std::atomic<double>& Sizeprogress,std::atomic<int>& filesCountProgress,std::atomic<bool>& cancel_request)
+	{
+		if (!fs::exists(source))
+		{
+			std::string e = std::format("Source path [{}] does not exist.", Utils::to_display_sring(Utils::path_to_utf8(source)));
+			return CopyReturn(std::nullopt, e);
+		}
+		std::error_code ec;
+
+		std::string name_of_the_folder;
+		fs::path dest;
+		// If the copied directory is a folder 
+		if (fs::is_directory(source))
+		{
+			if (is_subpath(destination, source))
+			{
+				std::string e = std::format("Cannot copy [{}] \ninto its own subfolder [{}].",
+					Utils::to_display_sring(Utils::path_to_utf8(source)),
+					Utils::to_display_sring(Utils::path_to_utf8(destination)));
+				return CopyReturn(std::nullopt, e);
+			}
+
+			auto u8_str1 = source.filename().u8string();
+			std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+
+			name_of_the_folder = Utils::generate_new_folder_name(destination, utf8_path1, NewType::FOLDER);
+			dest = destination / Utils::utf8_to_path(name_of_the_folder);
+			std::error_code ec_longPath;
+
+			fs::create_directories(dest, ec_longPath);
+
+			if (ec_longPath)
+			{
+				std::string e = std::format("Failed to create target directory [{}]: {}", Utils::to_display_sring(Utils::path_to_utf8(dest)), ec_longPath.message());
+				return CopyReturn(std::nullopt, e);
+			}
+
+			for (auto entry = fs::recursive_directory_iterator(source, fs::directory_options::skip_permission_denied, ec); entry != fs::recursive_directory_iterator(); entry.increment(ec))
+			{
+				if (cancel_request)
+				{
+					return CopyReturn(dest, std::nullopt);
+				}
+				fs::path relativePath = fs::relative(entry->path(), source);
+				fs::path targetPath = dest / relativePath;
+
+				if (entry->is_directory())
+				{
+					std::error_code ec_longPath;
+					fs::create_directories(targetPath, ec_longPath);
+					if (ec_longPath)
+					{
+						std::string e = std::format("Failed to create target directory [{}]: {}", Utils::to_display_sring(Utils::path_to_utf8(targetPath)), ec_longPath.message());
+					}
+				}
+
+				else if (entry->is_regular_file())
+				{
+					copy_in_chuncks(entry->path(), targetPath, Sizeprogress, filesCountProgress, cancel_request);
+					if (cancel_request) return CopyReturn(dest, std::nullopt);
+
+				}
+
+				if (ec)
+				{
+					continue;
+				}
+			}
+		}
+
+		// If the copied directory is a regular file so it does not need the access to the for loop
+		else if (fs::is_regular_file(source))
+		{
+			auto u8_str1 = source.filename().u8string();
+			std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+
+			name_of_the_folder = Utils::generate_new_folder_name(destination, utf8_path1, NewType::REG_FILE);
+			dest = destination / Utils::utf8_to_path(name_of_the_folder);
+
+			copy_in_chuncks(source, dest, Sizeprogress, filesCountProgress, cancel_request);
+		}
+
+		if (ec)
+		{
+			return CopyReturn(dest, std::format("Copy completed with errors: {}", ec.message()));
+		}
+
+		return CopyReturn(dest, std::nullopt);
+	}
+
 public:
 	
 	Explorer(TexturesManager& textures_manager) : M_texturesManager(textures_manager)
@@ -900,96 +990,59 @@ public:
 		return parentIt == parentPath.end();
 	}
 
+
 	const CopyReturn copy_paste(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
 	{
 		Guard guard(finished);
+		return copy_paste_helper(source, destination, Sizeprogress, filesCountProgress, cancel_request);
+	}
 
-		if (!fs::exists(source))
-		{
+	const CopyReturn cut_paste(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request, std::atomic<bool>& finished)
+	{
+		Guard guard(finished);
+
+		if (!fs::exists(source)) {
 			std::string e = std::format("Source path [{}] does not exist.", Utils::to_display_sring(Utils::path_to_utf8(source)));
 			return CopyReturn(std::nullopt, e);
 		}
+
 		std::error_code ec;
 
-		std::string name_of_the_folder;
-		fs::path dest;
-		// If the copied directory is a folder 
-		if (fs::is_directory(source))
-		{
-			if (is_subpath(destination, source))
-			{
-				std::string e = std::format("Cannot copy [{}] \ninto its own subfolder [{}].", 
-					Utils::to_display_sring(Utils::path_to_utf8(source)), 
-					Utils::to_display_sring(Utils::path_to_utf8(destination)));
-				return CopyReturn(std::nullopt, e);
-			}
+		auto u8_filename = source.filename().u8string();
+		std::string utf8_name(u8_filename.begin(), u8_filename.end());
+		NewType type = fs::is_directory(source) ? NewType::FOLDER : NewType::REG_FILE;
 
-			auto u8_str1 = source.filename().u8string();
-			std::string utf8_path1(u8_str1.begin(), u8_str1.end());
+		std::string new_name = Utils::generate_new_folder_name(destination, utf8_name, type);
+		fs::path target_dest = destination / Utils::utf8_to_path(new_name);
 
-			name_of_the_folder = Utils::generate_new_folder_name(destination, utf8_path1, NewType::FOLDER);
-			dest = destination / Utils::utf8_to_path(name_of_the_folder);
-			std::error_code ec_longPath;
+		// 2. Fast Path: Try atomic OS rename (same partition/drive)
+		fs::rename(source, target_dest, ec);
 
-			fs::create_directories(dest, ec_longPath);
+		if (!ec) {
+			// Fast path succeeded!
+			return CopyReturn(target_dest, std::nullopt);
+		}
 
-			if (ec_longPath) 
-			{
-				std::string e = std::format("Failed to create target directory [{}]: {}", Utils::to_display_sring(Utils::path_to_utf8(dest)), ec_longPath.message());
-				return CopyReturn(std::nullopt, e);
-			}
+		// 3. Fallback: Cross-drive move (Copy + Delete)
+		// IMPORTANT: Bypass Guard in copy_paste to avoid double-guard issues
+		CopyReturn copy_res = copy_paste_helper(source, target_dest, Sizeprogress, filesCountProgress, cancel_request);
 
-			for (auto entry = fs::recursive_directory_iterator(source, fs::directory_options::skip_permission_denied, ec); entry != fs::recursive_directory_iterator(); entry.increment(ec))
-			{
-				if (cancel_request)
-				{
-					return CopyReturn(dest, std::nullopt);
-				}
-				fs::path relativePath = fs::relative(entry->path(), source);
-				fs::path targetPath = dest / relativePath;
+		// If canceled by user, do NOT delete source!
+		if (cancel_request) {
+			return copy_res;
+		}
 
-				if (entry->is_directory())
-				{
-					std::error_code ec_longPath;
-					fs::create_directories(targetPath,ec_longPath);
-					if (ec_longPath)
-					{
-						std::string e = std::format("Failed to create target directory [{}]: {}", Utils::to_display_sring(Utils::path_to_utf8(targetPath)), ec_longPath.message());
-					}
-				}
+		// If copy succeeded without errors, remove the source
+		if (copy_res.finalPath.has_value() && !copy_res.msg.has_value()) {
+			std::error_code remove_ec;
+			fs::remove_all(source, remove_ec);
 
-				else if (entry->is_regular_file())
-				{
-					copy_in_chuncks(entry->path(), targetPath, Sizeprogress, filesCountProgress, cancel_request);
-					if (cancel_request) return CopyReturn(dest, std::nullopt);
-
-				}
-
-				if (ec)
-				{
-					continue;
-				}
+			if (remove_ec) {
+				return CopyReturn(copy_res.finalPath, std::format("Failed to remove source after copying: {}", remove_ec.message()));
 			}
 		}
 
-		// If the copied directory is a regular file so it does not need the access to the for loop
-		else if (fs::is_regular_file(source))
-		{
-			auto u8_str1 = source.filename().u8string();
-			std::string utf8_path1(u8_str1.begin(), u8_str1.end());
-
-			name_of_the_folder = Utils::generate_new_folder_name(destination, utf8_path1, NewType::REG_FILE);
-			dest = destination / Utils::utf8_to_path(name_of_the_folder);
-
-			copy_in_chuncks(source, dest, Sizeprogress, filesCountProgress, cancel_request);
-		}
-
-		if (ec)
-		{
-			return CopyReturn(dest, std::format("Copy completed with errors: {}", ec.message()));
-		}
-		
-		return CopyReturn(dest, std::nullopt);
+		return copy_res;
 	}
 
 	void copy_in_chuncks(const fs::path& source, const fs::path& destination, std::atomic<double>& Sizeprogress, std::atomic<int>& filesCountProgress, std::atomic<bool>& cancel_request)

@@ -556,6 +556,7 @@ void ForestView::on_update()
 			{
 				switch (m_queuedTasks[i]->task_type)	
 				{
+				case TaskType::CUT:
 				case TaskType::COPY_PASTE:
 				{
 					if (m_activeCopyingTasks.load() < 3) 
@@ -567,7 +568,16 @@ void ForestView::on_update()
 						m_activeCopyingTasks++;
 						m_queuedTasks[i]->worker = std::thread([this, task]()
 							{
-								CopyReturn result = tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+								CopyReturn result;
+								if (task->task_type == TaskType::COPY_PASTE)
+								{
+									result = tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+								}
+								else if (task->task_type == TaskType::CUT)
+								{
+									result = tabs[current_tab]->fileExplorer->cut_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
+								}
+
 								if (result.msg.has_value()) 
 								{
 									call_timed_tooltip(*result.msg, ImVec4(1.0, 0.0, 0.0, 1.0), (*result.msg).size() * 0.05);
@@ -670,6 +680,13 @@ void ForestView::on_update()
 						{
 						case TaskType::NONE:
 							break;
+						case TaskType::CUT:
+						{
+							ImGui::SeparatorText("Cut Task");
+							ImGui::Text(std::format("Cut From: {}", task->sourceName).c_str());
+							ImGui::Text(std::format("Paste To: {}", task->destinationName).c_str());
+							break;
+						}
 						case TaskType::COPY_PASTE: 
 						{
 							ImGui::SeparatorText("Copy/Paste Task");
@@ -719,7 +736,7 @@ void ForestView::on_update()
 		{
 			for (size_t i = 0; i < tasks.size(); i++)
 			{
-				if (tasks[i]->task_type == TaskType::COPY_PASTE)
+				if (tasks[i]->task_type == TaskType::COPY_PASTE || tasks[i]->task_type == TaskType::CUT)
 				{
 					if (!tasks[i]->finished)
 					{
@@ -1129,8 +1146,8 @@ void ForestView::refocus_reload()
 			tabs[current_tab]->entries_need_update = true;
 			was_focused = true;
 		}
-		tabs[current_tab]->copied_path.clear();
-		tabs[current_tab]->copied_paths.clear();
+		tabs[current_tab]->copied_path.second.clear();
+		tabs[current_tab]->copied_paths.second.clear();
 		tabs[current_tab]->deleted_path.clear();
 	}
 }
@@ -1676,10 +1693,43 @@ void ForestView::tool_bar()
 			}
 			else if (permissonToCopy) copy_helper();
 		}
+		if (!cantCopy && (!ImGui::GetIO().WantCaptureKeyboard && !m_shiftPressed && (m_ctrlPressd && ImGui::IsKeyPressed(ImGuiKey_X, false))))
+		{
+			bool permissonToCopy = true;
+			if (tabs[current_tab]->isSelecting)
+			{
+				const std::vector<Entry>& entries = tabs[current_tab]->entries;
+				const std::vector<SelectionRange>& selections = tabs[current_tab]->selectionManager.GetRanges();
+				for (const SelectionRange& range : selections)
+				{
+					if (!permissonToCopy) break;
+					if (range.first < 0 || range.last >= static_cast<int>(entries.size()) || range.first > range.last)
+					{
+						permissonToCopy = false;
+						break;
+					}
+					for (int i = range.first; i <= range.last; ++i)
+					{
+						AccessResult res = tabs[current_tab]->fileExplorer->check_access(entries[i].entry.path());
+						if (res == AccessResult::ACCESS_DENIED || res == AccessResult::LOCKED_OR_IN_USE)
+						{
+							permissonToCopy = false;
+							break;
+						}
+					}
+				}
 
+			}
+			if (!permissonToCopy)
+			{
+				need_access_denied_popup = true;
+				ImGui::CloseCurrentPopup();
+			}
+			else if (permissonToCopy) cut_helper();
+		}
 		ImGui::SameLine();
 
-		bool cantPaste = tabs[current_tab]->copied_path.empty() && tabs[current_tab]->copied_paths.empty();
+		bool cantPaste = tabs[current_tab]->copied_path.second.empty() && tabs[current_tab]->copied_paths.second.empty();
 		ImGui::BeginDisabled(cantPaste);
 		if (ImGui::Button("Paste"))
 		{
@@ -1905,36 +1955,63 @@ void ForestView::copy_helper()
 {
 	if (tabs[current_tab]->isSelecting)
 	{
-		tabs[current_tab]->copied_path.clear();
-		tabs[current_tab]->copied_paths.clear();
+		tabs[current_tab]->copied_path.second.clear();
+		tabs[current_tab]->copied_paths.second.clear();
 
+		tabs[current_tab]->copied_paths.first = TaskType::COPY_PASTE;
 		for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
 		{
 			for (int i = range.first; i <= range.last; i++)
 			{
-				tabs[current_tab]->copied_paths.emplace_back(tabs[current_tab]->entries[i].entry.path());
+				tabs[current_tab]->copied_paths.second.emplace_back(tabs[current_tab]->entries[i].entry.path());
 			}
 		}
 	}
 	else
 	{
-		tabs[current_tab]->copied_paths.clear();
-		tabs[current_tab]->copied_path = tabs[current_tab]->selected_path;
+		tabs[current_tab]->copied_paths.second.clear();
+		tabs[current_tab]->copied_path.first = TaskType::COPY_PASTE;
+		tabs[current_tab]->copied_path.second = tabs[current_tab]->selected_path;
+	}
+}
+
+void ForestView::cut_helper() 
+{
+	if (tabs[current_tab]->isSelecting)
+	{
+		tabs[current_tab]->copied_path.second.clear();
+		tabs[current_tab]->copied_paths.second.clear();
+
+		tabs[current_tab]->copied_paths.first = TaskType::CUT;
+		for (const SelectionRange& range : tabs[current_tab]->selectionManager.GetRanges())
+		{
+			for (int i = range.first; i <= range.last; i++)
+			{
+				tabs[current_tab]->copied_paths.second.emplace_back(tabs[current_tab]->entries[i].entry.path());
+			}
+		}
+	}
+	else
+	{
+		tabs[current_tab]->copied_paths.second.clear();
+		tabs[current_tab]->copied_path.first = TaskType::CUT;
+		tabs[current_tab]->copied_path.second = tabs[current_tab]->selected_path;
 	}
 }
 
 void ForestView::paste_helper()
 {
-	if (!tabs[current_tab]->copied_paths.empty())
+	if (!tabs[current_tab]->copied_paths.second.empty())
 	{
-		for (const fs::path& path : tabs[current_tab]->copied_paths)
+		const TaskType type = tabs[current_tab]->copied_paths.first;
+		for (const fs::path& path : tabs[current_tab]->copied_paths.second)
 		{
 			fs::path src = path;
 			fs::path dest = tabs[current_tab]->current_path;
 
 			EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(path);
 
-			std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
+			std::unique_ptr<Task> copyTask = std::make_unique<Task>(type);
 			copyTask->totalSize = data.directorySize;
 			copyTask->totalfilesCount = data.filesCount;
 			copyTask->source = src;
@@ -1951,16 +2028,17 @@ void ForestView::paste_helper()
 
 			m_queuedTasks.emplace_back(std::move(copyTask));
 		}
-		tabs[current_tab]->copied_paths.clear();
+		tabs[current_tab]->copied_paths.second.clear();
 	}
 	else
 	{
-		fs::path src = tabs[current_tab]->copied_path;
+		const TaskType type = tabs[current_tab]->copied_path.first;
+		fs::path src = tabs[current_tab]->copied_path.second;
 		fs::path dest = tabs[current_tab]->current_path;
 
-		EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(tabs[current_tab]->copied_path);
+		EntryDataReturn data = tabs[current_tab]->fileExplorer->get_total_files_size(src);
 
-		std::unique_ptr<Task> copyTask = std::make_unique<Task>(TaskType::COPY_PASTE);
+		std::unique_ptr<Task> copyTask = std::make_unique<Task>(type);
 		copyTask->totalSize = data.directorySize;
 		copyTask->totalfilesCount = data.filesCount;
 		copyTask->source = src;
@@ -1977,7 +2055,7 @@ void ForestView::paste_helper()
 
 		m_queuedTasks.emplace_back(std::move(copyTask));
 
-		tabs[current_tab]->copied_path.clear();
+		tabs[current_tab]->copied_path.second.clear();
 	}
 }
 
@@ -2497,8 +2575,8 @@ void ForestView::delete_warning()
 
 			tabs[current_tab]->deleted_path = "";
 			tabs[current_tab]->selected_path.clear();
-			tabs[current_tab]->copied_path.clear();
-			tabs[current_tab]->copied_paths.clear();
+			tabs[current_tab]->copied_path.second.clear();
+			tabs[current_tab]->copied_paths.second.clear();
 			ImGui::CloseCurrentPopup();
 		}
 		ImGui::SetItemDefaultFocus();
@@ -2924,6 +3002,12 @@ void ForestView::folders_right_click_popup(const fs::directory_entry& FolderEntr
 			copy_helper();
 		}
 
+		// Cut 
+		if (ImGui::Selectable("Cut"))
+		{
+			cut_helper();
+		}
+
 		// Delete
 		if (ImGui::Selectable("Delete"))
 		{
@@ -3108,6 +3192,12 @@ void ForestView::files_right_click_popup(const fs::directory_entry& FileEntry)
 			copy_helper();
 		}
 
+		// Cut 
+		if (ImGui::Selectable("Cut"))
+		{
+			cut_helper();
+		}
+
 		// Delete
 		if (ImGui::Selectable("Delete##Duplicate"))
 		{
@@ -3184,6 +3274,42 @@ void ForestView::selection_right_click_popup(const std::vector<SelectionRange>& 
 			}
 
 		}
+
+		// Cut 
+		if (ImGui::Selectable("Cut"))
+		{
+			const std::vector<Entry>& entries = tabs[current_tab]->entries;
+			bool canCopy = true;
+			for (const SelectionRange& range : selections)
+			{
+				if (!canCopy) break;
+				if (range.first < 0 || range.last >= static_cast<int>(entries.size()) || range.first > range.last)
+				{
+					canCopy = false;
+					break;
+				}
+				for (int i = range.first; i <= range.last; ++i)
+				{
+					AccessResult res = tabs[current_tab]->fileExplorer->check_access(entries[i].entry.path());
+					if (res == AccessResult::ACCESS_DENIED || res == AccessResult::LOCKED_OR_IN_USE)
+					{
+						canCopy = false;
+						break;
+					}
+				}
+			}
+			if (!canCopy)
+			{
+				need_access_denied_popup = true;
+				ImGui::CloseCurrentPopup();
+			}
+			else if (canCopy)
+			{
+				cut_helper();
+				ImGui::CloseCurrentPopup();
+			}
+		}
+
 		if (ImGui::Selectable("Delete")) 
 		{
 			const std::vector<Entry>& entries = tabs[current_tab]->entries;
@@ -4808,11 +4934,11 @@ void ForestView::render_debug_panel()
 		}
 
 		ImGui::SeparatorText("Copied Path");
-		ImGui::Text(tabs[current_tab]->copied_path.string().c_str());
+		ImGui::Text(Utils::to_display_sring(Utils::path_to_utf8(tabs[current_tab]->copied_path.second)).c_str());
 		ImGui::SeparatorText("Copied Paths");
-		for (const auto& copy : tabs[current_tab]->copied_paths)
+		for (const auto& copy : tabs[current_tab]->copied_paths.second)
 		{
-			ImGui::Text(copy.string().c_str());
+			ImGui::Text(Utils::to_display_sring(Utils::path_to_utf8(copy)).c_str());
 		}
 		ImGui::Separator();
 	}
