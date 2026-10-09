@@ -146,6 +146,58 @@ LIGHT_MODE,
 TEST,
 };
 
+struct Style
+{
+	ImVec2 windowPadding = ImVec2(10, 7);
+	ImVec2 framePadding = ImVec2(8, 5);
+	ImVec2 itemSpacing = ImVec2(6, 6);
+	ImVec2 itemInnerSpacing = ImVec2(6, 4);
+	ImVec2 cellPadding = ImVec2(8, 6);
+
+	float indentSpacing = 18.0f;
+	float scrollbarSize = 13.0f;
+	float grabMinSize = 10.0f;
+
+	float windowRounding = 0.0f;
+	float frameRounding = 5.0f;
+	float scrollbarRounding = 5.0f;
+	float grabRounding = 5.0f;
+	float tabRounding = 4.0f;
+	float popupRounding = 4.0f;
+	float childRounding = 3.0f;
+
+	ImVec4 unique_color = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
+	ImVec4 unique_color_2 = ImVec4(1.000f, 0.624f, 0.000f, 1.000f);
+
+	void ResetColors() 
+	{
+		unique_color = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
+		unique_color_2 = ImVec4(1.000f, 0.624f, 0.000f, 1.000f);
+	}
+	void Reset() 
+	{
+		windowPadding = ImVec2(10, 7);
+		framePadding = ImVec2(8, 5);
+		itemSpacing = ImVec2(6, 6);
+		itemInnerSpacing = ImVec2(6, 4);
+		cellPadding = ImVec2(8, 6);
+
+		indentSpacing = 18.0f;
+		scrollbarSize = 13.0f;
+		grabMinSize = 10.0f;
+
+		windowRounding = 0.0f;
+		frameRounding = 5.0f;
+		scrollbarRounding = 5.0f;
+		grabRounding = 5.0f;
+		tabRounding = 4.0f;
+		popupRounding = 4.0f;
+		childRounding = 3.0f;
+	
+	
+	}
+};
+
 class App 
 {
 private:
@@ -187,8 +239,10 @@ protected:
 	ImFont* default_font = nullptr;
 	ImFont* arabic_font = nullptr;
 
-	const ImVec4 unique_color = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
-	const ImVec4 unique_color_2 = ImVec4(1.000f, 0.624f, 0.000f, 1.000f);
+	ImVec4 unique_color = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
+	ImVec4 unique_color_2 = ImVec4(1.000f, 0.624f, 0.000f, 1.000f);
+
+	Style defaultStyle;
 
 	void Shut_Down();
 public:
@@ -275,6 +329,7 @@ private:
 
 	bool m_showSelectionCursor = false;
 	bool m_showSelectionAnchor = true;
+	bool m_showEditUi = false;
 public:
 
 	ForestView(TexturesManager& texture_manager) : M_texturesManager(texture_manager)
@@ -330,6 +385,8 @@ public:
 
 	// Popups
 	void view_settings();
+
+	void edit_ui();
 
 	void new_whatever();
 

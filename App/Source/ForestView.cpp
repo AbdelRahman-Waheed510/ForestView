@@ -117,22 +117,22 @@ void App::clean_up()
 
 void App::spacing_and_padding_and_stuff(ImGuiStyle& style)
 {
-	style.WindowPadding = ImVec2(10, 7);
-	style.FramePadding = ImVec2(8, 5);
-	style.ItemSpacing = ImVec2(6, 6);
-	style.ItemInnerSpacing = ImVec2(6, 4);
-	style.CellPadding = ImVec2(8, 6);
-	style.IndentSpacing = 18.0f;
-	style.ScrollbarSize = 13.0f;
-	style.GrabMinSize = 10.0f;
-
-	style.WindowRounding = 0.0f;
-	style.FrameRounding = 5.0f;
-	style.ScrollbarRounding = 5.0f;
-	style.GrabRounding = 5.0f;
-	style.TabRounding = 4.0f;
-	style.PopupRounding = 4.0f;
-	style.ChildRounding = 3.0f;
+	style.WindowPadding = defaultStyle.windowPadding;
+	style.FramePadding = defaultStyle.framePadding;
+	style.ItemSpacing = defaultStyle.itemSpacing;
+	style.ItemInnerSpacing = defaultStyle.itemInnerSpacing;
+	style.CellPadding = defaultStyle.cellPadding;
+	style.IndentSpacing = defaultStyle.indentSpacing;
+	style.ScrollbarSize = defaultStyle.scrollbarSize;
+	style.GrabMinSize = defaultStyle.grabMinSize;
+	
+	style.WindowRounding = defaultStyle.windowRounding;
+	style.FrameRounding = defaultStyle.frameRounding;
+	style.ScrollbarRounding = defaultStyle.scrollbarRounding;
+	style.GrabRounding = defaultStyle.grabRounding;
+	style.TabRounding = defaultStyle.tabRounding;
+	style.PopupRounding = defaultStyle.popupRounding;
+	style.ChildRounding = defaultStyle.childRounding;
 }
 
 void App::dark_mode()
@@ -299,9 +299,6 @@ void App::light_mode()
 	ImGuiStyle& style = ImGui::GetStyle();
 
 	spacing_and_padding_and_stuff(style);
-
-	// Steel Blue unique_color
-	const ImVec4 unique_color = ImVec4(0.38f, 0.60f, 0.95f, 1.0f);
 
 	style.Colors[ImGuiCol_Text] = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
 	style.Colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.54f, 0.60f, 1.00f);
@@ -1923,7 +1920,6 @@ void ForestView::tool_bar()
 		}
 		ImGui::SameLine();
 		// ##########################################################################
-
 		ImGui::SetCursorPosX(1860.0f);
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
 		if (ImGui::ImageButton("##Settings", M_texturesManager.get_settings_button_icon_texture_id(), ImVec2(15.0f, 15.0f)))
@@ -1945,6 +1941,8 @@ void ForestView::tool_bar()
 		largest_files_slider();
 
 		advanced_search();
+
+		edit_ui();
 	}
 	ImGui::EndChild();
 	ImGui::PopStyleVar(1);
@@ -2182,8 +2180,173 @@ void ForestView::view_settings()
 			}
 		}
 
+		if (ImGui::Selectable("Edit Ui")) 
+		{
+			m_showEditUi = !m_showEditUi;
+		}
+		
 		ImGui::EndPopup();
 	}
+}
+
+void ForestView::edit_ui() 
+{
+	if (m_showEditUi) 
+	{
+		ImGui::OpenPopup("EditUitest");
+		m_showEditUi = false;
+	}
+	if (ImGui::BeginPopup("EditUitest"))
+		{
+			ImGuiStyle& currentStyle = ImGui::GetStyle();
+
+			// --- Paddings & Spacings ---
+			ImGui::TextDisabled("Paddings & Spacings");
+
+			ImGui::PushID("WindowPadding");
+			ImGui::SliderFloat2("Window Padding", &currentStyle.WindowPadding.x, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.WindowPadding = defaultStyle.windowPadding;
+			ImGui::PopID();
+
+			ImGui::PushID("FramePadding");
+			ImGui::SliderFloat2("Frame Padding", &currentStyle.FramePadding.x, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.FramePadding = defaultStyle.framePadding;
+			ImGui::PopID();
+
+			ImGui::PushID("ItemSpacing");
+			ImGui::SliderFloat2("Item Spacing", &currentStyle.ItemSpacing.x, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.ItemSpacing = defaultStyle.itemSpacing;
+			ImGui::PopID();
+
+			ImGui::PushID("ItemInnerSpacing");
+			ImGui::SliderFloat2("Item Inner Spacing", &currentStyle.ItemInnerSpacing.x, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.ItemInnerSpacing = defaultStyle.itemInnerSpacing;
+			ImGui::PopID();
+
+			ImGui::PushID("CellPadding");
+			ImGui::SliderFloat2("Cell Padding", &currentStyle.CellPadding.x, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.CellPadding = defaultStyle.cellPadding;
+			ImGui::PopID();
+
+			ImGui::PushID("IndentSpacing");
+			ImGui::SliderFloat("Indent Spacing", &currentStyle.IndentSpacing, 0.0f, 50.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.IndentSpacing = defaultStyle.indentSpacing;
+			ImGui::PopID();
+
+			ImGui::PushID("ScrollbarSize");
+			ImGui::SliderFloat("Scrollbar Size", &currentStyle.ScrollbarSize, 1.0f, 30.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.ScrollbarSize = defaultStyle.scrollbarSize;
+			ImGui::PopID();
+
+			ImGui::PushID("GrabMinSize");
+			ImGui::SliderFloat("Grab Min Size", &currentStyle.GrabMinSize, 1.0f, 30.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.GrabMinSize = defaultStyle.grabMinSize;
+			ImGui::PopID();
+
+			ImGui::Separator();
+
+			// --- Rounding Settings ---
+			ImGui::TextDisabled("Rounding");
+
+			ImGui::PushID("WindowRounding");
+			ImGui::SliderFloat("Window Rounding", &currentStyle.WindowRounding, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.WindowRounding = defaultStyle.windowRounding;
+			ImGui::PopID();
+
+			ImGui::PushID("ChildRounding");
+			ImGui::SliderFloat("Child Rounding", &currentStyle.ChildRounding, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.ChildRounding = defaultStyle.childRounding;
+			ImGui::PopID();
+
+			ImGui::PushID("FrameRounding");
+			ImGui::SliderFloat("Frame Rounding", &currentStyle.FrameRounding, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.FrameRounding = defaultStyle.frameRounding;
+			ImGui::PopID();
+
+			ImGui::PushID("PopupRounding");
+			ImGui::SliderFloat("Popup Rounding", &currentStyle.PopupRounding, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.PopupRounding = defaultStyle.popupRounding;
+			ImGui::PopID();
+
+			ImGui::PushID("ScrollbarRounding");
+			ImGui::SliderFloat("Scrollbar Rounding", &currentStyle.ScrollbarRounding, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.ScrollbarRounding = defaultStyle.scrollbarRounding;
+			ImGui::PopID();
+
+			ImGui::PushID("GrabRounding");
+			ImGui::SliderFloat("Grab Rounding", &currentStyle.GrabRounding, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.GrabRounding = defaultStyle.grabRounding;
+			ImGui::PopID();
+
+			ImGui::PushID("TabRounding");
+			ImGui::SliderFloat("Tab Rounding", &currentStyle.TabRounding, 0.0f, 25.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) currentStyle.TabRounding = defaultStyle.tabRounding;
+			ImGui::PopID();
+
+			// --- Colors Settings ---
+			ImGui::TextDisabled("Colors");
+
+			ImGui::PushID("Color1");
+			ImGui::SliderFloat4("Unique Color 1", &unique_color.x, 0.0f, 1.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) unique_color = defaultStyle.unique_color;
+			ImGui::PopID();
+
+			ImGui::PushID("Color2");
+			ImGui::SliderFloat4("Unique Color 2", &unique_color_2.x, 0.0f, 1.0f, "%.1f");
+			ImGui::SameLine();
+			if (ImGui::Button("Reset")) unique_color_2 = defaultStyle.unique_color_2;
+			ImGui::PopID();
+	
+
+
+			ImGui::Separator();
+
+			if (ImGui::Button("Reset All"))
+			{
+				currentStyle.WindowPadding     = defaultStyle.windowPadding;
+				currentStyle.FramePadding      = defaultStyle.framePadding;
+				currentStyle.ItemSpacing       = defaultStyle.itemSpacing;
+				currentStyle.ItemInnerSpacing  = defaultStyle.itemInnerSpacing;
+				currentStyle.CellPadding       = defaultStyle.cellPadding;
+				currentStyle.IndentSpacing     = defaultStyle.indentSpacing;
+				currentStyle.ScrollbarSize     = defaultStyle.scrollbarSize;
+				currentStyle.GrabMinSize       = defaultStyle.grabMinSize;
+				currentStyle.WindowRounding    = defaultStyle.windowRounding;
+				currentStyle.FrameRounding     = defaultStyle.frameRounding;
+				currentStyle.ScrollbarRounding = defaultStyle.scrollbarRounding;
+				currentStyle.GrabRounding      = defaultStyle.grabRounding;
+				currentStyle.TabRounding       = defaultStyle.tabRounding;
+				currentStyle.PopupRounding     = defaultStyle.popupRounding;
+				currentStyle.ChildRounding     = defaultStyle.childRounding;
+				unique_color = defaultStyle.unique_color;
+				unique_color_2 = defaultStyle.unique_color_2;
+			}
+
+			ImGui::SameLine();
+
+			if (ImGui::Button("Close")) 
+			{
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
 }
 
 // New popup (New folder or file)
