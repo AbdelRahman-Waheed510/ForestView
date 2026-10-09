@@ -12,13 +12,21 @@ bool App::initialize_GLFW()
 
 bool App::create_window()
 {
-	window = glfwCreateWindow(900, 700, "ForestView", nullptr, nullptr);
+	window = glfwCreateWindow(1100, 720, "ForestView", nullptr, nullptr);
 	if (window == nullptr) 
 	{
 		glfwTerminate();
 		return false;
 	}
-	glfwSetWindowSizeLimits(window, 800, 600, GLFW_DONT_CARE, GLFW_DONT_CARE);
+
+	GLFWimage images[1];
+	images[0].pixels = stbi_load("assets/Images/Folder.png", &images[0].width, &images[0].height, 0, 4); // TODO: placeholder for now
+
+	if (images[0].pixels) {
+		glfwSetWindowIcon(window, 1, images);
+		stbi_image_free(images[0].pixels); 
+	}
+	glfwSetWindowSizeLimits(window, 1100, 720, GLFW_DONT_CARE, GLFW_DONT_CARE);
 	glfwMakeContextCurrent(window);
 	glfwSwapInterval(1);
 	return true;
@@ -476,7 +484,7 @@ void ForestView::on_start()
 // Main update function (each frame gets called)
 void ForestView::on_update()
 {
-	ImGui::SetNextWindowSizeConstraints(ImVec2(800.0f, 600.0f), ImVec2(FLT_MAX, FLT_MAX));
+	ImGui::SetNextWindowSizeConstraints(ImVec2(1100.0f, 720.0f), ImVec2(FLT_MAX, FLT_MAX));
 	if (ImGui::Begin("ForestView"))
 	{
 		refocus_reload();
