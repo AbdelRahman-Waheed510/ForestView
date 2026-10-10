@@ -636,41 +636,7 @@ void ForestView::on_update()
 					break;
 				}
 			}
-			/*while ((int)tasks.size() <= 2 && !m_queuedTasks.empty()) 
-			{
-				switch (m_queuedTasks.front()->task_type)
-				{
-				case TaskType::COPY_PASTE: 
-				{
-					Task* task = m_queuedTasks.front().get();
-
-					m_queuedTasks.front()->start = std::chrono::steady_clock::now();
-
-					m_queuedTasks.front()->worker = std::thread([this, task]()
-						{
-							tabs[current_tab]->fileExplorer->copy_paste(task->source, task->destination, task->sizeProgress, task->filesCountProgress, task->cancel_request, task->finished);
-						});
-
-					tasks.emplace_back(std::move(m_queuedTasks.front()));
-					m_queuedTasks.pop_front();
-					break;
-				}
-				case TaskType::_DELETE: 
-				{
-					Task* task = m_queuedTasks.front().get();
-					m_queuedTasks.front()->worker = std::thread([this, task]()
-						{
-							tabs[current_tab]->fileExplorer->remove(task->source);
-							task->finished = true;
-						});
-					tasks.emplace_back(std::move(m_queuedTasks.front()));
-					m_queuedTasks.pop_front();
-					break;
-				}
-				default:
-					break;
-				}
-			}*/
+			
 			if (!m_queuedTasks.empty()) 
 			{ 
 				if (ImGui::Begin("scheduled Tasks")) 
@@ -4670,26 +4636,26 @@ void ForestView::render_entries()
 
 					
 					ImGui::Selectable(tabs[current_tab]->entries[i].name.c_str(), is_selected, ImGuiSelectableFlags_SpanAllColumns, ImVec2(0, icon_height));
-					ImVec2 p_min = ImGui::GetItemRectMin();
-					ImVec2 p_max = ImGui::GetItemRectMax();
+					const ImVec2 p_min = ImGui::GetItemRectMin();
+					const ImVec2 p_max = ImGui::GetItemRectMax();
 			
 					handle_entries_mouse_click(tabs[current_tab]->entries[i].entry, i);
 					// ========================================== Last Modified ================================================
 					ImGui::TableNextColumn();
 
-					fs::file_time_type time = tabs[current_tab]->entries[i].entry.last_write_time();
+					const fs::file_time_type time = tabs[current_tab]->entries[i].entry.last_write_time();
 
-					auto sys_time = std::chrono::clock_cast<std::chrono::system_clock>(time);			
+					const auto sys_time = std::chrono::clock_cast<std::chrono::system_clock>(time);			
 																										
-					auto local = std::chrono::zoned_time{ std::chrono::current_zone(), sys_time };		
+					const auto local = std::chrono::zoned_time{ std::chrono::current_zone(), sys_time };		
 																										
-					std::string res = std::format("{:%Y-%m-%d %H:%M}", local);							
+					const std::string res = std::format("{:%Y-%m-%d %H:%M}", local);							
 													
 					ImGui::Selectable(res.c_str(), false, 0, ImVec2(0.0f, icon_height));
 
 					// ========================================== Type ================================================
 					ImGui::TableNextColumn();
-					fs::file_type type = tabs[current_tab]->entries[i].entry.status().type();
+					const fs::file_type type = tabs[current_tab]->entries[i].entry.status().type();
 
 					ImGui::Selectable(Utils::file_type_to_string(type).c_str(), false, 0, ImVec2(0.0f, icon_height));
 
@@ -4698,7 +4664,7 @@ void ForestView::render_entries()
 
 					if (!tabs[current_tab]->entries[i].entry.is_directory())
 					{
-						fileSize size = tabs[current_tab]->fileExplorer->decide_file_size_format(tabs[current_tab]->entries[i].entry.file_size());
+						const fileSize size = tabs[current_tab]->fileExplorer->decide_file_size_format(tabs[current_tab]->entries[i].entry.file_size());
 						ImGui::Selectable(std::format("{:.2f} {}", size.size, size.label).c_str(), false, 0, ImVec2(0.0f, icon_height));
 					}
 					ImGui::PopStyleVar(1);
@@ -4707,7 +4673,7 @@ void ForestView::render_entries()
 					// Drawing the anchor and the Cursor
 					if (m_showSelectionCursor)
 					{
-						bool is_cursor = tabs[current_tab]->selectionManager.IsCursor(i);
+						const bool is_cursor = tabs[current_tab]->selectionManager.IsCursor(i);
 						if (is_cursor)
 						{
 							ImGui::GetWindowDrawList()->AddRect(
@@ -4722,7 +4688,7 @@ void ForestView::render_entries()
 					}
 					if (m_showSelectionAnchor)
 					{
-						bool is_anchor = tabs[current_tab]->selectionManager.IsAnchor(i);
+						const bool is_anchor = tabs[current_tab]->selectionManager.IsAnchor(i);
 						if (is_anchor)
 						{
 							ImGui::GetWindowDrawList()->AddRect(
@@ -4904,7 +4870,6 @@ void ForestView::render_entries()
 			}
 		}
 	}
-
 }
 
 
