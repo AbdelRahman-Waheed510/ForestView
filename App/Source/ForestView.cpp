@@ -2077,12 +2077,14 @@ void ForestView::timed_tooltip()
 {
 	if (m_timer.IsRunning()) 
 	{
-		if (m_timer.GetElapsedSeconds() < m_numberOfSeconds) 
+		const float elapsedSeconds = m_timer.GetElapsedSeconds();
+		if (elapsedSeconds < m_numberOfSeconds)
 		{
 			ImGui::BeginTooltip();
 
 			ImGui::TextColored(m_msgColor, m_message.c_str());
-
+			
+			ImGui::Text(std::format("{:.1f} sec / {:.1f} sec", elapsedSeconds, m_numberOfSeconds).c_str());
 			ImGui::EndTooltip();
 		}
 		else 
@@ -2126,13 +2128,13 @@ void ForestView::view_settings()
 		ImGui::Text("Light Mode");
 
 		// Toggle Anchor 
-		if (ImGui::Selectable("Toggle Anchor"))
+		if (ImGui::Selectable((m_showSelectionAnchor) ? "Hide Anchor" : "Show Anchor"))
 		{
 			m_showSelectionAnchor = !m_showSelectionAnchor;
 		}
 
 		// Toggle Cursor 
-		if (ImGui::Selectable("Toggle Cursor")) 
+		if (ImGui::Selectable((m_showSelectionCursor) ? "Hide Cursor" : "Show Cursor"))
 		{
 			m_showSelectionCursor = !m_showSelectionCursor;
 		}
@@ -2782,7 +2784,7 @@ void ForestView::largest_files_slider()
 	if (ImGui::BeginPopup("LargestFilesSizeMaximumSlider")) 
 	{
 		static float MaxSize = 10.0;
-		ImGui::SliderFloat("Max Size", &MaxSize, 10.0, 1024.0);
+		ImGui::SliderFloat("Max Size [MegaBytes]", &MaxSize, 0.0, 10240.0);
 		if (ImGui::Button("Find")) 
 		{
 			// To be able to override the task mid seraching for the Largest files =====================
