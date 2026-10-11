@@ -1386,7 +1386,9 @@ void ForestView::search_bar()
 			ids++;
 			ImGui::SetKeyboardFocusHere();
 		}
-		ImGui::SetNextItemWidth(550.0f);
+		ImVec2 windowSize = ImGui::GetWindowSize();
+		float width = windowSize.x;
+		ImGui::SetNextItemWidth((width * 2) / 3);
 
 		ImGui::PushID(ids);
 		
